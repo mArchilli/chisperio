@@ -28,7 +28,7 @@ class SubcategoriaController extends Controller
                 ->get();
         }
         
-        return Inertia::render('Subcategorias/Index', [
+        return Inertia::render('Admin/Subcategorias/Index', [
             'subcategorias' => $subcategorias,
             'categoria' => $categoria,
             'categoriaId' => $categoriaId
@@ -43,7 +43,7 @@ class SubcategoriaController extends Controller
         $categoriaId = $request->query('categoria_id');
         $categorias = Categoria::orderBy('nombre')->get();
         
-        return Inertia::render('Subcategorias/Create', [
+        return Inertia::render('Admin/Subcategorias/Create', [
             'categorias' => $categorias,
             'categoriaId' => $categoriaId
         ]);
@@ -81,7 +81,7 @@ class SubcategoriaController extends Controller
     {
         $categorias = Categoria::orderBy('nombre')->get();
         
-        return Inertia::render('Subcategorias/Edit', [
+        return Inertia::render('Admin/Subcategorias/Edit', [
             'subcategoria' => $subcategoria->load('categoria'),
             'categorias' => $categorias
         ]);

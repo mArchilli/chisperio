@@ -15,7 +15,7 @@ class CategoriaController extends Controller
     {
         $categorias = Categoria::with('subcategorias')->orderBy('nombre')->get();
         
-        return Inertia::render('Categorias/Index', [
+        return Inertia::render('Admin/Categorias/Index', [
             'categorias' => $categorias
         ]);
     }
@@ -25,7 +25,7 @@ class CategoriaController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Categorias/Create');
+        return Inertia::render('Admin/Categorias/Create');
     }
 
     /**
@@ -57,7 +57,7 @@ class CategoriaController extends Controller
      */
     public function edit(Categoria $categoria)
     {
-        return Inertia::render('Categorias/Edit', [
+        return Inertia::render('Admin/Categorias/Edit', [
             'categoria' => $categoria
         ]);
     }

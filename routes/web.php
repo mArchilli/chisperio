@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
 use Illuminate\Foundation\Application;
@@ -26,10 +27,37 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
     // Rutas de Categorías
-    Route::resource('categorias', CategoriaController::class);
+    Route::resource('admin/categorias', CategoriaController::class)->names([
+        'index' => 'categorias.index',
+        'create' => 'categorias.create',
+        'store' => 'categorias.store',
+        'show' => 'categorias.show',
+        'edit' => 'categorias.edit',
+        'update' => 'categorias.update',
+        'destroy' => 'categorias.destroy',
+    ]);
     
     // Rutas de Subcategorías
-    Route::resource('subcategorias', SubcategoriaController::class);
+    Route::resource('admin/subcategorias', SubcategoriaController::class)->names([
+        'index' => 'subcategorias.index',
+        'create' => 'subcategorias.create',
+        'store' => 'subcategorias.store',
+        'show' => 'subcategorias.show',
+        'edit' => 'subcategorias.edit',
+        'update' => 'subcategorias.update',
+        'destroy' => 'subcategorias.destroy',
+    ]);
+    
+    // Rutas de Productos
+    Route::resource('admin/productos', ProductoController::class)->names([
+        'index' => 'productos.index',
+        'create' => 'productos.create',
+        'store' => 'productos.store',
+        'show' => 'productos.show',
+        'edit' => 'productos.edit',
+        'update' => 'productos.update',
+        'destroy' => 'productos.destroy',
+    ]);
 });
 
 require __DIR__.'/auth.php';
