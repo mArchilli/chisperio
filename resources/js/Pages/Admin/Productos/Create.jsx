@@ -190,34 +190,6 @@ export default function Create({ categorias, subcategorias }) {
                                             </div>
                                         )}
                                     </div>
-
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                id="is_active"
-                                                checked={data.is_active}
-                                                onChange={(e) => setData('is_active', e.target.checked)}
-                                                className="h-5 w-5 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
-                                            />
-                                            <label htmlFor="is_active" className="ml-3 block text-sm font-bold text-gray-700">
-                                                Producto Activo
-                                            </label>
-                                        </div>
-
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                id="is_featured"
-                                                checked={data.is_featured}
-                                                onChange={(e) => setData('is_featured', e.target.checked)}
-                                                className="h-5 w-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
-                                            />
-                                            <label htmlFor="is_featured" className="ml-3 flex items-center text-sm font-bold text-gray-700">
-                                                ⭐ Producto Destacado
-                                            </label>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <div className="mb-6">
@@ -241,8 +213,107 @@ export default function Create({ categorias, subcategorias }) {
                                     )}
                                 </div>
 
-                                {/* Sección Multimedia */}
-                                <div className="mb-8 p-6 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+                                {/* Categorías y Subcategorías */}
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                        <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        Categorización
+                                    </h3>
+                                    
+                                    <div className="space-y-4">
+                                        {/* Categorías */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-3">
+                                                Categorías <span className="text-gray-400 font-normal">(Selecciona una o más)</span>
+                                            </label>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                {categorias.map((categoria) => (
+                                                    <button
+                                                        key={categoria.id}
+                                                        type="button"
+                                                        onClick={() => toggleCategoria(categoria.id)}
+                                                        className={`relative p-4 rounded-xl border-2 text-left transition-all transform hover:scale-105 ${
+                                                            data.categorias.includes(categoria.id)
+                                                                ? 'border-[#40B0C2] bg-gradient-to-br from-[#40B0C2]/10 to-[#40B0C2]/5 shadow-lg shadow-[#40B0C2]/20'
+                                                                : 'border-gray-200 bg-white hover:border-[#40B0C2]/50'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex-1">
+                                                                <p className={`font-semibold text-sm ${
+                                                                    data.categorias.includes(categoria.id) ? 'text-[#40B0C2]' : 'text-gray-700'
+                                                                }`}>
+                                                                    {categoria.nombre}
+                                                                </p>
+                                                            </div>
+                                                            {data.categorias.includes(categoria.id) && (
+                                                                <div className="flex-shrink-0 ml-2">
+                                                                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                                                                        <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                        </svg>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {errors.categorias && (
+                                                <div className="mt-2 flex items-center text-sm text-red-600">
+                                                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                    </svg>
+                                                    {errors.categorias}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Subcategorías - Solo mostrar las de las categorías seleccionadas */}
+                                        {data.categorias.length > 0 && (
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-3">
+                                                    Subcategorías <span className="text-gray-400 font-normal">(Basadas en categorías seleccionadas)</span>
+                                                </label>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                                                    {subcategorias
+                                                        .filter(sub => data.categorias.includes(sub.categoria?.id))
+                                                        .map((subcategoria) => (
+                                                            <button
+                                                                key={subcategoria.id}
+                                                                type="button"
+                                                                onClick={() => toggleSubcategoria(subcategoria.id)}
+                                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                                                    data.subcategorias.includes(subcategoria.id)
+                                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-md'
+                                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                                                                }`}
+                                                            >
+                                                                {subcategoria.nombre}
+                                                            </button>
+                                                        ))
+                                                    }
+                                                </div>
+                                                {data.categorias.length > 0 && subcategorias.filter(sub => data.categorias.includes(sub.categoria?.id)).length === 0 && (
+                                                    <p className="text-sm text-gray-500 italic mt-2">No hay subcategorías para las categorías seleccionadas</p>
+                                                )}
+                                                {errors.subcategorias && (
+                                                    <div className="mt-2 flex items-center text-sm text-red-600">
+                                                        <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                        {errors.subcategorias}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Sección Multimedia Moderna */}
+                                <div className="mb-8">
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
                                         <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -250,41 +321,53 @@ export default function Create({ categorias, subcategorias }) {
                                         Multimedia
                                     </h3>
 
-                                    {/* Imágenes */}
+                                    {/* Zona de Imágenes */}
                                     <div className="mb-6">
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <label className="block text-sm font-bold text-gray-700 mb-3">
                                             Imágenes del Producto
                                         </label>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleImagenesChange}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-[#40B0C2] file:to-[#A72DAB] file:text-white hover:file:opacity-90 file:cursor-pointer"
-                                        />
-                                        {errors.imagenes && (
-                                            <div className="mt-2 flex items-center text-sm text-red-600">
-                                                <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                                {errors.imagenes}
-                                            </div>
-                                        )}
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={handleImagenesChange}
+                                                id="imageUpload"
+                                                className="hidden"
+                                            />
+                                            <label
+                                                htmlFor="imageUpload"
+                                                className="flex flex-col items-center justify-center w-full h-48 border-3 border-dashed border-[#40B0C2]/40 rounded-2xl cursor-pointer bg-gradient-to-br from-[#40B0C2]/5 via-white to-[#A72DAB]/5 hover:from-[#40B0C2]/10 hover:to-[#A72DAB]/10 transition-all group"
+                                            >
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <div className="p-4 bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] rounded-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                                        <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                    <p className="mb-2 text-sm font-bold text-gray-700">
+                                                        <span className="bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">Haz clic para subir</span> o arrastra las imágenes aquí
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 5MB</p>
+                                                </div>
+                                            </label>
+                                        </div>
                                         
-                                        {/* Preview de imágenes */}
                                         {imagenesPreview.length > 0 && (
-                                            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                                 {imagenesPreview.map((preview, index) => (
                                                     <div key={index} className="relative group">
-                                                        <img
-                                                            src={preview.url}
-                                                            alt={preview.name}
-                                                            className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
-                                                        />
+                                                        <div className="aspect-square rounded-xl overflow-hidden border-3 border-gray-200 shadow-md hover:shadow-xl transition-all">
+                                                            <img
+                                                                src={preview.url}
+                                                                alt={preview.name}
+                                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                                            />
+                                                        </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => removeImagen(index)}
-                                                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
                                                         >
                                                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -293,13 +376,13 @@ export default function Create({ categorias, subcategorias }) {
                                                         <button
                                                             type="button"
                                                             onClick={() => setData('imagen_principal', index)}
-                                                            className={`absolute bottom-2 left-2 px-2 py-1 text-xs rounded-full ${
+                                                            className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full shadow-lg transition-all ${
                                                                 data.imagen_principal === index
-                                                                    ? 'bg-yellow-500 text-white'
-                                                                    : 'bg-white text-gray-700 opacity-0 group-hover:opacity-100'
-                                                            } transition-opacity`}
+                                                                    ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white scale-105'
+                                                                    : 'bg-white text-gray-700 opacity-0 group-hover:opacity-100 hover:scale-105'
+                                                            }`}
                                                         >
-                                                            {data.imagen_principal === index ? '⭐ Principal' : 'Marcar principal'}
+                                                            {data.imagen_principal === index ? '⭐ Principal' : 'Principal'}
                                                         </button>
                                                     </div>
                                                 ))}
@@ -307,45 +390,58 @@ export default function Create({ categorias, subcategorias }) {
                                         )}
                                     </div>
 
-                                    {/* Videos */}
+                                    {/* Zona de Videos */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <label className="block text-sm font-bold text-gray-700 mb-3">
                                             Videos del Producto
                                         </label>
-                                        <input
-                                            type="file"
-                                            accept="video/*"
-                                            multiple
-                                            onChange={handleVideosChange}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-[#40B0C2] file:to-[#A72DAB] file:text-white hover:file:opacity-90 file:cursor-pointer"
-                                        />
-                                        {errors.videos && (
-                                            <div className="mt-2 flex items-center text-sm text-red-600">
-                                                <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                                {errors.videos}
-                                            </div>
-                                        )}
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                accept="video/*"
+                                                multiple
+                                                onChange={handleVideosChange}
+                                                id="videoUpload"
+                                                className="hidden"
+                                            />
+                                            <label
+                                                htmlFor="videoUpload"
+                                                className="flex flex-col items-center justify-center w-full h-40 border-3 border-dashed border-[#A72DAB]/40 rounded-2xl cursor-pointer bg-gradient-to-br from-[#A72DAB]/5 via-white to-[#40B0C2]/5 hover:from-[#A72DAB]/10 hover:to-[#40B0C2]/10 transition-all group"
+                                            >
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <div className="p-4 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                                        <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                    <p className="mb-2 text-sm font-bold text-gray-700">
+                                                        <span className="bg-gradient-to-r from-[#A72DAB] to-[#40B0C2] bg-clip-text text-transparent">Haz clic para subir</span> o arrastra videos aquí
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">MP4, MOV, AVI hasta 50MB</p>
+                                                </div>
+                                            </label>
+                                        </div>
                                         
-                                        {/* Lista de videos */}
                                         {videosPreview.length > 0 && (
-                                            <div className="mt-4 space-y-2">
+                                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 {videosPreview.map((preview, index) => (
-                                                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-                                                        <div className="flex items-center">
-                                                            <svg className="h-5 w-5 text-[#40B0C2] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                            </svg>
-                                                            <span className="text-sm text-gray-700">{preview.name}</span>
+                                                    <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
+                                                        <div className="flex items-center flex-1">
+                                                            <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
+                                                                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                            </div>
+                                                            <span className="ml-3 text-sm font-medium text-gray-700 truncate">{preview.name}</span>
                                                         </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => removeVideo(index)}
-                                                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                                            className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                                                         >
-                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                             </svg>
                                                         </button>
                                                     </div>
@@ -354,69 +450,66 @@ export default function Create({ categorias, subcategorias }) {
                                         )}
                                     </div>
                                 </div>
+                                {/* Fin Sección Multimedia */}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Categorías
-                                        </label>
-                                        <div className="border-2 border-gray-200 rounded-xl p-4 max-h-48 overflow-y-auto">
-                                            {categorias.map((categoria) => (
-                                                <div key={categoria.id} className="flex items-center mb-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        id={`categoria-${categoria.id}`}
-                                                        checked={data.categorias.includes(categoria.id)}
-                                                        onChange={() => toggleCategoria(categoria.id)}
-                                                        className="h-4 w-4 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
-                                                    />
-                                                    <label htmlFor={`categoria-${categoria.id}`} className="ml-2 block text-sm text-gray-700">
-                                                        {categoria.nombre}
-                                                    </label>
+                                {/* Configuración de Visibilidad */}
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                        <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                        </svg>
+                                        Configuración del Producto
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Toggle Activo */}
+                                        <div className="flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-[#40B0C2] transition-all">
+                                            <div className="flex items-center">
+                                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        {errors.categorias && (
-                                            <div className="mt-2 flex items-center text-sm text-red-600">
-                                                <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                                {errors.categorias}
+                                                <label htmlFor="is_active" className="ml-3 block text-sm font-bold text-gray-700 cursor-pointer">
+                                                    Producto Visible
+                                                    <span className="block text-xs text-gray-500 font-normal">Mostrar en el catálogo</span>
+                                                </label>
                                             </div>
-                                        )}
-                                    </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    id="is_active"
+                                                    checked={data.is_active}
+                                                    onChange={(e) => setData('is_active', e.target.checked)}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#40B0C2]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-600"></div>
+                                            </label>
+                                        </div>
 
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Subcategorías
-                                        </label>
-                                        <div className="border-2 border-gray-200 rounded-xl p-4 max-h-48 overflow-y-auto">
-                                            {subcategorias.map((subcategoria) => (
-                                                <div key={subcategoria.id} className="flex items-center mb-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        id={`subcategoria-${subcategoria.id}`}
-                                                        checked={data.subcategorias.includes(subcategoria.id)}
-                                                        onChange={() => toggleSubcategoria(subcategoria.id)}
-                                                        className="h-4 w-4 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
-                                                    />
-                                                    <label htmlFor={`subcategoria-${subcategoria.id}`} className="ml-2 block text-sm text-gray-700">
-                                                        {subcategoria.nombre}
-                                                        {subcategoria.categoria && (
-                                                            <span className="text-xs text-gray-400 ml-1">({subcategoria.categoria.nombre})</span>
-                                                        )}
-                                                    </label>
+                                        {/* Toggle Destacado */}
+                                        <div className="flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-yellow-500 transition-all">
+                                            <div className="flex items-center">
+                                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
+                                                    <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                    </svg>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        {errors.subcategorias && (
-                                            <div className="mt-2 flex items-center text-sm text-red-600">
-                                                <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                                {errors.subcategorias}
+                                                <label htmlFor="is_featured" className="ml-3 block text-sm font-bold text-gray-700 cursor-pointer">
+                                                    Producto Destacado
+                                                    <span className="block text-xs text-gray-500 font-normal">Aparecerá primero</span>
+                                                </label>
                                             </div>
-                                        )}
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    id="is_featured"
+                                                    checked={data.is_featured}
+                                                    onChange={(e) => setData('is_featured', e.target.checked)}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-yellow-400 peer-checked:to-yellow-600"></div>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
 

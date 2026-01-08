@@ -260,4 +260,16 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')
             ->with('success', 'Producto eliminado exitosamente');
     }
+
+    /**
+     * Toggle featured status
+     */
+    public function toggleFeatured(Producto $producto)
+    {
+        $producto->update([
+            'is_featured' => !$producto->is_featured
+        ]);
+
+        return redirect()->back();
+    }
 }

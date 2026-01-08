@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
         'update' => 'productos.update',
         'destroy' => 'productos.destroy',
     ]);
+    Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
 });
 
 require __DIR__.'/auth.php';
