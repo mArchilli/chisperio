@@ -71,4 +71,29 @@ class Producto extends Model
             ->where('tipo', 'imagen')
             ->where('is_principal', true);
     }
+
+    /**
+     * Relación uno a muchos con Oferta
+     */
+    public function ofertas(): HasMany
+    {
+        return $this->hasMany(Oferta::class);
+    }
+
+    /**
+     * Obtener la oferta vigente del producto
+     */
+    public function ofertaVigente()
+    {
+        return $this->hasOne(Oferta::class)
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('fecha_inicio')
+                    ->orWhere('fecha_inicio', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('fecha_fin')
+                    ->orWhere('fecha_fin', '>=', now());
+            });
+    }
 }

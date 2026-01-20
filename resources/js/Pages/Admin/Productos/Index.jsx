@@ -1,10 +1,31 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 export default function Index({ productos }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [productoToDelete, setProductoToDelete] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState({
+        estado: 'todos', // todos, activo, inactivo
+        destacado: 'todos', // todos, destacado, no-destacado
+        precioMin: '',
+        precioMax: '',
+        categoria: '',
+        subcategoria: '',
+    });
+    const [ordenamiento, setOrdenamiento] = useState(''); // alfabetico-asc, alfabetico-desc, precio-asc, precio-desc
+
+    // Función para formatear precios en pesos argentinos
+    const formatearPrecio = (precio) => {
+        return new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(precio);
+    };
 
     const openDeleteModal = (producto) => {
         setProductoToDelete(producto);
@@ -30,6 +51,130 @@ export default function Index({ productos }) {
             preserveScroll: true,
         });
     };
+
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+    };
+
+    const resetFilters = () => {
+        setFilters({
+            estado: 'todos',
+            destacado: 'todos',
+            precioMin: '',
+            precioMax: '',
+            categoria: '',
+            subcategoria: '',
+        });
+        setSearchTerm('');
+        setOrdenamiento('');
+    };
+
+    // Extraer categorías únicas de los productos
+    const categorias = useMemo(() => {
+        const cats = new Map();
+        productos.forEach(producto => {
+            producto.categorias?.forEach(cat => {
+                if (!cats.has(cat.id)) {
+                    cats.set(cat.id, cat);
+                }
+            });
+        });
+        return Array.from(cats.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }, [productos]);
+
+    // Extraer subcategorías de la categoría seleccionada
+    const subcategorias = useMemo(() => {
+        if (!filters.categoria) return [];
+        const subs = new Map();
+        productos.forEach(producto => {
+            if (producto.categorias?.some(cat => cat.id == filters.categoria)) {
+                producto.subcategorias?.forEach(sub => {
+                    if (!subs.has(sub.id)) {
+                        subs.set(sub.id, sub);
+                    }
+                });
+            }
+        });
+        return Array.from(subs.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }, [productos, filters.categoria]);
+
+    const productosFiltrados = useMemo(() => {
+        let resultado = productos.filter(producto => {
+            // Filtro de búsqueda
+            const matchSearch = producto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            if (!matchSearch) return false;
+
+            // Filtro de estado
+            if (filters.estado !== 'todos') {
+                const isActive = filters.estado === 'activo';
+                if (producto.is_active !== isActive) return false;
+            }
+
+            // Filtro de destacado
+            if (filters.destacado !== 'todos') {
+                const isFeatured = filters.destacado === 'destacado';
+                if (producto.is_featured !== isFeatured) return false;
+            }
+
+            // Filtro de precio mínimo
+            if (filters.precioMin && parseFloat(producto.precio) < parseFloat(filters.precioMin)) {
+                return false;
+            }
+
+            // Filtro de precio máximo
+            if (filters.precioMax && parseFloat(producto.precio) > parseFloat(filters.precioMax)) {
+                return false;
+            }
+
+            // Filtro de categoría
+            if (filters.categoria) {
+                const tieneCategoria = producto.categorias?.some(cat => cat.id == filters.categoria);
+                if (!tieneCategoria) return false;
+            }
+
+            // Filtro de subcategoría
+            if (filters.subcategoria) {
+                const tieneSubcategoria = producto.subcategorias?.some(sub => sub.id == filters.subcategoria);
+                if (!tieneSubcategoria) return false;
+            }
+
+            return true;
+        });
+
+        // Aplicar ordenamiento
+        if (ordenamiento) {
+            resultado = [...resultado].sort((a, b) => {
+                switch (ordenamiento) {
+                    case 'alfabetico-asc':
+                        return a.titulo.localeCompare(b.titulo);
+                    case 'alfabetico-desc':
+                        return b.titulo.localeCompare(a.titulo);
+                    case 'precio-asc':
+                        return parseFloat(a.precio) - parseFloat(b.precio);
+                    case 'precio-desc':
+                        return parseFloat(b.precio) - parseFloat(a.precio);
+                    default:
+                        return 0;
+                }
+            });
+        }
+
+        return resultado;
+    }, [productos, searchTerm, filters, ordenamiento]);
+
+    const activeFiltersCount = useMemo(() => {
+        let count = 0;
+        if (filters.estado !== 'todos') count++;
+        if (filters.destacado !== 'todos') count++;
+        if (filters.precioMin) count++;
+        if (filters.precioMax) count++;
+        if (filters.categoria) count++;
+        if (filters.subcategoria) count++;
+        if (ordenamiento) count++;
+        return count;
+    }, [filters, ordenamiento]);
 
     return (
         <AuthenticatedLayout
@@ -57,199 +202,484 @@ export default function Index({ productos }) {
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    {/* Vista de Cards para móvil */}
-                    <div className="lg:hidden space-y-4 px-4">
-                        {productos.length === 0 ? (
-                            <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
-                                    <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {/* Barra de búsqueda y filtros */}
+                    <div className="mb-6 px-4 sm:px-0">
+                        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                            {/* Barra de búsqueda */}
+                            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                                <div className="flex-1 relative">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar productos por nombre o descripción..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all"
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm('')}
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
+                                        >
+                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border-2 border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 relative"
+                                >
+                                    <svg 
+                                        className={`h-5 w-5 mr-2 transition-transform duration-500 ${showFilters ? 'rotate-180' : 'rotate-0'}`} 
+                                        fill="none" 
+                                        viewBox="0 0 24 24" 
+                                        stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                    </svg>
+                                    {showFilters ? 'Ocultar Filtros' : 'Filtros'}
+                                    {activeFiltersCount > 0 && (
+                                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full animate-pulse shadow-lg shadow-red-500/50">
+                                            {activeFiltersCount}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Panel de filtros avanzados */}
+                            <div 
+                                className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                                    showFilters ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                                }`}
+                            >
+                                <div className="border-t-2 border-gray-100 pt-4">
+                                    {/* Sección de Ordenamiento */}
+                                    <div className="mb-6 pb-6 border-b border-gray-200">
+                                        <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center">
+                                            <svg className="h-5 w-5 mr-2 text-[#A72DAB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                                            </svg>
+                                            Ordenar por
+                                        </label>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            <button
+                                                onClick={() => setOrdenamiento('alfabetico-asc')}
+                                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                                    ordenamiento === 'alfabetico-asc'
+                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                A → Z
+                                            </button>
+                                            <button
+                                                onClick={() => setOrdenamiento('alfabetico-desc')}
+                                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                                    ordenamiento === 'alfabetico-desc'
+                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                Z → A
+                                            </button>
+                                            <button
+                                                onClick={() => setOrdenamiento('precio-asc')}
+                                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                                    ordenamiento === 'precio-asc'
+                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                $ Menor
+                                            </button>
+                                            <button
+                                                onClick={() => setOrdenamiento('precio-desc')}
+                                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                                    ordenamiento === 'precio-desc'
+                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                $ Mayor
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Filtros */}
+                                    <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center">
+                                        <svg className="h-5 w-5 mr-2 text-[#A72DAB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                        </svg>
+                                        Filtros
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {/* Filtro por categoría */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Categoría
+                                            </label>
+                                            <select
+                                                value={filters.categoria}
+                                                onChange={(e) => {
+                                                    handleFilterChange('categoria', e.target.value);
+                                                    handleFilterChange('subcategoria', '');
+                                                }}
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                            >
+                                                <option value="">Todas las categorías</option>
+                                                {categorias.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Filtro por subcategoría */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Subcategoría
+                                            </label>
+                                            <select
+                                                value={filters.subcategoria}
+                                                onChange={(e) => handleFilterChange('subcategoria', e.target.value)}
+                                                disabled={!filters.categoria}
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02] disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                <option value="">
+                                                    {filters.categoria ? 'Todas las subcategorías' : 'Selecciona una categoría primero'}
+                                                </option>
+                                                {subcategorias.map(sub => (
+                                                    <option key={sub.id} value={sub.id}>{sub.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Filtro por estado */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Estado
+                                            </label>
+                                            <select
+                                                value={filters.estado}
+                                                onChange={(e) => handleFilterChange('estado', e.target.value)}
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                            >
+                                                <option value="todos">Todos</option>
+                                                <option value="activo">Activos</option>
+                                                <option value="inactivo">Inactivos</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Filtro por destacado */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Destacado
+                                            </label>
+                                            <select
+                                                value={filters.destacado}
+                                                onChange={(e) => handleFilterChange('destacado', e.target.value)}
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                            >
+                                                <option value="todos">Todos</option>
+                                                <option value="destacado">Destacados</option>
+                                                <option value="no-destacado">No destacados</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Filtro precio mínimo */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Precio Mínimo
+                                            </label>
+                                            <input
+                                                type="number"
+                                                placeholder="$0.00"
+                                                value={filters.precioMin}
+                                                onChange={(e) => handleFilterChange('precioMin', e.target.value)}
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+
+                                        {/* Filtro precio máximo */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Precio Máximo
+                                            </label>
+                                            <input
+                                                type="number"
+                                                placeholder="$9999.99"
+                                                value={filters.precioMax}
+                                                onChange={(e) => handleFilterChange('precioMax', e.target.value)}
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Botón para limpiar filtros */}
+                                    {(activeFiltersCount > 0 || searchTerm) && (
+                                        <div className="mt-4 flex justify-end">
+                                            <button
+                                                onClick={resetFilters}
+                                                className="inline-flex items-center px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:border-gray-400 hover:shadow-md"
+                                            >
+                                                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                                Limpiar filtros
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Contador de resultados */}
+                            <div className="mt-4 flex items-center justify-between text-sm transition-all duration-300">
+                                <span className="text-gray-600">
+                                    Mostrando <span className="font-bold text-gray-900 transition-all duration-300">{productosFiltrados.length}</span> de <span className="font-bold text-gray-900">{productos.length}</span> productos
+                                </span>
+                                {(activeFiltersCount > 0 || searchTerm) && (
+                                    <span className="text-[#A72DAB] font-semibold animate-fadeIn flex items-center gap-2">
+                                        <span className="inline-block animate-pulse">🔍</span> Filtros activos
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Vista de Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-0">
+                        {productosFiltrados.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                                    <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
                                 </div>
-                                <p className="text-gray-500">No hay productos registrados</p>
+                                <p className="text-gray-600 text-lg mb-2">
+                                    {productos.length === 0 ? 'No hay productos registrados' : 'No se encontraron productos'}
+                                </p>
+                                {(activeFiltersCount > 0 || searchTerm) && (
+                                    <button
+                                        onClick={resetFilters}
+                                        className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 animate-fadeIn"
+                                    >
+                                        <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Limpiar búsqueda y filtros
+                                    </button>
+                                )}
                             </div>
                         ) : (
-                            productos.map((producto) => (
-                                <div key={producto.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-200">
-                                    <div className="p-6">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex items-center flex-1">
-                                                <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
-                                                    <span className="text-white font-bold text-lg">{producto.titulo.charAt(0)}</span>
-                                                </div>
-                                                <div className="ml-4 flex-1">
-                                                    <h3 className="text-lg font-bold text-gray-900">{producto.titulo}</h3>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        {producto.is_featured && (
-                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-                                                                ⭐ Destacado
-                                                            </span>
-                                                        )}
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${producto.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                            {producto.is_active ? '✓ Activo' : '✕ Inactivo'}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                            productosFiltrados.map((producto, index) => (
+                                <div 
+                                    key={producto.id} 
+                                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
+                                    style={{ animationDelay: `${index * 50}ms` }}
+                                >
+                                    {/* Header de la card con imagen/icono */}
+                                    <div className="relative h-48 bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] overflow-hidden">
+                                        {producto.imagen_principal ? (
+                                            <img 
+                                                src={`/${producto.imagen_principal.ruta}`}
+                                                alt={producto.titulo}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div 
+                                            className="absolute inset-0 flex items-center justify-center"
+                                            style={{ display: producto.imagen_principal ? 'none' : 'flex' }}
+                                        >
+                                            <div className="text-white text-6xl font-bold opacity-30">
+                                                {producto.titulo.charAt(0).toUpperCase()}
                                             </div>
                                         </div>
                                         
-                                        <div className="mb-4">
-                                            <p className="text-sm text-gray-600 line-clamp-2">
-                                                {producto.descripcion || <span className="text-gray-400 italic">Sin descripción</span>}
-                                            </p>
-                                        </div>
-
-                                        <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100">
-                                            <span className="text-sm text-gray-500 font-medium">Precio:</span>
-                                            <span className="text-xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                ${parseFloat(producto.precio).toFixed(2)}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex gap-2">
+                                        {/* Botón de destacar en la esquina superior izquierda */}
+                                        <div className="absolute top-3 left-3 z-10">
                                             <button
                                                 onClick={() => toggleFeatured(producto)}
-                                                className={`inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                                className={`inline-flex items-center justify-center p-2.5 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-110 active:scale-95 shadow-lg ${
                                                     producto.is_featured 
-                                                    ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-2 border-yellow-600' 
-                                                    : 'bg-white border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50'
+                                                        ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white shadow-yellow-500/50 hover:shadow-xl scale-110' 
+                                                        : 'bg-white/90 backdrop-blur-sm border-2 border-yellow-400 text-yellow-600 hover:bg-yellow-50'
                                                 }`}
                                                 title={producto.is_featured ? 'Quitar destacado' : 'Destacar producto'}
                                             >
-                                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                                 </svg>
                                             </button>
-                                            <Link
-                                                href={route('productos.edit', producto.id)}
-                                                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg text-sm font-medium"
-                                            >
-                                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                                Editar
-                                            </Link>
-                                            <button
-                                                onClick={() => openDeleteModal(producto)}
-                                                className="inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-medium"
-                                            >
-                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
+                                        </div>
+                                        
+                                        {/* Badges en la esquina superior derecha */}
+                                        <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+                                            {producto.is_featured && (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-400 text-yellow-900 shadow-lg animate-bounceIn">
+                                                    ⭐ Destacado
+                                                </span>
+                                            )}
+                                            {producto.oferta_vigente && (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-orange-400 to-red-500 text-white shadow-lg animate-bounceIn">
+                                                    🔥 {Math.round(producto.oferta_vigente.porcentaje_descuento)}% OFF
+                                                </span>
+                                            )}
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-lg ${
+                                                producto.is_active 
+                                                    ? 'bg-green-400 text-green-900' 
+                                                    : 'bg-red-400 text-red-900'
+                                            }`}>
+                                                {producto.is_active ? '✓ Activo' : '✕ Inactivo'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Contenido de la card */}
+                                    <div className="p-6">
+                                        {/* Categorías y Subcategorías */}
+                                        <div className="mb-4">
+                                            {/* Mostrar categorías y subcategorías en la misma línea */}
+                                            {((producto.categorias && producto.categorias.length > 0) || 
+                                              (producto.subcategorias && producto.subcategorias.length > 0)) && (
+                                                <div className="flex flex-wrap gap-1.5 items-center">
+                                                    {/* Categorías */}
+                                                    {producto.categorias && producto.categorias.map((categoria) => (
+                                                        <span 
+                                                            key={`cat-${categoria.id}`}
+                                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[#40B0C2]/20 to-[#40B0C2]/30 text-[#40B0C2] border border-[#40B0C2]/40 transition-all duration-300 hover:from-[#40B0C2]/30 hover:to-[#40B0C2]/40 hover:scale-105"
+                                                        >
+                                                            {categoria.nombre}
+                                                        </span>
+                                                    ))}
+
+                                                    {/* Subcategorías */}
+                                                    {producto.subcategorias && producto.subcategorias.map((subcategoria) => (
+                                                        <span 
+                                                            key={`sub-${subcategoria.id}`}
+                                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[#A72DAB]/20 to-[#A72DAB]/30 text-[#A72DAB] border border-[#A72DAB]/40 transition-all duration-300 hover:from-[#A72DAB]/30 hover:to-[#A72DAB]/40 hover:scale-105"
+                                                        >
+                                                            {subcategoria.nombre}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Mensaje si no tiene categorías */}
+                                            {(!producto.categorias || producto.categorias.length === 0) && 
+                                             (!producto.subcategorias || producto.subcategorias.length === 0) && (
+                                                <div className="text-xs text-gray-400 italic">
+                                                    Sin categorías asignadas
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Título */}
+                                        <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-1">
+                                            {producto.titulo}
+                                        </h3>
+
+                                        
+                                        
+                                        {/* Descripción */}
+                                        <p className="text-sm text-gray-600 mb-4 line-clamp-3 min-h-[60px]">
+                                            {producto.descripcion || (
+                                                <span className="text-gray-400 italic">Sin descripción disponible</span>
+                                            )}
+                                        </p>
+
+                                        {/* Precio destacado */}
+                                        <div className="flex items-center justify-center py-4 mb-4 bg-gradient-to-r from-[#40B0C2]/10 to-[#A72DAB]/10 rounded-xl transition-all duration-300 hover:from-[#40B0C2]/20 hover:to-[#A72DAB]/20 hover:shadow-md">
+                                            <div className="text-center">
+                                                {producto.oferta_vigente ? (
+                                                    <>
+                                                        <span className="text-xs text-gray-600 block mb-1">Precio Original</span>
+                                                        <span className="text-lg text-gray-400 line-through block mb-1">
+                                                            {formatearPrecio(producto.precio)}
+                                                        </span>
+                                                        <span className="text-xs text-orange-600 font-bold block mb-1">Precio de Oferta</span>
+                                                        <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                                                            {formatearPrecio(producto.oferta_vigente.precio_oferta)}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-xs text-gray-600 block mb-1">Precio</span>
+                                                        <span className="text-3xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                                            {formatearPrecio(producto.precio)}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Botones de acción */}
+                                        <div className="space-y-2">
+                                            {/* Botón de crear/gestionar oferta */}
+                                            {producto.oferta_vigente ? (
+                                                <Link
+                                                    href={route('ofertas.edit', producto.oferta_vigente.id)}
+                                                    className="w-full inline-flex items-center justify-center p-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                    title="Gestionar oferta"
+                                                >
+                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                    </svg>
+                                                    <span className="font-semibold">Gestionar Oferta</span>
+                                                </Link>
+                                            ) : (
+                                                <Link
+                                                    href={route('ofertas.create', { producto_id: producto.id })}
+                                                    className="w-full inline-flex items-center justify-center p-3 bg-white border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+                                                    title="Crear oferta"
+                                                >
+                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                    </svg>
+                                                    <span className="font-semibold">Crear Oferta</span>
+                                                </Link>
+                                            )}
+                                            
+                                            {/* Botones de editar y eliminar */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Link
+                                                    href={route('productos.edit', producto.id)}
+                                                    className="inline-flex items-center justify-center p-3 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+                                                    title="Editar producto"
+                                                >
+                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    <span className="hidden sm:inline">Editar</span>
+                                                </Link>
+                                                <button
+                                                    onClick={() => openDeleteModal(producto)}
+                                                    className="inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+                                                    title="Eliminar producto"
+                                                >
+                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    <span className="hidden sm:inline">Eliminar</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             ))
                         )}
-                    </div>
-
-                    {/* Vista de Tabla para desktop */}
-                    <div className="hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
-                        <div className="p-6">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full">
-                                    <thead>
-                                        <tr className="border-b-2 border-gradient-to-r from-[#40B0C2] to-[#A72DAB]">
-                                            <th className="px-6 py-4 text-left text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                Producto
-                                            </th>
-                                            <th className="px-6 py-4 text-left text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                Descripción
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                Precio
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                Estado
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                Acciones
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {productos.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                                                    No hay productos registrados
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            productos.map((producto) => (
-                                                <tr key={producto.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-[#40B0C2]/5 hover:to-[#A72DAB]/5 transition-all duration-200">
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex items-center">
-                                                            <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
-                                                                <span className="text-white font-bold text-sm">{producto.titulo.charAt(0)}</span>
-                                                            </div>
-                                                            <div className="ml-4">
-                                                                <div className="text-sm font-bold text-gray-900">{producto.titulo}</div>
-                                                                {producto.is_featured && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800 mt-1">
-                                                                        ⭐ Destacado
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-5 text-sm text-gray-600 max-w-xs">
-                                                        <div className="line-clamp-2">
-                                                            {producto.descripcion || <span className="text-gray-400 italic">Sin descripción</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-5 text-center">
-                                                        <span className="text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                            ${parseFloat(producto.precio).toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-5 text-center">
-                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${producto.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                            {producto.is_active ? '✓ Activo' : '✕ Inactivo'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                        <div className="flex justify-end gap-2">
-                                                            <button
-                                                                onClick={() => toggleFeatured(producto)}
-                                                                className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-all text-xs font-medium ${
-                                                                    producto.is_featured 
-                                                                    ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-2 border-yellow-600 shadow-lg shadow-yellow-500/30' 
-                                                                    : 'bg-white border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50'
-                                                                }`}
-                                                                title={producto.is_featured ? 'Quitar destacado' : 'Destacar producto'}
-                                                            >
-                                                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                                </svg>
-                                                            </button>
-                                                            <Link
-                                                                href={route('productos.edit', producto.id)}
-                                                                className="inline-flex items-center px-3 py-1.5 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg hover:bg-[#40B0C2] hover:text-white transition-all text-xs font-medium"
-                                                            >
-                                                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                </svg>
-                                                                Editar
-                                                            </Link>
-                                                            <button
-                                                                onClick={() => openDeleteModal(producto)}
-                                                                className="inline-flex items-center px-3 py-1.5 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all text-xs font-medium"
-                                                            >
-                                                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                                Eliminar
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

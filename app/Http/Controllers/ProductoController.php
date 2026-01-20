@@ -15,10 +15,10 @@ class ProductoController extends Controller
      */
     public function index()
     {
-        $productos = Producto::with(['categorias', 'subcategorias'])->get();
+        $productos = Producto::with(['categorias', 'subcategorias', 'imagenPrincipal', 'ofertaVigente'])->get();
         
         return Inertia::render('Admin/Productos/Index', [
-            'productos' => $productos
+            'productos' => $productos,
         ]);
     }
 

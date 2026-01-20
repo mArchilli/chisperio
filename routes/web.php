@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
@@ -59,6 +60,18 @@ Route::middleware('auth')->group(function () {
         'destroy' => 'productos.destroy',
     ]);
     Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
+
+    // Rutas de Ofertas
+    Route::resource('admin/ofertas', OfertaController::class)->names([
+        'index' => 'ofertas.index',
+        'create' => 'ofertas.create',
+        'store' => 'ofertas.store',
+        'show' => 'ofertas.show',
+        'edit' => 'ofertas.edit',
+        'update' => 'ofertas.update',
+        'destroy' => 'ofertas.destroy',
+    ]);
+    Route::patch('admin/ofertas/{oferta}/toggle-active', [OfertaController::class, 'toggleActive'])->name('ofertas.toggle-active');
 });
 
 require __DIR__.'/auth.php';
