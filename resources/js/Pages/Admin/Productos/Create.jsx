@@ -1,6 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 
 export default function Create({ categorias, subcategorias }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -18,6 +20,31 @@ export default function Create({ categorias, subcategorias }) {
 
     const [imagenesPreview, setImagenesPreview] = useState([]);
     const [videosPreview, setVideosPreview] = useState([]);
+
+    const quillRef = useRef(null);
+    const quillInstanceRef = useRef(null);
+
+    useEffect(() => {
+        if (quillRef.current && !quillInstanceRef.current) {
+            quillInstanceRef.current = new Quill(quillRef.current, {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline'],
+                        [{ list: 'ordered' }, { list: 'bullet' }],
+                        [{ header: [2, 3, false] }],
+                        ['link', 'clean'],
+                    ],
+                },
+                placeholder: 'Escribe la descripción del producto...',
+            });
+
+            quillInstanceRef.current.on('text-change', () => {
+                const html = quillInstanceRef.current.root.innerHTML;
+                setData('descripcion', html === '<p><br></p>' ? '' : html);
+            });
+        }
+    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -193,16 +220,12 @@ export default function Create({ categorias, subcategorias }) {
                                 </div>
 
                                 <div className="mb-6">
-                                    <label htmlFor="descripcion" className="block text-sm font-bold text-gray-700 mb-2">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
                                         Descripción
                                     </label>
-                                    <textarea
-                                        id="descripcion"
-                                        value={data.descripcion}
-                                        onChange={(e) => setData('descripcion', e.target.value)}
-                                        rows="4"
-                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all resize-none"
-                                    />
+                                    <div className="rounded-xl overflow-hidden shadow-sm">
+                                        <div ref={quillRef} />
+                                    </div>
                                     {errors.descripcion && (
                                         <div className="mt-2 flex items-center text-sm text-red-600">
                                             <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">

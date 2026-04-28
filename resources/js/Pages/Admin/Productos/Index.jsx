@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 
 export default function Index({ productos }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -25,6 +26,13 @@ export default function Index({ productos }) {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(precio);
+    };
+
+    const stripHtml = (html) => {
+        if (!html) return '';
+        const div = document.createElement('div');
+        div.innerHTML = DOMPurify.sanitize(html);
+        return div.textContent || '';
     };
 
     const openDeleteModal = (producto) => {
@@ -102,7 +110,7 @@ export default function Index({ productos }) {
         let resultado = productos.filter(producto => {
             // Filtro de búsqueda
             const matchSearch = producto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm.toLowerCase()));
+                                (producto.descripcion && stripHtml(producto.descripcion).toLowerCase().includes(searchTerm.toLowerCase()));
             
             if (!matchSearch) return false;
 
@@ -594,11 +602,16 @@ export default function Index({ productos }) {
                                         
                                         
                                         {/* Descripción */}
-                                        <p className="text-sm text-gray-600 mb-4 line-clamp-3 min-h-[60px]">
-                                            {producto.descripcion || (
+                                        {producto.descripcion ? (
+                                            <div
+                                                className="quill-content text-sm text-gray-600 mb-4 line-clamp-3 min-h-[60px]"
+                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(producto.descripcion) }}
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-gray-600 mb-4 min-h-[60px]">
                                                 <span className="text-gray-400 italic">Sin descripción disponible</span>
-                                            )}
-                                        </p>
+                                            </p>
+                                        )}
 
                                         {/* Precio destacado */}
                                         <div className="flex items-center justify-center py-4 mb-4 bg-gradient-to-r from-[#40B0C2]/10 to-[#A72DAB]/10 rounded-xl transition-all duration-300 hover:from-[#40B0C2]/20 hover:to-[#A72DAB]/20 hover:shadow-md">

@@ -10,11 +10,18 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
+        ->where('is_active', true)
+        ->where('is_featured', true)
+        ->get();
+
+    $categorias = \App\Models\Categoria::all();
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
+        'productosDestacados' => $productosDestacados,
+        'categorias' => $categorias,
     ]);
 });
 
