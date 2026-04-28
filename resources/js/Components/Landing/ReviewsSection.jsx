@@ -37,7 +37,7 @@ const Star = ({ size = 4 }) => (
 
 export default function ReviewsSection() {
     return (
-        <section className="bg-white py-10 md:py-14 border-y border-gray-100 mb-16 md:mb-20">
+        <section className="bg-white py-10 border-y border-gray-100">
             <div className="px-4 md:px-6 max-w-[1280px] mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
