@@ -5,9 +5,12 @@ use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
+use App\Http\Controllers\TiendaController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::get('/tienda', [TiendaController::class, 'index'])->name('tienda.index');
 
 Route::get('/', function () {
     $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])

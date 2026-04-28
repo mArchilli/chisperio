@@ -175,7 +175,7 @@ export default function FeaturedProductsSection({ productos }) {
     const secondaryProducts = rest.slice(0, 2);
 
     return (
-        <section className="px-4 md:px-6 mb-16 md:mb-20 max-w-[1280px] mx-auto">
+        <section className="px-4 md:px-6 mb-16 md:mb-20 max-w-[1440px] mx-auto">
             <h3 className="text-2xl md:text-[32px] font-bold text-[#1c1b1b] mb-8">Equipos de Élite</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-8">

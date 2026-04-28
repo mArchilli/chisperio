@@ -1,3 +1,19 @@
+import { useRef } from 'react';
+
+const SCROLL_AMOUNT = 300;
+
+const NavArrow = ({ direction, onClick }) => (
+    <button
+        onClick={onClick}
+        className="hidden md:flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 bg-white hover:bg-[#6000ca] hover:border-[#6000ca] hover:text-white text-[#1c1b1b] transition-all duration-200 shadow-sm flex-shrink-0"
+        aria-label={direction === 'left' ? 'Anterior' : 'Siguiente'}
+    >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d={direction === 'left' ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} />
+        </svg>
+    </button>
+);
+
 const REVIEWS = [
     {
         id: 1,
@@ -36,9 +52,17 @@ const Star = ({ size = 4 }) => (
 );
 
 export default function ReviewsSection() {
+    const scrollRef = useRef(null);
+
+    const scroll = (dir) => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({ left: dir === 'left' ? -SCROLL_AMOUNT : SCROLL_AMOUNT, behavior: 'smooth' });
+        }
+    };
+
     return (
         <section className="bg-white py-10 border-y border-gray-100">
-            <div className="px-4 md:px-6 max-w-[1280px] mx-auto">
+            <div className="px-4 md:px-6 max-w-[1440px] mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
                     <div>
@@ -51,10 +75,14 @@ export default function ReviewsSection() {
                             <span className="text-[#4b4356] text-sm">basado en 253 reseñas de Google</span>
                         </div>
                     </div>
+                    <div className="hidden md:flex items-center gap-2">
+                        <NavArrow direction="left" onClick={() => scroll('left')} />
+                        <NavArrow direction="right" onClick={() => scroll('right')} />
+                    </div>
                 </div>
 
                 {/* Reviews scroll */}
-                <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2">
+                <div ref={scrollRef} className="flex overflow-x-auto no-scrollbar gap-4 pb-2">
                     {REVIEWS.map((review) => (
                         <div
                             key={review.id}

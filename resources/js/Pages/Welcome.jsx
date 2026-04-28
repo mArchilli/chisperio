@@ -7,14 +7,14 @@ import FeaturedProductsSection from '@/Components/Landing/FeaturedProductsSectio
 import ReviewsSection from '@/Components/Landing/ReviewsSection';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 
-export default function Welcome({ canLogin, canRegister, productosDestacados = [], categorias = [] }) {
+export default function Welcome({ canLogin, productosDestacados = [], categorias = [] }) {
     return (
         <div
             className="bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased"
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
             <Head title="Chisperío — Efectos Especiales para Eventos" />
-            <LandingHeader canLogin={canLogin} canRegister={canRegister} />
+            <LandingHeader canLogin={canLogin} />
             <main>
                 <HeroSection />
                 <TrustBanner />
@@ -22,7 +22,7 @@ export default function Welcome({ canLogin, canRegister, productosDestacados = [
                 <FeaturedProductsSection productos={productosDestacados} />
                 <ReviewsSection />
             </main>
-            <LandingFooter canLogin={canLogin} />
+            <LandingFooter />
         </div>
     );
 }

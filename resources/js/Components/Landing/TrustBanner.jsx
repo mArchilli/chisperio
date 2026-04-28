@@ -6,7 +6,7 @@ const Star = () => (
 
 export default function TrustBanner() {
     return (
-        <section className="px-4 md:px-6 mb-12 md:mb-20 max-w-[1280px] mx-auto">
+        <section className="px-4 md:px-6 mb-12 md:mb-20 max-w-[1440px] mx-auto">
             <div className="bg-[#f6f3f2] rounded-2xl py-5 px-5 md:px-10 flex flex-wrap justify-center md:justify-between items-center gap-5 border border-gray-100">
 
                 {/* Google rating */}

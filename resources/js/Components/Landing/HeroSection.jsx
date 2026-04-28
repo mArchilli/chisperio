@@ -1,6 +1,6 @@
 export default function HeroSection() {
     return (
-        <section id="inicio" className="px-4 md:px-6 pt-8 md:pt-16 pb-12 md:pb-20 max-w-[1280px] mx-auto">
+        <section id="inicio" className="px-4 md:px-6 pt-8 md:pt-16 pb-12 md:pb-20 max-w-[1440px] mx-auto">
             <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
 
                 {/* Hero visual — first on mobile */}

@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+
 const GRADIENTS = [
     'from-purple-600 to-pink-500',
     'from-cyan-500 to-blue-600',
@@ -7,27 +9,53 @@ const GRADIENTS = [
     'from-indigo-600 to-violet-600',
 ];
 
+const SCROLL_AMOUNT = 312;
+
+const NavArrow = ({ direction, onClick }) => (
+    <button
+        onClick={onClick}
+        className="hidden md:flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 bg-white hover:bg-[#6000ca] hover:border-[#6000ca] hover:text-white text-[#1c1b1b] transition-all duration-200 shadow-sm flex-shrink-0"
+        aria-label={direction === 'left' ? 'Anterior' : 'Siguiente'}
+    >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d={direction === 'left' ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} />
+        </svg>
+    </button>
+);
+
 export default function CategoriesSection({ categorias }) {
+    const scrollRef = useRef(null);
+
+    const scroll = (dir) => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({ left: dir === 'left' ? -SCROLL_AMOUNT : SCROLL_AMOUNT, behavior: 'smooth' });
+        }
+    };
+
     if (!categorias || categorias.length === 0) return null;
 
     return (
         <section id="tienda" className="mb-16 md:mb-20">
             {/* Header */}
-            <div className="px-4 md:px-6 mb-6 flex justify-between items-end max-w-[1280px] mx-auto">
+            <div className="px-4 md:px-6 mb-6 flex justify-between items-end max-w-[1440px] mx-auto">
                 <div>
                     <h3 className="text-2xl md:text-[32px] font-bold text-[#1c1b1b]">Categorías Destacadas</h3>
                     <p className="text-[#4b4356] text-sm md:text-base mt-1">Equipamiento especializado para cada necesidad</p>
                 </div>
-                <button className="text-[#6000ca] font-bold text-sm flex items-center gap-1 hover:underline flex-shrink-0 ml-4">
-                    Ver Todo
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
+                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                    <NavArrow direction="left" onClick={() => scroll('left')} />
+                    <NavArrow direction="right" onClick={() => scroll('right')} />
+                    <button className="text-[#6000ca] font-bold text-sm flex items-center gap-1 hover:underline ml-1">
+                        Ver Todo
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             {/* Horizontal scroll */}
-            <div className="flex overflow-x-auto no-scrollbar gap-4 md:gap-6 px-4 md:px-6 pb-4 max-w-[1280px] mx-auto">
+            <div ref={scrollRef} className="flex overflow-x-auto no-scrollbar gap-4 md:gap-6 px-4 md:px-6 pb-4 max-w-[1440px] mx-auto">
                 {categorias.map((cat, idx) => (
                     <div key={cat.id} className="flex-none w-56 md:w-72 group cursor-pointer">
                         <div
