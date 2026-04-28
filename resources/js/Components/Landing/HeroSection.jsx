@@ -6,33 +6,12 @@ export default function HeroSection() {
                 {/* Hero visual — first on mobile */}
                 <div className="w-full md:w-7/12 order-1 md:order-2">
                     <div className="relative rounded-[2rem] overflow-hidden aspect-[4/3] shadow-2xl">
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#6000ca] via-[#8b10f0] to-[#FF00D4]" />
-
-                        {/* Glow blobs */}
-                        <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
-                        <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-[#FF00D4]/25 blur-3xl" />
-
-                        {/* Spark particles */}
-                        {[
-                            [18, 22, 5, 0.7], [45, 65, 4, 0.5], [72, 18, 6, 0.8],
-                            [30, 80, 3, 0.6], [85, 50, 5, 0.9], [55, 35, 4, 0.5],
-                            [10, 55, 3, 0.7], [65, 75, 6, 0.6], [40, 10, 4, 0.8],
-                            [80, 88, 3, 0.5], [25, 45, 5, 0.7], [90, 30, 4, 0.6],
-                            [50, 90, 3, 0.5], [15, 75, 5, 0.8], [70, 45, 4, 0.6],
-                        ].map(([top, left, size, opacity], i) => (
-                            <div
-                                key={i}
-                                className="absolute rounded-full bg-white"
-                                style={{ top: `${top}%`, left: `${left}%`, width: size, height: size, opacity }}
-                            />
-                        ))}
-
-                        {/* Center star */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <svg className="w-2/5 h-2/5 text-white opacity-10" fill="currentColor" viewBox="0 0 100 100">
-                                <path d="M50 5 L60 40 L95 50 L60 60 L50 95 L40 60 L5 50 L40 40 Z" />
-                            </svg>
-                        </div>
+                        <img
+                            src="/images/imagen-hero.png"
+                            alt="Imagen hero"
+                            className="absolute inset-0 h-full w-full object-cover object-center"
+                            loading="lazy"
+                        />
 
                         {/* Brand badge */}
                         <div className="absolute bottom-6 left-6 bg-white/20 backdrop-blur-md rounded-2xl px-4 py-3">
