@@ -61,7 +61,7 @@ export default function ReviewsSection() {
     };
 
     return (
-        <section className="bg-white py-10 border-y border-gray-100">
+        <section className="py-10">
             <div className="px-4 md:px-6 max-w-[1440px] mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
