@@ -13,6 +13,12 @@ use Inertia\Inertia;
 Route::get('/tienda', [TiendaController::class, 'index'])->name('tienda.index');
 Route::get('/tienda/{producto}', [TiendaController::class, 'show'])->name('tienda.show');
 
+Route::get('/carrito', function () {
+    return Inertia::render('Carrito', [
+        'canLogin' => Route::has('login'),
+    ]);
+})->name('carrito.index');
+
 Route::get('/', function () {
     $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
         ->where('is_active', true)

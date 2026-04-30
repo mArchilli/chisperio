@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { Link } from '@inertiajs/react';
 
 const GRADIENTS = [
     'from-purple-600 to-pink-500',
@@ -45,19 +46,19 @@ export default function CategoriesSection({ categorias }) {
                 <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                     <NavArrow direction="left" onClick={() => scroll('left')} />
                     <NavArrow direction="right" onClick={() => scroll('right')} />
-                    <button className="text-[#6000ca] font-bold text-sm flex items-center gap-1 hover:underline ml-1">
+                    <Link href={route('tienda.index')} className="text-[#6000ca] font-bold text-sm flex items-center gap-1 hover:underline ml-1">
                         Ver Todo
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
-                    </button>
+                    </Link>
                 </div>
             </div>
 
             {/* Horizontal scroll */}
             <div ref={scrollRef} className="flex overflow-x-auto no-scrollbar gap-4 md:gap-6 px-4 md:px-6 pb-4 max-w-[1440px] mx-auto">
                 {categorias.map((cat, idx) => (
-                    <div key={cat.id} className="flex-none w-56 md:w-72 group cursor-pointer">
+                    <Link key={cat.id} href={route('tienda.index', { categoria: cat.id })} className="flex-none w-56 md:w-72 group cursor-pointer">
                         <div
                             className={`relative h-[260px] md:h-[380px] rounded-3xl overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-500 bg-gradient-to-br ${GRADIENTS[idx % GRADIENTS.length]}`}
                         >
@@ -86,7 +87,7 @@ export default function CategoriesSection({ categorias }) {
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
         </section>

@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import { useCart } from '@/Context/CartContext';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -128,12 +129,14 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const [isFav, setIsFav] = useState(false);
     const [expandDesc, setExpandDesc] = useState(false);
     const [toast, setToast] = useState(null);
+    const { addToCart: addToCartContext } = useCart();
 
     const hasOffer = !!producto.oferta_vigente;
     const displayPrice = hasOffer ? producto.oferta_vigente.precio_oferta : producto.precio;
     const discount = hasOffer ? Math.round(producto.oferta_vigente.porcentaje_descuento) : null;
 
     const addToCart = () => {
+        addToCartContext(producto, qty);
         if (toast) clearTimeout(window._toastTimer);
         setToast(`${producto.titulo} agregado al carrito`);
         window._toastTimer = setTimeout(() => setToast(null), 2500);

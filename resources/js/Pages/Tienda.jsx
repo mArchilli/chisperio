@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import { useCart } from '@/Context/CartContext';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -234,15 +235,13 @@ function CartToast({ message }) {
 
 export default function Tienda({ productos, categorias, filters, canLogin }) {
     const [quantities, setQuantities] = useState({});
-    const [cart, setCart] = useState([]);
     const [toast, setToast] = useState(null);
+    const { addToCart: addToCartContext } = useCart();
 
     const activeFilter = filters.filter || 'todos';
     const activeCategoriaId = filters.categoria ? Number(filters.categoria) : null;
     const activeSubcategoriaId = filters.subcategoria ? Number(filters.subcategoria) : null;
     const activeCat = categorias.find((c) => c.id === activeCategoriaId) ?? null;
-
-    const cartTotal = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
     const navigate = (params) => {
         const clean = Object.fromEntries(
@@ -290,16 +289,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
 
     const addToCart = (producto) => {
         const qty = getQty(producto.id);
-        setCart((prev) => {
-            const existing = prev.find((item) => item.id === producto.id);
-            return existing
-                ? prev.map((item) =>
-                      item.id === producto.id
-                          ? { ...item, cantidad: item.cantidad + qty }
-                          : item
-                  )
-                : [...prev, { ...producto, cantidad: qty }];
-        });
+        addToCartContext(producto, qty);
         if (toast) clearTimeout(window._toastTimer);
         setToast(`${producto.titulo} agregado al carrito`);
         window._toastTimer = setTimeout(() => setToast(null), 2500);
@@ -311,7 +301,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
             <Head title="Catálogo — Chisperío" />
-            <LandingHeader canLogin={canLogin} cartCount={cartTotal} />
+            <LandingHeader canLogin={canLogin} />
 
             <main className="max-w-[1440px] mx-auto pb-6">
                 {/* Title */}
