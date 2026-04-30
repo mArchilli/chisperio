@@ -10,6 +10,47 @@ use Inertia\Inertia;
 
 class TiendaController extends Controller
 {
+    public function show(Producto $producto)
+    {
+        abort_if(!$producto->is_active, 404);
+
+        $producto->load([
+            'imagenes',
+            'imagenPrincipal',
+            'ofertaVigente',
+            'categorias',
+            'subcategorias',
+        ]);
+
+        $categoriaIds = $producto->categorias->pluck('id');
+
+        $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
+            ->where('is_active', true)
+            ->where('id', '!=', $producto->id)
+            ->when($categoriaIds->isNotEmpty(), fn ($q) =>
+                $q->whereHas('categorias', fn ($q2) =>
+                    $q2->whereIn('categorias.id', $categoriaIds)
+                )
+            )
+            ->limit(6)
+            ->get();
+
+        if ($relacionados->isEmpty()) {
+            $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
+                ->where('is_active', true)
+                ->where('id', '!=', $producto->id)
+                ->where('is_featured', true)
+                ->limit(6)
+                ->get();
+        }
+
+        return Inertia::render('ShowProduct', [
+            'producto'    => $producto,
+            'relacionados' => $relacionados,
+            'canLogin'    => Route::has('login'),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $query = Producto::with([

@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
@@ -103,7 +103,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 </div>
 
                 {/* Qty + Add */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 mb-2">
                     <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                         <button
                             onClick={() => onQtyChange(qty - 1)}
@@ -130,6 +130,12 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                         <span className="inline">Agregar</span>
                     </button>
                 </div>
+                <Link
+                    href={route('tienda.show', producto.id)}
+                    className="w-full h-7 border border-[#6000ca] text-[#6000ca] rounded-lg flex items-center justify-center text-xs font-bold hover:bg-purple-50 transition-colors active:scale-95"
+                >
+                    Ver Producto
+                </Link>
             </div>
         </div>
     );
