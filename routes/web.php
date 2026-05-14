@@ -19,6 +19,18 @@ Route::get('/carrito', function () {
     ]);
 })->name('carrito.index');
 
+Route::get('/checkout', function () {
+    return Inertia::render('Checkout', [
+        'canLogin' => Route::has('login'),
+    ]);
+})->name('checkout.index');
+
+Route::get('/confirmacion-pedido', function () {
+    return Inertia::render('ConfirmacionPedido', [
+        'canLogin' => Route::has('login'),
+    ]);
+})->name('confirmacion.index');
+
 Route::get('/', function () {
     $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
         ->where('is_active', true)

@@ -170,9 +170,12 @@ function OrderSummary({ subtotal }) {
             </div>
 
             {/* CTA principal */}
-            <button className="w-full bg-[#d700b2] text-white font-bold py-4 md:py-5 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg hover:bg-[#b5009a] text-sm md:text-base">
+            <Link
+                href={route('checkout.index')}
+                className="w-full bg-[#d700b2] text-white font-bold py-4 md:py-5 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg hover:bg-[#b5009a] text-sm md:text-base"
+            >
                 Finalizar Compra
-            </button>
+            </Link>
 
             {/* CTA secundario */}
             <Link
