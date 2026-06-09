@@ -1,6 +1,6 @@
 export default function LandingFooter() {
     return (
-        <footer className="bg-gray-50 border-t border-gray-200 py-10 px-6">
+        <footer id="contacto" className="bg-gray-50 border-t border-gray-200 py-10 px-6">
             <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex flex-col items-center md:items-start gap-1">
                     <span className="text-xl font-black text-[#1c1b1b]">Chisperío</span>

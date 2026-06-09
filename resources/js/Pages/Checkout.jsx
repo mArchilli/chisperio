@@ -222,10 +222,7 @@ export default function Checkout({ canLogin }) {
         `${inputBase} ${errors[field] ? 'border-[#ba1a1a] bg-red-50/40' : 'border-[#e5e2e1]'}`;
 
     return (
-        <div
-            className="bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-        >
+        <div className="bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased">
             <Head title="Finalizar pedido — Chisperío" />
             <LandingHeader canLogin={canLogin} />
 

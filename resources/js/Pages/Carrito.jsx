@@ -212,10 +212,7 @@ export default function Carrito({ canLogin }) {
     const { items, removeFromCart, updateQty, subtotal, cartCount } = useCart();
 
     return (
-        <div
-            className="bg-white md:bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-        >
+        <div className="bg-white md:bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased">
             <Head title="Tu Carrito — Chisperío" />
             <LandingHeader canLogin={canLogin} />
 

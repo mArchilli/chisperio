@@ -1,172 +1,264 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCart } from '@/Context/CartContext';
 
-const NAV_ITEMS = [
+const TOPBAR_MESSAGES = [
     {
-        id: 'inicio',
-        label: 'Inicio',
-        href: '/',
-        isRoute: false,
-        match: (url) => url === '/',
-        icon: (active) => (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        id: 'shipping',
+        text: 'Envios a todo el pais - a domicilio',
+        icon: (
+            <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M1.5 7.5A1.5 1.5 0 013 6h10.5A1.5 1.5 0 0115 7.5V15h1.379a1.5 1.5 0 011.06.44l1.62 1.62c.281.281.44.663.44 1.06V19.5a1.5 1.5 0 01-1.5 1.5H18" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5h2.625a1.5 1.5 0 011.2.6L21 14.25H15" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 19.5h1.5m0 0a2.25 2.25 0 104.5 0m-4.5 0a2.25 2.25 0 114.5 0m4.5 0h-4.5m4.5 0a2.25 2.25 0 104.5 0m-4.5 0a2.25 2.25 0 114.5 0" />
             </svg>
         ),
     },
     {
-        id: 'tienda',
-        label: 'Tienda',
-        href: 'tienda.index',
-        isRoute: true,
-        match: (url) => url.startsWith('/tienda'),
-        icon: (active) => (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        id: 'payments',
+        text: 'Todos los metodos de pago',
+        icon: (
+            <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m3 0h2m-8 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
         ),
     },
     {
-        id: 'carrito',
-        label: 'Carrito',
-        href: 'carrito.index',
-        isRoute: true,
-        match: (url) => url.startsWith('/carrito'),
-        icon: (active) => (
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        id: 'rentals',
+        text: 'Alquiler de maquinaria para eventos',
+        icon: (
+            <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5v4.5l3 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         ),
     },
 ];
 
-export default function LandingHeader({ canLogin }) {
+const NAV_LINKS = [
+    {
+        id: 'inicio',
+        label: 'Inicio',
+        href: '/',
+        type: 'anchor',
+        active: (url, hash) => url === '/' && (!hash || hash === '#inicio'),
+    },
+    {
+        id: 'catalogo',
+        label: 'Catalogo',
+        href: 'tienda.index',
+        type: 'route',
+        active: (url) => url.startsWith('/tienda'),
+    },
+    {
+        id: 'sobre-nosotros',
+        label: 'Sobre nosotros',
+        href: '/#sobre-nosotros',
+        type: 'anchor',
+        active: (url, hash) => url === '/' && hash === '#sobre-nosotros',
+    },
+    {
+        id: 'contacto',
+        label: 'Contacto',
+        href: '/#contacto',
+        type: 'anchor',
+        active: (url, hash) => url === '/' && hash === '#contacto',
+    },
+];
+
+function Logo({ invert = false, className = '' }) {
+    return (
+        <img
+            src="/images/logo-chisperio.png"
+            alt="Chisperio"
+            className={`h-10 w-auto ${invert ? 'brightness-0 invert' : ''} ${className}`}
+        />
+    );
+}
+
+function CartButton({ cartCount, invert = false }) {
+    return (
+        <Link
+            href={route('carrito.index')}
+            className={`relative flex h-11 w-11 items-center justify-center rounded-full border transition-all ${
+                invert
+                    ? 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+                    : 'border-[#6000ca] bg-[#6000ca] text-white hover:bg-[#4f00a8]'
+            }`}
+            aria-label="Carrito de compras"
+        >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF00D4] px-1 text-[10px] font-bold leading-none text-white">
+                    {cartCount > 99 ? '99+' : cartCount}
+                </span>
+            )}
+        </Link>
+    );
+}
+
+function DesktopNavLink({ item, currentUrl, currentHash }) {
+    const isActive = item.active(currentUrl, currentHash);
+    const className = `border-b-2 pb-1 text-[13px] font-medium uppercase tracking-[0.12em] transition-colors ${
+        isActive
+            ? 'border-[#6000ca] text-[#6000ca]'
+            : 'border-transparent text-[#4b4356] hover:border-[#6000ca]/50 hover:text-[#6000ca]'
+    }`;
+
+    if (item.type === 'route') {
+        return (
+            <Link href={route(item.href)} className={className}>
+                {item.label}
+            </Link>
+        );
+    }
+
+    return (
+        <a href={item.href} className={className}>
+            {item.label}
+        </a>
+    );
+}
+
+function MobileNavLink({ item, onNavigate }) {
+    const className = 'text-2xl font-medium uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-80';
+
+    if (item.type === 'route') {
+        return (
+            <Link href={route(item.href)} onClick={onNavigate} className={className}>
+                {item.label}
+            </Link>
+        );
+    }
+
+    return (
+        <a href={item.href} onClick={onNavigate} className={className}>
+            {item.label}
+        </a>
+    );
+}
+
+export default function LandingHeader() {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [currentHash, setCurrentHash] = useState('');
     const { cartCount } = useCart();
     const { url } = usePage();
 
+    useEffect(() => {
+        document.body.style.overflow = menuOpen ? 'hidden' : '';
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [menuOpen]);
+
+    useEffect(() => {
+        setMenuOpen(false);
+    }, [url]);
+
+    useEffect(() => {
+        const syncHash = () => {
+            setCurrentHash(window.location.hash || '');
+        };
+
+        syncHash();
+        window.addEventListener('hashchange', syncHash);
+
+        return () => {
+            window.removeEventListener('hashchange', syncHash);
+        };
+    }, [url]);
+
     return (
         <>
-            <header className="bg-white/90 backdrop-blur-xl sticky top-0 z-50 border-b border-gray-100 shadow-sm">
-                <div className="flex justify-between items-center px-4 md:px-6 py-4 max-w-[1440px] mx-auto">
-                    {/* Left: hamburger (mobile) + logo */}
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setMenuOpen(!menuOpen)}
-                            className="md:hidden p-2 rounded-xl hover:bg-gray-50 transition-colors"
-                            aria-label="Menú"
-                        >
-                            <svg className="w-6 h-6 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                {menuOpen
-                                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                    : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                                }
-                            </svg>
-                        </button>
-                        <Link href="/" className="text-2xl font-black text-[#6000ca] tracking-tight select-none">
-                            Chisperío
-                        </Link>
-                    </div>
+            <style>{`
+                @keyframes chisperio-topbar-loop {
+                    0% { transform: translate3d(0, 0, 0); }
+                    100% { transform: translate3d(-33.333333%, 0, 0); }
+                }
+            `}</style>
 
-                    {/* Center: desktop nav */}
-                    <nav className="hidden md:flex items-center gap-6">
-                        <Link href="/" className={`font-semibold text-sm transition-colors ${url === '/' ? 'text-[#6000ca]' : 'text-gray-500 hover:text-[#6000ca]'}`}>
-                            Inicio
-                        </Link>
-                        <Link href={route('tienda.index')} className={`font-semibold text-sm transition-colors ${url.startsWith('/tienda') ? 'text-[#6000ca]' : 'text-gray-500 hover:text-[#6000ca]'}`}>
-                            Tienda
-                        </Link>
-                    </nav>
-
-                    {/* Right: cart icon + auth */}
-                    <div className="flex items-center gap-1">
-                        <Link
-                            href={route('carrito.index')}
-                            className="relative p-2 rounded-xl hover:bg-gray-50 transition-colors"
-                            aria-label="Carrito de compras"
-                        >
-                            <svg className="w-6 h-6 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            {cartCount > 0 && (
-                                <span className="absolute -top-0.5 -right-0.5 bg-[#FF00D4] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center leading-none">
-                                    {cartCount > 99 ? '99+' : cartCount}
-                                </span>
-                            )}
-                        </Link>
-                        {canLogin && (
-                            <Link
-                                href={route('login')}
-                                className="hidden md:inline-flex items-center px-4 py-2 text-sm font-semibold text-[#6000ca] rounded-xl hover:bg-purple-50 transition-colors"
+            <header className="sticky top-0 z-50">
+                <div className="overflow-hidden bg-[#6000ca] text-white">
+                    <div className="inline-flex w-max whitespace-nowrap [animation:chisperio-topbar-loop_22s_linear_infinite] will-change-transform">
+                        {[0, 1, 2].map((groupIndex) => (
+                            <div
+                                key={groupIndex}
+                                className="flex shrink-0 items-center gap-4 px-4 py-2 md:gap-6 md:px-5"
+                                aria-hidden={groupIndex > 0}
                             >
-                                Ingresar
-                            </Link>
-                        )}
+                                {TOPBAR_MESSAGES.map((message) => (
+                                    <span
+                                        key={`${message.id}-${groupIndex}`}
+                                        className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] md:text-xs"
+                                    >
+                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/14">
+                                            {message.icon}
+                                        </span>
+                                        <span>{message.text}</span>
+                                    </span>
+                                ))}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Mobile dropdown */}
-                {menuOpen && (
-                    <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-1">
-                        <Link href="/" onClick={() => setMenuOpen(false)} className="font-semibold text-sm text-gray-700 py-2.5 hover:text-[#6000ca] transition-colors">
-                            Inicio
+                <div className={`${menuOpen ? 'bg-[#6000ca]' : 'bg-white/95'} border-b border-[#6000ca] backdrop-blur-xl transition-colors duration-300`}>
+                    <div className="flex w-full items-center justify-between px-5 py-2 md:grid md:grid-cols-[1fr_auto_1fr] md:px-8 md:py-2.5">
+                        <div className="flex items-center md:hidden">
+                            <button
+                                type="button"
+                                onClick={() => setMenuOpen((open) => !open)}
+                                className={`flex h-11 w-11 items-center justify-center rounded-full border transition-colors ${
+                                    menuOpen
+                                        ? 'border-white/20 bg-white/10 text-white'
+                                        : 'border-[#6000ca]/10 bg-white text-[#6000ca]'
+                                }`}
+                                aria-label={menuOpen ? 'Cerrar menu' : 'Abrir menu'}
+                                aria-expanded={menuOpen}
+                            >
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                    {menuOpen
+                                        ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                                        : <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />}
+                                </svg>
+                            </button>
+                        </div>
+
+                        <nav className="hidden items-center gap-5 md:flex">
+                            {NAV_LINKS.map((item) => (
+                                <DesktopNavLink key={item.id} item={item} currentUrl={url} currentHash={currentHash} />
+                            ))}
+                        </nav>
+
+                        <Link href="/" className="flex items-center justify-center">
+                            <Logo invert={menuOpen} className="h-16 md:h-20" />
                         </Link>
-                        <Link href={route('tienda.index')} onClick={() => setMenuOpen(false)} className="font-semibold text-sm text-gray-700 py-2.5 hover:text-[#6000ca] transition-colors">
-                            Tienda
-                        </Link>
-                        <Link href={route('carrito.index')} onClick={() => setMenuOpen(false)} className="font-semibold text-sm text-gray-700 py-2.5 hover:text-[#6000ca] transition-colors flex items-center gap-2">
-                            Carrito
-                            {cartCount > 0 && (
-                                <span className="bg-[#FF00D4] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                                    {cartCount}
-                                </span>
-                            )}
-                        </Link>
-                        {canLogin && (
-                            <Link href={route('login')} className="font-semibold text-sm text-[#6000ca] py-2.5">
-                                Ingresar
-                            </Link>
-                        )}
+
+                        <div className="flex justify-end">
+                            <CartButton cartCount={cartCount} invert={menuOpen} />
+                        </div>
                     </div>
-                )}
+
+                    {menuOpen && (
+                        <div className="md:hidden border-t border-white/10 bg-[#6000ca]">
+                            <div className="flex min-h-[calc(100vh-8.5rem)] flex-col items-center px-6 pb-10 pt-8 text-center">
+                                <Link href="/" onClick={() => setMenuOpen(false)} className="mb-10">
+                                    <Logo invert className="h-16" />
+                                </Link>
+
+                                <nav className="flex w-full flex-col items-center gap-6">
+                                    {NAV_LINKS.map((item) => (
+                                        <MobileNavLink key={item.id} item={item} onNavigate={() => setMenuOpen(false)} />
+                                    ))}
+                                </nav>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </header>
-
-            {/* Mobile bottom nav */}
-            <nav className="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-stretch bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50">
-                {NAV_ITEMS.map((item) => {
-                    const isActive = item.match(url);
-                    const href = item.isRoute ? route(item.href) : item.href;
-                    const cls = `flex flex-col items-center justify-center pt-2 pb-3 flex-1 transition-all ${
-                        isActive
-                            ? 'text-[#FF00D4] border-t-2 border-[#FF00D4]'
-                            : 'text-gray-400 hover:text-[#6000ca] border-t-2 border-transparent'
-                    }`;
-
-                    const content = (
-                        <>
-                            <span className="relative">
-                                {item.icon(isActive)}
-                                {item.id === 'carrito' && cartCount > 0 && (
-                                    <span className="absolute -top-1 -right-1.5 bg-[#FF00D4] text-white text-[8px] font-bold min-w-[14px] h-[14px] px-0.5 rounded-full flex items-center justify-center leading-none">
-                                        {cartCount > 9 ? '9+' : cartCount}
-                                    </span>
-                                )}
-                            </span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest mt-0.5">{item.label}</span>
-                        </>
-                    );
-
-                    return item.isRoute ? (
-                        <Link key={item.id} href={href} className={cls}>{content}</Link>
-                    ) : (
-                        <a key={item.id} href={href} className={cls}>{content}</a>
-                    );
-                })}
-            </nav>
-
-            {/* Spacer so content isn't hidden behind mobile nav */}
-            <div className="md:hidden h-20" />
         </>
     );
 }
