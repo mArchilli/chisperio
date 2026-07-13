@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProductoController;
@@ -49,9 +51,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -108,6 +110,9 @@ Route::middleware('auth')->group(function () {
         'destroy' => 'ofertas.destroy',
     ]);
     Route::patch('admin/ofertas/{oferta}/toggle-active', [OfertaController::class, 'toggleActive'])->name('ofertas.toggle-active');
+
+    // Ruta de Métricas
+    Route::get('admin/metricas', [MetricasController::class, 'index'])->name('metricas.index');
 });
 
 require __DIR__.'/auth.php';

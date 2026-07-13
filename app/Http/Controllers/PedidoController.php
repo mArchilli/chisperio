@@ -65,7 +65,14 @@ class PedidoController extends Controller
             'estado' => ['required', new Enum(EstadoPedido::class)],
         ]);
 
-        $pedido->update(['estado' => $validated['estado']]);
+        $nuevoEstado = $validated['estado'];
+
+        $pedido->update([
+            'estado' => $nuevoEstado,
+            'despachado_at' => $nuevoEstado === EstadoPedido::Despachado->value
+                ? ($pedido->despachado_at ?? now())
+                : null,
+        ]);
 
         return back()->with('success', 'Estado del pedido actualizado.');
     }

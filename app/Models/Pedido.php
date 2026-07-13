@@ -21,12 +21,14 @@ class Pedido extends Model
         'subtotal',
         'total',
         'estado',
+        'despachado_at',
     ];
 
     protected $casts = [
         'estado' => EstadoPedido::class,
         'subtotal' => 'decimal:2',
         'total' => 'decimal:2',
+        'despachado_at' => 'datetime',
     ];
 
     public function items(): HasMany
