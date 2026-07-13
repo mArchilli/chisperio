@@ -21,5 +21,7 @@ class DatabaseSeeder extends Seeder
             SubcategoriaSeeder::class,
             ProductoSeeder::class,
         ]);
+
+        $this->call(ProductoCatalogoSeeder::class);
     }
 }
