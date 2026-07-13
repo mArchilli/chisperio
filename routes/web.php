@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\OfertaController;
+use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
@@ -24,6 +25,8 @@ Route::get('/checkout', function () {
         'canLogin' => Route::has('login'),
     ]);
 })->name('checkout.index');
+
+Route::post('/checkout', [PedidoController::class, 'store'])->name('checkout.store');
 
 Route::get('/confirmacion-pedido', function () {
     return Inertia::render('ConfirmacionPedido', [
@@ -88,6 +91,11 @@ Route::middleware('auth')->group(function () {
         'destroy' => 'productos.destroy',
     ]);
     Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
+
+    // Rutas de Pedidos
+    Route::get('admin/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
+    Route::get('admin/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    Route::patch('admin/pedidos/{pedido}/estado', [PedidoController::class, 'cambiarEstado'])->name('pedidos.cambiar-estado');
 
     // Rutas de Ofertas
     Route::resource('admin/ofertas', OfertaController::class)->names([

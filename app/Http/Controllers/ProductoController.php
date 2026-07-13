@@ -73,31 +73,35 @@ class ProductoController extends Controller
 
         // Guardar imágenes
         if ($request->hasFile('imagenes')) {
-            $imgPath = trim(env('PRODUCTOS_IMG_PATH', '/productos/img/'), '/');
+            $imgPath = config('productos.img_path');
             $publicImgPath = public_path($imgPath);
-            
+
             // Crear directorio si no existe
             if (!file_exists($publicImgPath)) {
                 mkdir($publicImgPath, 0755, true);
             }
-            
+
             foreach ($request->file('imagenes') as $index => $imagen) {
                 $filename = time() . '_' . $index . '_' . $imagen->getClientOriginalName();
                 $imagen->move($publicImgPath, $filename);
                 $relativePath = $imgPath . '/' . $filename;
-                
+
+                $esPrincipal = $request->filled('imagen_principal')
+                    ? $request->imagen_principal == $index
+                    : $index === 0;
+
                 $producto->media()->create([
                     'tipo' => 'imagen',
                     'ruta' => $relativePath,
                     'orden' => $index,
-                    'is_principal' => $request->imagen_principal == $index,
+                    'is_principal' => $esPrincipal,
                 ]);
             }
         }
 
         // Guardar videos
         if ($request->hasFile('videos')) {
-            $videoPath = trim(env('PRODUCTOS_VIDEO_PATH', '/productos/videos/'), '/');
+            $videoPath = config('productos.video_path');
             $publicVideoPath = public_path($videoPath);
             
             // Crear directorio si no existe
@@ -198,32 +202,36 @@ class ProductoController extends Controller
 
         // Guardar nuevas imágenes
         if ($request->hasFile('imagenes')) {
-            $imgPath = trim(env('PRODUCTOS_IMG_PATH', '/productos/img/'), '/');
+            $imgPath = config('productos.img_path');
             $publicImgPath = public_path($imgPath);
-            
+
             // Crear directorio si no existe
             if (!file_exists($publicImgPath)) {
                 mkdir($publicImgPath, 0755, true);
             }
-            
+
             $maxOrden = $producto->media()->where('tipo', 'imagen')->max('orden') ?? -1;
+            $tienePrincipal = $producto->media()->where('tipo', 'imagen')->where('is_principal', true)->exists();
+
             foreach ($request->file('imagenes') as $index => $imagen) {
                 $filename = time() . '_' . $index . '_' . $imagen->getClientOriginalName();
                 $imagen->move($publicImgPath, $filename);
                 $relativePath = $imgPath . '/' . $filename;
-                
+
                 $producto->media()->create([
                     'tipo' => 'imagen',
                     'ruta' => $relativePath,
                     'orden' => $maxOrden + $index + 1,
-                    'is_principal' => false,
+                    // Si el producto no tenía ninguna imagen marcada como principal,
+                    // la primera imagen nueva pasa a serlo para que se muestre en catálogo/carrito.
+                    'is_principal' => !$tienePrincipal && $index === 0,
                 ]);
             }
         }
 
         // Guardar nuevos videos
         if ($request->hasFile('videos')) {
-            $videoPath = trim(env('PRODUCTOS_VIDEO_PATH', '/productos/videos/'), '/');
+            $videoPath = config('productos.video_path');
             $publicVideoPath = public_path($videoPath);
             
             // Crear directorio si no existe
