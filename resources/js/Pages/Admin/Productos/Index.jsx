@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
+import { Pencil, Trash2, Tag } from 'lucide-react';
 
 export default function Index({ productos }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -495,9 +496,9 @@ export default function Index({ productos }) {
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     {/* Header de la card con imagen/icono */}
-                                    <div className="relative h-48 bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] overflow-hidden">
+                                    <div className="relative aspect-[4/5] bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] overflow-hidden">
                                         {producto.imagen_principal ? (
-                                            <img 
+                                            <img
                                                 src={`/${producto.imagen_principal.ruta}`}
                                                 alt={producto.titulo}
                                                 className="w-full h-full object-cover"
@@ -556,138 +557,110 @@ export default function Index({ productos }) {
                                     </div>
 
                                     {/* Contenido de la card */}
-                                    <div className="p-6">
+                                    <div className="p-4">
                                         {/* Categorías y Subcategorías */}
-                                        <div className="mb-4">
-                                            {/* Mostrar categorías y subcategorías en la misma línea */}
-                                            {((producto.categorias && producto.categorias.length > 0) || 
-                                              (producto.subcategorias && producto.subcategorias.length > 0)) && (
-                                                <div className="flex flex-wrap gap-1.5 items-center">
-                                                    {/* Categorías */}
-                                                    {producto.categorias && producto.categorias.map((categoria) => (
-                                                        <span 
-                                                            key={`cat-${categoria.id}`}
-                                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[#40B0C2]/20 to-[#40B0C2]/30 text-[#40B0C2] border border-[#40B0C2]/40 transition-all duration-300 hover:from-[#40B0C2]/30 hover:to-[#40B0C2]/40 hover:scale-105"
-                                                        >
-                                                            {categoria.nombre}
-                                                        </span>
-                                                    ))}
+                                        {((producto.categorias && producto.categorias.length > 0) ||
+                                          (producto.subcategorias && producto.subcategorias.length > 0)) ? (
+                                            <div className="flex flex-wrap gap-1.5 items-center mb-2">
+                                                {/* Categorías */}
+                                                {producto.categorias && producto.categorias.map((categoria) => (
+                                                    <span
+                                                        key={`cat-${categoria.id}`}
+                                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#40B0C2]/20 to-[#40B0C2]/30 text-[#40B0C2] border border-[#40B0C2]/40"
+                                                    >
+                                                        {categoria.nombre}
+                                                    </span>
+                                                ))}
 
-                                                    {/* Subcategorías */}
-                                                    {producto.subcategorias && producto.subcategorias.map((subcategoria) => (
-                                                        <span 
-                                                            key={`sub-${subcategoria.id}`}
-                                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[#A72DAB]/20 to-[#A72DAB]/30 text-[#A72DAB] border border-[#A72DAB]/40 transition-all duration-300 hover:from-[#A72DAB]/30 hover:to-[#A72DAB]/40 hover:scale-105"
-                                                        >
-                                                            {subcategoria.nombre}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Mensaje si no tiene categorías */}
-                                            {(!producto.categorias || producto.categorias.length === 0) && 
-                                             (!producto.subcategorias || producto.subcategorias.length === 0) && (
-                                                <div className="text-xs text-gray-400 italic">
-                                                    Sin categorías asignadas
-                                                </div>
-                                            )}
-                                        </div>
+                                                {/* Subcategorías */}
+                                                {producto.subcategorias && producto.subcategorias.map((subcategoria) => (
+                                                    <span
+                                                        key={`sub-${subcategoria.id}`}
+                                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#A72DAB]/20 to-[#A72DAB]/30 text-[#A72DAB] border border-[#A72DAB]/40"
+                                                    >
+                                                        {subcategoria.nombre}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[11px] text-gray-400 italic mb-2">
+                                                Sin categorías asignadas
+                                            </div>
+                                        )}
 
                                         {/* Título */}
-                                        <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-1">
+                                        <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-1">
                                             {producto.titulo}
                                         </h3>
 
-                                        
-                                        
                                         {/* Descripción */}
                                         {producto.descripcion ? (
                                             <div
-                                                className="quill-content text-sm text-gray-600 mb-4 line-clamp-3 min-h-[60px]"
+                                                className="quill-content text-xs text-gray-600 mb-2 line-clamp-2 min-h-[32px]"
                                                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(producto.descripcion) }}
                                             />
                                         ) : (
-                                            <p className="text-sm text-gray-600 mb-4 min-h-[60px]">
+                                            <p className="text-xs text-gray-600 mb-2 min-h-[32px]">
                                                 <span className="text-gray-400 italic">Sin descripción disponible</span>
                                             </p>
                                         )}
 
-                                        {/* Precio destacado */}
-                                        <div className="flex items-center justify-center py-4 mb-4 bg-gradient-to-r from-[#40B0C2]/10 to-[#A72DAB]/10 rounded-xl transition-all duration-300 hover:from-[#40B0C2]/20 hover:to-[#A72DAB]/20 hover:shadow-md">
-                                            <div className="text-center">
-                                                {producto.oferta_vigente ? (
-                                                    <>
-                                                        <span className="text-xs text-gray-600 block mb-1">Precio Original</span>
-                                                        <span className="text-lg text-gray-400 line-through block mb-1">
-                                                            {formatearPrecio(producto.precio)}
-                                                        </span>
-                                                        <span className="text-xs text-orange-600 font-bold block mb-1">Precio de Oferta</span>
-                                                        <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                                                            {formatearPrecio(producto.oferta_vigente.precio_oferta)}
-                                                        </span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span className="text-xs text-gray-600 block mb-1">Precio</span>
-                                                        <span className="text-3xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                            {formatearPrecio(producto.precio)}
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </div>
+                                        {/* Precio */}
+                                        <div className="flex items-baseline gap-2 mb-3">
+                                            {producto.oferta_vigente ? (
+                                                <>
+                                                    <span className="text-sm text-gray-400 line-through">
+                                                        {formatearPrecio(producto.precio)}
+                                                    </span>
+                                                    <span className="text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                                                        {formatearPrecio(producto.oferta_vigente.precio_oferta)}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span className="text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                                    {formatearPrecio(producto.precio)}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Botones de acción */}
-                                        <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
                                             {/* Botón de crear/gestionar oferta */}
                                             {producto.oferta_vigente ? (
                                                 <Link
                                                     href={route('ofertas.edit', producto.oferta_vigente.id)}
-                                                    className="w-full inline-flex items-center justify-center p-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-xs font-semibold hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
                                                     title="Gestionar oferta"
                                                 >
-                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                                    </svg>
-                                                    <span className="font-semibold">Gestionar Oferta</span>
+                                                    <Tag className="h-3.5 w-3.5" />
+                                                    Gestionar Oferta
                                                 </Link>
                                             ) : (
                                                 <Link
                                                     href={route('ofertas.create', { producto_id: producto.id })}
-                                                    className="w-full inline-flex items-center justify-center p-3 bg-white border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+                                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border-2 border-orange-500 text-orange-500 rounded-lg text-xs font-semibold hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
                                                     title="Crear oferta"
                                                 >
-                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                                    </svg>
-                                                    <span className="font-semibold">Crear Oferta</span>
+                                                    <Tag className="h-3.5 w-3.5" />
+                                                    Crear Oferta
                                                 </Link>
                                             )}
-                                            
+
                                             {/* Botones de editar y eliminar */}
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Link
-                                                    href={route('productos.edit', producto.id)}
-                                                    className="inline-flex items-center justify-center p-3 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
-                                                    title="Editar producto"
-                                                >
-                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    <span className="hidden sm:inline">Editar</span>
-                                                </Link>
-                                                <button
-                                                    onClick={() => openDeleteModal(producto)}
-                                                    className="inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
-                                                    title="Eliminar producto"
-                                                >
-                                                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    <span className="hidden sm:inline">Eliminar</span>
-                                                </button>
-                                            </div>
+                                            <Link
+                                                href={route('productos.edit', producto.id)}
+                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-full hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                title="Editar"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Link>
+                                            <button
+                                                onClick={() => openDeleteModal(producto)}
+                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
