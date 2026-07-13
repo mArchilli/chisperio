@@ -5,7 +5,6 @@ const EXCLUDED_PREFIXES = [
     '/carrito',
     '/checkout',
     '/login',
-    '/register',
     '/forgot-password',
     '/reset-password',
     '/confirm-password',

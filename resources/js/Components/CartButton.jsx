@@ -3,7 +3,7 @@ import { Link, router } from '@inertiajs/react';
 import { useCart } from '@/Context/CartContext';
 
 const EXCLUDED_PREFIXES = [
-    '/carrito', '/checkout', '/login', '/register',
+    '/carrito', '/checkout', '/login',
     '/forgot-password', '/reset-password', '/confirm-password',
     '/verify-email', '/dashboard', '/admin', '/profile',
 ];
