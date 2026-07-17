@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useCart } from '@/Context/CartContext';
@@ -243,6 +243,19 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
     const activeSubcategoriaId = filters.subcategoria ? Number(filters.subcategoria) : null;
     const activeCat = categorias.find((c) => c.id === activeCategoriaId) ?? null;
 
+    useEffect(() => {
+        if (window.location.hash !== '#productos') return undefined;
+
+        const frameId = window.requestAnimationFrame(() => {
+            document.getElementById('productos')?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+        });
+
+        return () => window.cancelAnimationFrame(frameId);
+    }, [activeCategoriaId, activeFilter, activeSubcategoriaId]);
+
     const navigate = (params) => {
         const clean = Object.fromEntries(
             Object.entries(params).filter(([, v]) => v != null && v !== '' && v !== 'todos')
@@ -374,7 +387,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                 </p>
 
                 {/* Grid */}
-                <div className="px-4 md:px-6 mt-2">
+                <div id="productos" className="mt-2 scroll-mt-36 px-4 md:px-6">
                     {productos.data.length === 0 ? (
                         <EmptyState onReset={() => navigate({})} />
                     ) : (

@@ -1,94 +1,154 @@
-import { useRef } from 'react';
 import { Link } from '@inertiajs/react';
+import { useState } from 'react';
 
-const GRADIENTS = [
-    'from-purple-600 to-pink-500',
-    'from-cyan-500 to-blue-600',
-    'from-orange-500 to-red-500',
-    'from-emerald-500 to-teal-600',
-    'from-yellow-500 to-orange-500',
-    'from-indigo-600 to-violet-600',
+const CATEGORY_FILTERS = [
+    {
+        key: 'chispas-frias',
+        label: 'Chispas frías',
+        image: '/images/img-filtro-chispas.png',
+        categoryNames: ['chispas frias'],
+    },
+    {
+        key: 'fuegos-artificiales',
+        label: 'Fuegos artificiales',
+        image: '/images/img-filtro-fuegos-artificiales.png',
+        categoryNames: ['fuegos artificiales'],
+    },
+    {
+        key: 'maquinas',
+        label: 'Máquinas',
+        image: '/images/img-filtro-maquinas.png',
+        categoryNames: ['maquinaria', 'maquinas'],
+    },
+    {
+        key: 'humo',
+        label: 'Humo',
+        image: '/images/img-filtro-humo.png',
+        categoryNames: ['humo'],
+    },
+    {
+        key: 'velas',
+        label: 'Velas',
+        image: '/images/img-filtro-velas.png',
+        categoryNames: ['velas'],
+    },
 ];
 
-const SCROLL_AMOUNT = 312;
+const normalizeName = (value) =>
+    value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
 
-const NavArrow = ({ direction, onClick }) => (
-    <button
-        onClick={onClick}
-        className="hidden md:flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 bg-white hover:bg-[#6000ca] hover:border-[#6000ca] hover:text-white text-[#1c1b1b] transition-all duration-200 shadow-sm flex-shrink-0"
-        aria-label={direction === 'left' ? 'Anterior' : 'Siguiente'}
-    >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d={direction === 'left' ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} />
-        </svg>
-    </button>
-);
+const catalogHref = (categoryId) => {
+    const href = categoryId
+        ? route('tienda.index', { categoria: categoryId })
+        : route('tienda.index');
 
-export default function CategoriesSection({ categorias }) {
-    const scrollRef = useRef(null);
+    return `${href}#productos`;
+};
 
-    const scroll = (dir) => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollBy({ left: dir === 'left' ? -SCROLL_AMOUNT : SCROLL_AMOUNT, behavior: 'smooth' });
-        }
-    };
+export default function CategoriesSection({ categorias = [] }) {
+    const [activeCategoryId, setActiveCategoryId] = useState(null);
+    const categoriesByName = new Map(
+        categorias.map((category) => [normalizeName(category.nombre), category])
+    );
 
-    if (!categorias || categorias.length === 0) return null;
+    const filters = CATEGORY_FILTERS.map((filter) => ({
+        ...filter,
+        category: filter.categoryNames
+            .map((name) => categoriesByName.get(normalizeName(name)))
+            .find(Boolean),
+    })).filter((filter) => filter.category);
+
+    if (filters.length === 0) return null;
 
     return (
-        <section id="tienda" className="mb-16 md:mb-20">
-            {/* Header */}
-            <div className="px-4 md:px-6 mb-6 flex justify-between items-end max-w-[1440px] mx-auto">
-                <div>
-                    <h3 className="text-2xl md:text-[32px] font-bold text-[#1c1b1b]">Categorías Destacadas</h3>
-                    <p className="text-[#4b4356] text-sm md:text-base mt-1">Equipamiento especializado para cada necesidad</p>
-                </div>
-                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                    <NavArrow direction="left" onClick={() => scroll('left')} />
-                    <NavArrow direction="right" onClick={() => scroll('right')} />
-                    <Link href={route('tienda.index')} className="text-[#6000ca] font-bold text-sm flex items-center gap-1 hover:underline ml-1">
-                        Ver Todo
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </Link>
-                </div>
-            </div>
+        <section
+            id="tienda"
+            aria-labelledby="effect-categories-title"
+            className="mb-16 w-full px-6 md:mb-20 md:px-10 lg:px-12 xl:px-16"
+        >
+            <div className="grid items-stretch gap-9 lg:grid-cols-[minmax(340px,0.75fr)_minmax(0,1.35fr)] lg:gap-14 xl:gap-20">
+                <div className="min-w-0 py-2 md:py-4 lg:order-2">
+                    <h2
+                        id="effect-categories-title"
+                        className="max-w-5xl text-[2.5rem] font-black uppercase leading-[0.98] tracking-tight text-[#1c1b1b] md:text-[3.25rem] lg:text-[clamp(2.75rem,3.3vw,4rem)]"
+                    >
+                        ¿Qué tipo de efecto estás buscando?
+                    </h2>
 
-            {/* Horizontal scroll */}
-            <div ref={scrollRef} className="flex overflow-x-auto no-scrollbar gap-4 md:gap-6 px-4 md:px-6 pb-4 max-w-[1440px] mx-auto">
-                {categorias.map((cat, idx) => (
-                    <Link key={cat.id} href={route('tienda.index', { categoria: cat.id })} className="flex-none w-56 md:w-72 group cursor-pointer">
-                        <div
-                            className={`relative h-[260px] md:h-[380px] rounded-3xl overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-500 bg-gradient-to-br ${GRADIENTS[idx % GRADIENTS.length]}`}
+                    <div className="no-scrollbar mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:pb-0 lg:gap-6 xl:gap-7">
+                        {filters.map(({ key, label, image, category }) => {
+                            const isActive = activeCategoryId === category.id;
+
+                            return (
+                                <Link
+                                    key={key}
+                                    href={catalogHref(category.id)}
+                                    onClick={() => setActiveCategoryId(category.id)}
+                                    aria-current={isActive ? 'page' : undefined}
+                                    className="group flex w-[8.25rem] flex-none snap-start flex-col rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 md:w-auto"
+                                >
+                                    <span
+                                        className={`relative block aspect-square overflow-hidden rounded-[1.4rem] border bg-white shadow-[0_10px_28px_-20px_rgba(28,27,27,0.45)] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_32px_-20px_rgba(96,0,202,0.5)] group-active:scale-[0.98] ${
+                                            isActive
+                                                ? 'border-[#6000ca]/50 ring-4 ring-[#6000ca]/10'
+                                                : 'border-black/[0.06] group-hover:border-[#6000ca]/25'
+                                        }`}
+                                    >
+                                        <img
+                                            src={image}
+                                            alt={label}
+                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+                                            loading="lazy"
+                                        />
+                                    </span>
+                                    <span
+                                        className={`mt-3 min-h-10 px-1 text-xs font-bold uppercase leading-snug tracking-[0.07em] transition-colors md:text-[13px] ${
+                                            isActive
+                                                ? 'text-[#6000ca]'
+                                                : 'text-[#4b4356] group-hover:text-[#6000ca]'
+                                        }`}
+                                    >
+                                        {label}
+                                    </span>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <aside className="relative min-h-[320px] overflow-hidden rounded-[2rem] border border-[#6000ca]/10 bg-gradient-to-br from-[#f4edff] via-[#edf3ff] to-[#e8f9ff] p-7 md:min-h-[350px] md:p-9 lg:order-1">
+                    <div className="absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[#6000ca]/10 blur-3xl" aria-hidden="true" />
+                    <div className="absolute -bottom-20 left-6 h-44 w-44 rounded-full bg-[#00b8ff]/10 blur-3xl" aria-hidden="true" />
+
+                    <div className="relative z-10 flex h-full max-w-[330px] flex-col items-start">
+                        <h3 className="text-3xl font-black uppercase leading-[0.98] tracking-tight text-[#1c1b1b] md:text-[2.5rem]">
+                            Encontrá el efecto ideal
+                        </h3>
+                        <p className="mt-4 text-sm font-medium leading-relaxed text-[#4b4356] md:text-base">
+                            Descubrí opciones para entradas, shows y momentos inolvidables.
+                        </p>
+                        <Link
+                            href={catalogHref()}
+                            className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#6000ca] px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 active:scale-95"
                         >
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            Ver todos los productos
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-5-5 5 5-5 5" />
+                            </svg>
+                        </Link>
+                    </div>
 
-                            {/* Decorative bg icon */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
-                                <svg className="w-36 h-36 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                </svg>
-                            </div>
-
-                            {/* Top badge */}
-                            <div className="absolute top-4 left-4">
-                                <span className="text-[11px] font-bold text-white/90 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full uppercase tracking-wider">
-                                    Categoría
-                                </span>
-                            </div>
-
-                            {/* Bottom content */}
-                            <div className="absolute bottom-5 left-5 right-5 text-white">
-                                <h4 className="text-lg md:text-xl font-bold leading-tight">{cat.nombre}</h4>
-                                {cat.descripcion && (
-                                    <p className="text-sm text-white/75 mt-1 line-clamp-2">{cat.descripcion}</p>
-                                )}
-                            </div>
-                        </div>
-                    </Link>
-                ))}
+                    <img
+                        src="/images/img-filtro-fuegos-artificiales.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -bottom-16 -right-14 w-64 mix-blend-multiply opacity-30 md:w-72"
+                    />
+                </aside>
             </div>
         </section>
     );

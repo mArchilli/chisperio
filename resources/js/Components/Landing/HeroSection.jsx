@@ -4,7 +4,7 @@ export default function HeroSection() {
     return (
         <section
             id="inicio"
-            className="relative h-[calc(100svh-7rem)] w-full overflow-hidden bg-[#f7f6fb] md:h-[calc(100vh-7.75rem)]"
+            className="relative h-[calc(100svh-7rem)] w-full overflow-hidden border-b-2 border-[#6000ca] bg-[#f7f6fb] md:h-[calc(100vh-7.75rem)]"
         >
             <img
                 src="/images/img-hero-maletin.png"
