@@ -186,7 +186,7 @@ export default function LandingHeader() {
                         {[0, 1, 2].map((groupIndex) => (
                             <div
                                 key={groupIndex}
-                                className="flex shrink-0 items-center gap-4 px-4 py-2 md:gap-6 md:px-5"
+                                className="flex shrink-0 items-center gap-4 px-4 py-1.5 md:gap-6 md:px-5"
                                 aria-hidden={groupIndex > 0}
                             >
                                 {TOPBAR_MESSAGES.map((message) => (
@@ -206,7 +206,7 @@ export default function LandingHeader() {
                 </div>
 
                 <div className={`${menuOpen ? 'bg-[#6000ca]' : 'bg-white/95'} border-b border-[#6000ca] backdrop-blur-xl transition-colors duration-300`}>
-                    <div className="flex w-full items-center justify-between px-5 py-2 md:grid md:grid-cols-[1fr_auto_1fr] md:px-8 md:py-2.5">
+                    <div className="flex w-full items-center justify-between px-5 py-2 md:grid md:grid-cols-[1fr_auto_1fr] md:px-8">
                         <div className="flex items-center md:hidden">
                             <button
                                 type="button"
@@ -234,7 +234,7 @@ export default function LandingHeader() {
                         </nav>
 
                         <Link href="/" className="flex items-center justify-center">
-                            <Logo invert={menuOpen} className="h-16 md:h-20" />
+                            <Logo invert={menuOpen} className="h-[3.75rem] md:h-[4.5rem]" />
                         </Link>
 
                         <div className="flex justify-end">
@@ -244,7 +244,7 @@ export default function LandingHeader() {
 
                     {menuOpen && (
                         <div className="md:hidden border-t border-white/10 bg-[#6000ca]">
-                            <div className="flex min-h-[calc(100vh-8.5rem)] flex-col items-center px-6 pb-10 pt-8 text-center">
+                            <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center px-6 pb-10 pt-8 text-center">
                                 <Link href="/" onClick={() => setMenuOpen(false)} className="mb-10">
                                     <Logo invert className="h-16" />
                                 </Link>
