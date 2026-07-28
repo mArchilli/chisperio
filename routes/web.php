@@ -9,7 +9,6 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\TiendaController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -40,6 +39,8 @@ Route::get('/', function () {
     $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
         ->where('is_active', true)
         ->where('is_featured', true)
+        ->latest('updated_at')
+        ->latest('id')
         ->get();
 
     $categorias = \App\Models\Categoria::all();
@@ -59,7 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
     // Rutas de Categorías
     Route::resource('admin/categorias', CategoriaController::class)->names([
         'index' => 'categorias.index',
@@ -70,7 +71,7 @@ Route::middleware('auth')->group(function () {
         'update' => 'categorias.update',
         'destroy' => 'categorias.destroy',
     ]);
-    
+
     // Rutas de Subcategorías
     Route::resource('admin/subcategorias', SubcategoriaController::class)->names([
         'index' => 'subcategorias.index',
@@ -81,7 +82,7 @@ Route::middleware('auth')->group(function () {
         'update' => 'subcategorias.update',
         'destroy' => 'subcategorias.destroy',
     ]);
-    
+
     // Rutas de Productos
     Route::resource('admin/productos', ProductoController::class)->names([
         'index' => 'productos.index',

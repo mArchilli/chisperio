@@ -3,7 +3,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import HeroSection from '@/Components/Landing/HeroSection';
 import TrustBanner from '@/Components/Landing/TrustBanner';
 import CategoriesSection from '@/Components/Landing/CategoriesSection';
-import FeaturedProductsSection from '@/Components/Landing/FeaturedProductsSection';
+import OutstandingProducts from '@/Components/Landing/OutstandingProducts';
 import ReviewsSection from '@/Components/Landing/ReviewsSection';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 
@@ -16,7 +16,7 @@ export default function Welcome({ canLogin, productosDestacados = [], categorias
                 <HeroSection />
                 <TrustBanner />
                 <CategoriesSection categorias={categorias} />
-                <FeaturedProductsSection productos={productosDestacados} />
+                <OutstandingProducts productos={productosDestacados} />
                 <ReviewsSection />
             </main>
             <LandingFooter />
