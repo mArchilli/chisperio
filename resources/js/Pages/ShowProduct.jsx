@@ -12,77 +12,100 @@ const formatPrice = (price) =>
         maximumFractionDigits: 0,
     }).format(price);
 
+function ArrowIcon({ className = 'h-4 w-4' }) {
+    return (
+        <svg
+            className={className}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.25}
+            aria-hidden="true"
+        >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-5-5 5 5-5 5" />
+        </svg>
+    );
+}
+
 function ProductGallery({ imagenes, titulo }) {
     const [activeIdx, setActiveIdx] = useState(0);
     const imgs = imagenes?.length > 0 ? imagenes : null;
 
     if (!imgs) {
         return (
-            <>
-                {/* Mobile: full-width placeholder */}
-                <div className="md:hidden w-full aspect-square bg-[#f0eded] flex items-center justify-center">
-                    <span className="text-8xl font-black text-[#6000ca]/20 select-none">
-                        {titulo?.charAt(0).toUpperCase()}
-                    </span>
-                </div>
-                {/* Desktop: boxed placeholder */}
-                <div className="hidden md:flex w-full aspect-square bg-[#f6f3f2] rounded-xl border border-gray-100 items-center justify-center">
-                    <span className="text-8xl font-black text-[#6000ca]/20 select-none">
-                        {titulo?.charAt(0).toUpperCase()}
-                    </span>
-                </div>
-            </>
+            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[38px] border-[#6000ca]/[0.035]" />
+                <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[#FF00D4]/[0.025] blur-2xl" />
+                <span className="relative flex h-36 w-36 select-none items-center justify-center rounded-full border border-[#6000ca]/10 bg-white/75 text-7xl font-black text-[#6000ca]/20 shadow-[0_18px_50px_-30px_rgba(96,0,202,0.45)] sm:h-44 sm:w-44 sm:text-8xl">
+                    {titulo?.charAt(0).toUpperCase()}
+                </span>
+            </div>
         );
     }
 
     const current = imgs[activeIdx];
 
     return (
-        <div className="md:space-y-3">
-            {/* Main image */}
-            <div className="relative w-full aspect-square bg-white overflow-hidden md:rounded-xl md:border md:border-gray-100">
+        <div className="space-y-3 lg:space-y-4">
+            <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
+                <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full border-[46px] border-white/45" />
+                <div className="pointer-events-none absolute -bottom-20 -left-12 h-60 w-60 rounded-full bg-[#6000ca]/[0.035] blur-2xl" />
+
                 <img
                     src={`/${current.ruta}`}
                     alt={titulo}
-                    className="w-full h-full object-cover"
+                    className="relative h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
                 />
-                {/* Carousel dots — mobile only */}
+
                 {imgs.length > 1 && (
-                    <div className="md:hidden absolute bottom-4 left-0 w-full flex justify-center gap-2">
-                        {imgs.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => setActiveIdx(i)}
-                                aria-label={`Imagen ${i + 1}`}
-                                className={`rounded-full transition-all ${
-                                    i === activeIdx
-                                        ? 'w-8 h-1.5 bg-[#6000ca]'
-                                        : 'w-1.5 h-1.5 bg-gray-300'
-                                }`}
-                            />
-                        ))}
+                    <div className="absolute inset-x-0 bottom-3 flex justify-center sm:bottom-4 md:hidden">
+                        <div className="flex items-center rounded-full border border-white/70 bg-white/85 px-1.5 shadow-lg shadow-[#1c1b1b]/10 backdrop-blur-md">
+                            {imgs.map((_, i) => (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => setActiveIdx(i)}
+                                    aria-label={`Ver imagen ${i + 1} de ${imgs.length}`}
+                                    aria-pressed={i === activeIdx}
+                                    className="flex h-10 w-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
+                                >
+                                    <span
+                                        className={`block rounded-full transition-all duration-200 ${
+                                            i === activeIdx
+                                                ? 'h-2 w-6 bg-[#6000ca]'
+                                                : 'h-2 w-2 bg-[#b9afc3]'
+                                        }`}
+                                    />
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Thumbnails — desktop only */}
             {imgs.length > 1 && (
-                <div className="hidden md:grid grid-cols-4 gap-3">
+                <div className="hidden gap-3 overflow-x-auto md:flex lg:grid lg:grid-cols-4 lg:overflow-visible">
                     {imgs.slice(0, 4).map((img, i) => (
                         <button
                             key={i}
+                            type="button"
                             onClick={() => setActiveIdx(i)}
-                            className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                            aria-label={`Ver imagen ${i + 1} de ${imgs.length}`}
+                            aria-pressed={i === activeIdx}
+                            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-[#f6f3f8] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
                                 i === activeIdx
-                                    ? 'border-[#6000ca]'
-                                    : 'border-gray-200 hover:border-[#6000ca]/40'
+                                    ? 'border-[#6000ca] shadow-[0_10px_25px_-18px_rgba(96,0,202,0.8)]'
+                                    : 'border-black/[0.06] hover:border-[#6000ca]/35'
                             }`}
                         >
                             <img
                                 src={`/${img.ruta}`}
                                 alt=""
-                                className="w-full h-full object-cover"
+                                className="h-full w-full object-contain p-2.5 mix-blend-multiply transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none"
                             />
+                            {i === activeIdx && (
+                                <span className="absolute inset-x-3 bottom-1.5 h-0.5 rounded-full bg-[#6000ca]" />
+                            )}
                         </button>
                     ))}
                 </div>
@@ -98,28 +121,57 @@ function RelatedCard({ producto }) {
     return (
         <Link
             href={route('tienda.show', producto.id)}
-            className="min-w-[160px] md:min-w-0 bg-white border border-gray-100 rounded-xl p-3 shadow-sm block hover:shadow-md transition-shadow flex-shrink-0"
+            aria-label={`Ver ${producto.titulo}`}
+            className="group block min-w-[78vw] max-w-[310px] flex-shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 sm:min-w-[44vw] md:min-w-0 md:max-w-none motion-reduce:transform-none"
         >
-            <div className="aspect-square rounded-lg bg-[#f6f3f2] mb-3 overflow-hidden flex items-center justify-center">
+            <div className="relative aspect-[4/3] overflow-hidden bg-[#f6f3f8]">
+                {hasOffer && (
+                    <span className="absolute right-3 top-3 z-10 rounded-full bg-[#FF00D4] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
+                        Oferta
+                    </span>
+                )}
+
                 {producto.imagen_principal ? (
                     <img
                         src={`/${producto.imagen_principal.ruta}`}
                         alt={producto.titulo}
-                        className="w-full h-full object-contain mix-blend-multiply"
+                        className="h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none"
+                        loading="lazy"
                     />
                 ) : (
-                    <span className="text-3xl font-black text-[#6000ca]/20 select-none">
-                        {producto.titulo?.charAt(0).toUpperCase()}
-                    </span>
+                    <div className="flex h-full w-full items-center justify-center">
+                        <span className="flex h-20 w-20 select-none items-center justify-center rounded-full border border-[#6000ca]/10 bg-white/75 text-4xl font-black text-[#6000ca]/20 shadow-sm">
+                            {producto.titulo?.charAt(0).toUpperCase()}
+                        </span>
+                    </div>
                 )}
             </div>
-            <p className="font-bold text-sm text-[#1c1b1b] line-clamp-2 leading-tight mb-1">
-                {producto.titulo}
-            </p>
-            {hasOffer && (
-                <p className="text-xs text-gray-400 line-through leading-none">{formatPrice(producto.precio)}</p>
-            )}
-            <p className="text-[#6000ca] font-black text-base">{formatPrice(displayPrice)}</p>
+
+            <div className="p-5">
+                <p className="mb-2 min-h-4 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#6000ca]">
+                    {producto.categorias?.[0]?.nombre ?? 'Selección Chisperío'}
+                </p>
+                <p className="line-clamp-2 min-h-11 text-base font-extrabold leading-snug text-[#1c1b1b] transition-colors group-hover:text-[#6000ca]">
+                    {producto.titulo}
+                </p>
+
+                <div className="mt-5 flex items-end justify-between gap-3 border-t border-black/[0.06] pt-4">
+                    <div className="min-w-0">
+                        {hasOffer && (
+                            <p className="text-[11px] font-medium leading-none text-[#81788a] line-through">
+                                {formatPrice(producto.precio)}
+                            </p>
+                        )}
+                        <p className={`font-black leading-none text-[#6000ca] ${hasOffer ? 'mt-1.5' : ''}`}>
+                            {formatPrice(displayPrice)}
+                        </p>
+                    </div>
+
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#6000ca]/15 bg-[#6000ca]/[0.04] text-[#6000ca] transition-colors group-hover:border-[#6000ca] group-hover:bg-[#6000ca] group-hover:text-white">
+                        <ArrowIcon />
+                    </span>
+                </div>
+            </div>
         </Link>
     );
 }
@@ -143,257 +195,294 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     };
 
     return (
-        <div className="bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased">
+        <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
             <Head title={`${producto.titulo} — Chisperío`} />
             <LandingHeader canLogin={canLogin} />
 
-            <main className="pb-28 md:pb-16">
+            <main className="relative pb-28 md:pb-20">
+                <div className="pointer-events-none absolute left-[-12rem] top-16 h-[28rem] w-[28rem] rounded-full bg-[#6000ca]/[0.035] blur-3xl" />
+                <div className="pointer-events-none absolute right-[-10rem] top-[32rem] h-[24rem] w-[24rem] rounded-full bg-[#FF00D4]/[0.025] blur-3xl" />
 
-                {/* Breadcrumbs — desktop only */}
-                <nav className="hidden md:flex max-w-[1280px] mx-auto px-8 py-6 text-sm text-[#4b4356] gap-2 items-center flex-wrap">
-                    <Link href="/" className="hover:text-[#6000ca] transition-colors">Inicio</Link>
-                    <span className="text-gray-300">/</span>
-                    <Link href={route('tienda.index')} className="hover:text-[#6000ca] transition-colors">Catálogo</Link>
+                <nav
+                    aria-label="Migas de pan"
+                    className="relative mx-auto hidden max-w-[1280px] flex-wrap items-center gap-2 px-8 py-6 text-xs font-semibold text-[#81788a] md:flex"
+                >
+                    <Link
+                        href="/"
+                        className="rounded-md transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
+                    >
+                        Inicio
+                    </Link>
+                    <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />
+                    <Link
+                        href={route('tienda.index')}
+                        className="rounded-md transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
+                    >
+                        Catálogo
+                    </Link>
                     {producto.categorias?.[0] && (
                         <>
-                            <span className="text-gray-300">/</span>
+                            <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />
                             <Link
                                 href={route('tienda.index', { categoria: producto.categorias[0].id })}
-                                className="hover:text-[#6000ca] transition-colors"
+                                className="rounded-md transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
                             >
                                 {producto.categorias[0].nombre}
                             </Link>
                         </>
                     )}
-                    <span className="text-gray-300">/</span>
-                    <span className="font-bold text-[#1c1b1b] truncate max-w-xs">{producto.titulo}</span>
+                    <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />
+                    <span className="max-w-xs truncate font-extrabold text-[#1c1b1b]">{producto.titulo}</span>
                 </nav>
 
-                {/* Product Hero: gallery + info */}
-                <div className="md:max-w-[1280px] md:mx-auto md:px-8 md:grid md:grid-cols-2 md:gap-12 md:mb-20">
+                <section className="relative mx-auto max-w-[1280px] px-3 pt-3 sm:px-5 md:pt-0 lg:px-8">
+                    <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
+                        <ProductGallery imagenes={producto.imagenes} titulo={producto.titulo} />
 
-                    {/* Gallery */}
-                    <ProductGallery imagenes={producto.imagenes} titulo={producto.titulo} />
+                        <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
+                            <div className="mb-4 flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">
+                                        {producto.categorias?.[0]?.nombre ?? 'Selección Chisperío'}
+                                    </p>
 
-                    {/* Details */}
-                    <div className="px-4 md:px-0 pt-5 md:pt-0 md:flex md:flex-col md:justify-start">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {hasOffer && (
+                                            <span className="rounded-full bg-[#FF00D4] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
+                                                {discount}% off
+                                            </span>
+                                        )}
+                                        {!hasOffer && producto.is_featured && (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.06] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#6000ca]">
+                                                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.07 3.29a1 1 0 00.95.69h3.46c.97 0 1.37 1.24.59 1.81l-2.8 2.03a1 1 0 00-.36 1.12l1.07 3.29c.3.92-.76 1.69-1.54 1.12l-2.8-2.03a1 1 0 00-1.18 0l-2.8 2.03c-.78.57-1.84-.2-1.54-1.12l1.07-3.29a1 1 0 00-.36-1.12l-2.8-2.03c-.78-.57-.38-1.81.59-1.81h3.46a1 1 0 00.95-.69l1.07-3.29z" />
+                                                </svg>
+                                                Destacado
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
 
-                        {/* Status badges */}
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                            {hasOffer && (
-                                <span className="bg-[#FF00D4] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                                    {discount}% OFF
-                                </span>
-                            )}
-                            {!hasOffer && producto.is_featured && (
-                                <span className="bg-cyan-100 text-cyan-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                                    Destacado
-                                </span>
-                            )}
-                            <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                Envío Gratis
-                            </span>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFav(!isFav)}
+                                    aria-label={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                                    aria-pressed={isFav}
+                                    className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 ${
+                                        isFav
+                                            ? 'border-[#FF00D4]/20 bg-[#FF00D4]/[0.08] text-[#FF00D4]'
+                                            : 'border-black/[0.07] bg-white text-[#81788a] hover:border-[#FF00D4]/25 hover:bg-[#FF00D4]/[0.05] hover:text-[#FF00D4]'
+                                    }`}
+                                >
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill={isFav ? 'currentColor' : 'none'}
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={2}
+                                        aria-hidden="true"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                    </svg>
+                                </button>
+                            </div>
 
-                        {/* Title + Favorite */}
-                        <div className="flex justify-between items-start mb-4">
-                            <h1 className="text-2xl md:text-[36px] font-extrabold text-[#1c1b1b] leading-tight tracking-tight pr-3">
+                            <h1 className="text-[clamp(2rem,8vw,3.15rem)] font-black leading-[0.98] tracking-[-0.045em] text-[#1c1b1b] lg:text-[clamp(2.35rem,4vw,3.7rem)]">
                                 {producto.titulo}
                             </h1>
-                            <button
-                                onClick={() => setIsFav(!isFav)}
-                                className="flex-shrink-0 p-2 rounded-full hover:bg-pink-50 transition-colors"
-                                aria-label={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-                            >
-                                <svg
-                                    className={`w-6 h-6 transition-colors ${isFav ? 'text-pink-500' : 'text-gray-400'}`}
-                                    fill={isFav ? 'currentColor' : 'none'}
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
-                            </button>
-                        </div>
 
-                        {/* Price */}
-                        <div className="mb-5">
-                            {hasOffer && (
-                                <span className="text-sm text-gray-400 line-through block leading-none mb-1">
-                                    {formatPrice(producto.precio)}
-                                </span>
-                            )}
-                            <span className="text-4xl md:text-[42px] font-black text-[#6000ca] leading-none">
-                                {formatPrice(displayPrice)}
-                            </span>
-                            <p className="text-xs text-[#4b4356] mt-1.5">
-                                IVA incluido. Paga en hasta 12 cuotas sin interés.
-                            </p>
-                        </div>
-
-                        {/* Description */}
-                        {producto.descripcion && (
-                            <div className="mb-6 border-t border-gray-100 pt-5">
-                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#4b4356] mb-2">
-                                    Descripción
-                                </h3>
-                                <div
-                                    className={`quill-content text-sm md:text-base text-[#4b4356] leading-relaxed ${!expandDesc ? 'line-clamp-4 md:line-clamp-none' : ''}`}
-                                    dangerouslySetInnerHTML={{ __html: producto.descripcion }}
-                                />
-                                {!expandDesc && (
-                                    <button
-                                        onClick={() => setExpandDesc(true)}
-                                        className="md:hidden mt-2 text-[#6000ca] font-bold text-sm flex items-center gap-1"
-                                    >
-                                        Ver descripción completa
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Quantity + Add to Cart */}
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white">
-                                <button
-                                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                                    className="w-11 h-12 flex items-center justify-center text-[#6000ca] hover:bg-purple-50 transition-colors font-bold text-xl leading-none"
-                                    aria-label="Reducir cantidad"
-                                >
-                                    −
-                                </button>
-                                <span className="w-10 text-center font-bold text-[#1c1b1b] select-none">
-                                    {qty}
-                                </span>
-                                <button
-                                    onClick={() => setQty((q) => q + 1)}
-                                    className="w-11 h-12 flex items-center justify-center text-[#6000ca] hover:bg-purple-50 transition-colors font-bold text-xl leading-none"
-                                    aria-label="Aumentar cantidad"
-                                >
-                                    +
-                                </button>
-                            </div>
-                            <button
-                                onClick={addToCart}
-                                className="flex-1 h-12 bg-[#FF00D4] text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#d900b3] active:scale-95 transition-all shadow-lg shadow-pink-500/20 text-sm"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                Añadir al Carrito
-                            </button>
-                        </div>
-
-                        {/* Category tags */}
-                        {producto.categorias?.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                {producto.categorias.map((cat) => (
-                                    <Link
-                                        key={cat.id}
-                                        href={route('tienda.index', { categoria: cat.id })}
-                                        className="text-xs font-semibold text-[#6000ca] bg-purple-50 px-3 py-1.5 rounded-full hover:bg-purple-100 transition-colors"
-                                    >
-                                        {cat.nombre}
-                                    </Link>
-                                ))}
-                                {producto.subcategorias?.map((sub) => (
-                                    <span
-                                        key={sub.id}
-                                        className="text-xs font-semibold text-[#4b4356] bg-gray-100 px-3 py-1.5 rounded-full"
-                                    >
-                                        {sub.nombre}
+                            <div className="mt-6 rounded-[1.5rem] border border-[#6000ca]/[0.08] bg-[#f7f4fa] p-5 sm:p-6">
+                                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                                    <span className="text-[clamp(2.25rem,10vw,3.25rem)] font-black leading-none tracking-[-0.045em] text-[#6000ca]">
+                                        {formatPrice(displayPrice)}
                                     </span>
-                                ))}
+                                    {hasOffer && (
+                                        <span className="pb-1 text-sm font-semibold text-[#81788a] line-through">
+                                            {formatPrice(producto.precio)}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                    </div>
-                </div>
 
-                {/* Related Products */}
+                            {producto.descripcion && (
+                                <div className="mt-6 border-t border-black/[0.06] pt-5">
+                                    <h2 className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">
+                                        Sobre este producto
+                                    </h2>
+                                    <div
+                                        className={`quill-content text-sm font-medium leading-relaxed text-[#4b4356] md:text-[15px] ${!expandDesc ? 'line-clamp-4 md:line-clamp-none' : ''}`}
+                                        dangerouslySetInnerHTML={{ __html: producto.descripcion }}
+                                    />
+                                    {!expandDesc && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setExpandDesc(true)}
+                                            className="mt-3 inline-flex items-center gap-1.5 rounded-md text-sm font-extrabold text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 md:hidden"
+                                        >
+                                            Ver descripción completa
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-[#f7f6f9] p-4 sm:p-5">
+                                <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
+                                    Elegí la cantidad
+                                </p>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <div className="flex h-14 w-full items-center justify-between rounded-full border border-black/[0.08] bg-white px-1 shadow-sm sm:w-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => setQty((q) => Math.max(1, q - 1))}
+                                            className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95"
+                                            aria-label="Reducir cantidad"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="min-w-10 select-none text-center text-base font-black text-[#1c1b1b]">
+                                            {qty}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setQty((q) => q + 1)}
+                                            className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95"
+                                            aria-label="Aumentar cantidad"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={addToCart}
+                                        className="flex h-14 w-full flex-1 items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25h10.5l.75 12H6l.75-12z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V6.75a3 3 0 016 0V9" />
+                                        </svg>
+                                        Añadir al carrito
+                                    </button>
+                                </div>
+                            </div>
+
+                            {producto.categorias?.length > 0 && (
+                                <div className="mt-5 flex flex-wrap gap-2">
+                                    {producto.categorias.map((cat) => (
+                                        <Link
+                                            key={cat.id}
+                                            href={route('tienda.index', { categoria: cat.id })}
+                                            className="rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.05] px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#6000ca] transition-colors hover:border-[#6000ca]/20 hover:bg-[#6000ca]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
+                                        >
+                                            {cat.nombre}
+                                        </Link>
+                                    ))}
+                                    {producto.subcategorias?.map((sub) => (
+                                        <span
+                                            key={sub.id}
+                                            className="rounded-full border border-black/[0.06] bg-white px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#4b4356]"
+                                        >
+                                            {sub.nombre}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
                 {relacionados?.length > 0 && (
-                    <section className="mt-14 md:max-w-[1280px] md:mx-auto md:px-8">
-                        <div className="flex justify-between items-center px-4 md:px-0 mb-4">
-                            <div>
-                                <h2 className="text-xl md:text-2xl font-extrabold text-[#1c1b1b]">
-                                    Productos Relacionados
+                    <section className="relative mx-auto mt-16 max-w-[1280px] md:mt-24 md:px-8">
+                        <div className="mb-7 flex items-end justify-between gap-5 px-4 md:px-0">
+                            <div className="max-w-3xl">
+                                <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#6000ca]">
+                                    Seguí descubriendo
+                                </p>
+                                <h2 className="text-[clamp(1.75rem,7vw,3.5rem)] font-black uppercase leading-[0.96] tracking-[-0.045em] text-[#1c1b1b]">
+                                    Productos <span className="text-[#6000ca]">relacionados</span>
                                 </h2>
-                                <div className="h-1 w-14 bg-[#6000ca] rounded-full mt-1.5" />
                             </div>
                             <Link
                                 href={route('tienda.index')}
-                                className="text-[#6000ca] font-bold text-sm flex items-center gap-1 hover:underline"
+                                className="hidden h-12 items-center gap-2 rounded-full border-2 border-[#6000ca] bg-white px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-[#6000ca] transition-all hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 active:scale-95 sm:inline-flex"
                             >
                                 Ver catálogo
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
+                                <ArrowIcon />
                             </Link>
                         </div>
 
-                        {/* Mobile: horizontal scroll */}
-                        <div className="md:hidden flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2">
+                        <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:hidden">
                             {relacionados.map((prod) => (
                                 <RelatedCard key={prod.id} producto={prod} />
                             ))}
                         </div>
 
-                        {/* Desktop: grid */}
-                        <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 gap-5">
+                        <div className="hidden grid-cols-3 gap-5 md:grid lg:grid-cols-4 lg:gap-6">
                             {relacionados.map((prod) => (
                                 <RelatedCard key={prod.id} producto={prod} />
                             ))}
+                        </div>
+
+                        <div className="mt-5 px-4 sm:hidden">
+                            <Link
+                                href={route('tienda.index')}
+                                className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-2 border-[#6000ca] bg-white text-xs font-extrabold uppercase tracking-[0.07em] text-[#6000ca] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98]"
+                            >
+                                Ver catálogo
+                                <ArrowIcon />
+                            </Link>
                         </div>
                     </section>
                 )}
 
-                {/* Featured Banner */}
-                <section className="mt-14 mx-4 md:max-w-[1280px] md:mx-auto md:px-8">
-                    <div className="relative rounded-2xl overflow-hidden bg-[#7d12ff] p-8 md:p-16">
-                        <div className="relative z-10 max-w-xl">
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-[#ffd8ed] mb-3 block">
-                                Tecnología de Vanguardia
+                <section className="relative mx-auto mt-16 max-w-[1280px] px-4 md:mt-24 md:px-8">
+                    <div className="relative overflow-hidden rounded-[2rem] bg-[#6000ca] px-6 py-10 shadow-[0_28px_60px_-35px_rgba(96,0,202,0.85)] sm:px-9 sm:py-12 md:rounded-[2.5rem] md:px-14 md:py-16 lg:px-16">
+                        <div className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full border-[64px] border-white/[0.055]" />
+                        <div className="pointer-events-none absolute -bottom-28 right-36 h-64 w-64 rounded-full bg-[#FF00D4]/20 blur-3xl" />
+                        <div className="pointer-events-none absolute right-10 top-1/2 hidden -translate-y-1/2 lg:block" aria-hidden="true">
+                            <svg className="h-44 w-44 text-white/[0.08]" viewBox="0 0 100 100" fill="currentColor">
+                                <path d="M50 2l9.3 32.7L92 44l-32.7 9.3L50 86l-9.3-32.7L8 44l32.7-9.3L50 2z" />
+                            </svg>
+                        </div>
+
+                        <div className="relative z-10 max-w-3xl">
+                            <span className="mb-3 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#ffd8ed]">
+                                Tecnología de vanguardia
                             </span>
-                            <h2 className="text-2xl md:text-[36px] font-extrabold text-white leading-tight mb-4">
-                                Domina el Escenario con Efectos Chisperío
+                            <h2 className="max-w-2xl text-[clamp(2rem,8vw,4.15rem)] font-black uppercase leading-[0.94] tracking-[-0.045em] text-white">
+                                Dominá el escenario con efectos Chisperío
                             </h2>
-                            <p className="text-sm md:text-base text-white/75 mb-6 leading-relaxed">
+                            <p className="mt-5 max-w-2xl text-sm font-medium leading-relaxed text-white/75 md:text-base">
                                 Nuestras máquinas están diseñadas para ofrecer un rendimiento impecable bajo las condiciones más exigentes. Seguridad certificada y efectos visuales de alto impacto.
                             </p>
                             <Link
                                 href={route('tienda.index')}
-                                className="inline-flex items-center bg-white text-[#6000ca] px-6 py-3 rounded-full font-bold hover:bg-gray-50 transition-colors shadow-xl text-sm gap-2"
+                                className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.07em] text-[#6000ca] shadow-xl shadow-black/10 transition-all hover:-translate-y-0.5 hover:bg-[#fcf9f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#6000ca] active:scale-95 motion-reduce:transform-none"
                             >
                                 Ver catálogo completo
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
+                                <ArrowIcon />
                             </Link>
                         </div>
-
-                        {/* Decorative circles */}
-                        <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-white/5" />
-                        <div className="absolute -right-4 bottom-0 w-40 h-40 rounded-full bg-white/5" />
                     </div>
                 </section>
-
             </main>
 
             <LandingFooter />
 
-            {/* Cart Toast */}
             {toast && (
-                <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 bg-[#1c1b1b] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl z-[100] flex items-center gap-2.5 whitespace-nowrap pointer-events-none">
-                    <svg className="w-4 h-4 text-[#FF00D4] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    {toast}
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className="pointer-events-none fixed bottom-24 left-1/2 z-[100] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-full bg-[#1c1b1b] px-5 py-3 text-xs font-semibold text-white shadow-2xl md:bottom-8 md:text-sm"
+                >
+                    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#FF00D4]" aria-hidden="true">
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+                    <span className="truncate">{toast}</span>
                 </div>
             )}
         </div>

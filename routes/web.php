@@ -15,6 +15,12 @@ use Inertia\Inertia;
 Route::get('/tienda', [TiendaController::class, 'index'])->name('tienda.index');
 Route::get('/tienda/{producto}', [TiendaController::class, 'show'])->name('tienda.show');
 
+Route::get('/contacto', function () {
+    return Inertia::render('Contacto', [
+        'canLogin' => Route::has('login'),
+    ]);
+})->name('contacto.index');
+
 Route::get('/carrito', function () {
     return Inertia::render('Carrito', [
         'canLogin' => Route::has('login'),

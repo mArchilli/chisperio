@@ -191,7 +191,7 @@ export default function CartButton() {
                         </div>
                         <Link
                             href={route('checkout.index')}
-                            className="block w-full bg-[#d700b2] text-white text-sm font-bold py-3 rounded-xl text-center hover:bg-[#b5009a] active:scale-95 transition-all shadow-sm"
+                            className="block w-full bg-[#6000ca] text-white text-sm font-bold py-3 rounded-xl text-center hover:bg-[#4f00a8] active:scale-95 transition-all shadow-sm shadow-[#6000ca]/20"
                             onClick={() => setOpen(false)}
                         >
                             Finalizar Compra

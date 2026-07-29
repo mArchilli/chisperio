@@ -40,22 +40,6 @@ function InstagramIcon() {
     );
 }
 
-function FacebookIcon() {
-    return (
-        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M24 12.073C24 5.446 18.627.073 12 .073S0 5.446 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-        </svg>
-    );
-}
-
-function YouTubeIcon() {
-    return (
-        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M23.5 6.19a3.02 3.02 0 00-2.12-2.14C19.5 3.54 12 3.54 12 3.54s-7.5 0-9.38.51A3.02 3.02 0 00.5 6.19C0 8.08 0 12 0 12s0 3.92.5 5.81a3.02 3.02 0 002.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51a3.02 3.02 0 002.12-2.14C24 15.92 24 12 24 12s0-3.92-.5-5.81zM9.55 15.57V8.43L15.82 12l-6.27 3.57z" />
-        </svg>
-    );
-}
-
 function WhatsAppIcon() {
     return (
         <svg viewBox="0 0 32 32" className="h-5 w-5 fill-current" aria-hidden="true">
@@ -66,8 +50,6 @@ function WhatsAppIcon() {
 
 const SOCIALS = [
     { label: 'Instagram', icon: InstagramIcon },
-    { label: 'Facebook', icon: FacebookIcon },
-    { label: 'YouTube', icon: YouTubeIcon },
     { label: 'WhatsApp', icon: WhatsAppIcon, href: WHATSAPP_URL },
 ];
 
@@ -126,14 +108,11 @@ function SocialBubble({ social }) {
 
 export default function LandingFooter() {
     return (
-        <footer id="contacto" className="scroll-mt-32 border-t-2 border-[#6000ca] bg-[#1c1b1b] text-white">
+        <footer className="border-t-2 border-[#6000ca] bg-[#1c1b1b] text-white">
             <div className="bg-[#6000ca]">
                 <div className="flex w-full flex-col gap-7 px-6 py-10 md:px-10 lg:flex-row lg:items-center lg:justify-between lg:px-12 xl:px-16">
                     <div className="max-w-3xl">
-                        <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/70 md:text-xs">
-                            Tu próximo evento empieza acá
-                        </span>
-                        <h2 className="mt-3 text-3xl font-black uppercase leading-[0.98] tracking-tight md:text-[2.75rem]">
+                        <h2 className="text-3xl font-black uppercase leading-[0.98] tracking-tight md:text-[2.75rem]">
                             Hagamos que ese momento tenga su propia chispa.
                         </h2>
                         <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-white/75 md:text-base">
@@ -154,14 +133,14 @@ export default function LandingFooter() {
                 </div>
             </div>
 
-            <div className="w-full px-6 pb-28 pt-12 md:px-10 md:pb-24 md:pt-14 lg:px-12 xl:px-16">
+            <div className="w-full px-6 pb-6 pt-12 md:px-10 md:pb-8 md:pt-14 lg:px-12 xl:px-16">
                 <div className="grid gap-12 border-b border-white/10 pb-12 md:grid-cols-2 lg:grid-cols-[minmax(320px,1.2fr)_minmax(0,1fr)] lg:gap-20">
                     <div className="max-w-xl">
                         <a href="/#inicio" className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#1c1b1b]" aria-label="Volver al inicio">
                             <img
                                 src="/images/logo-chisperio.png"
                                 alt="Chisperío"
-                                className="h-24 w-auto brightness-0 invert md:h-28"
+                                className="h-24 w-auto md:h-28"
                                 loading="lazy"
                             />
                         </a>
@@ -199,11 +178,14 @@ export default function LandingFooter() {
                     </nav>
                 </div>
 
-                <div className="flex flex-col gap-4 pt-6 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40 sm:flex-row sm:items-center sm:justify-between">
-                    <p>© {new Date().getFullYear()} Chisperío. Todos los derechos reservados.</p>
-                    <p>
+                <div className="grid gap-3 pt-6 uppercase sm:grid-cols-3 sm:items-center">
+                    <p className="text-center text-[11px] font-semibold tracking-[0.08em] text-white/40 sm:text-left">
+                        © {new Date().getFullYear()} Chisperío. Todos los derechos reservados.
+                    </p>
+                    <p className="text-center text-[13px] font-extrabold tracking-[0.1em] text-white/60 md:text-[15px]">
                         Powered by <span className="text-[#8f32ff]">PAMPA LABS</span>
                     </p>
+                    <span className="hidden sm:block" aria-hidden="true" />
                 </div>
             </div>
         </footer>

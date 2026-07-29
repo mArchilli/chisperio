@@ -60,9 +60,9 @@ const NAV_LINKS = [
     {
         id: 'contacto',
         label: 'Contacto',
-        href: '/#contacto',
-        type: 'anchor',
-        active: (url, hash) => url === '/' && hash === '#contacto',
+        href: 'contacto.index',
+        type: 'route',
+        active: (url) => url === '/contacto',
     },
 ];
 

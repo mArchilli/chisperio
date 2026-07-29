@@ -49,7 +49,7 @@ export default function RentalMachine() {
             aria-labelledby="rental-machine-title"
             className="mb-16 w-full scroll-mt-32 px-6 md:mb-20 md:px-10 lg:px-12 xl:px-16"
         >
-            <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="mb-8">
                 <div className="max-w-5xl">
                     <h2
                         id="rental-machine-title"
@@ -60,11 +60,6 @@ export default function RentalMachine() {
                     <p className="mt-4 max-w-3xl text-sm font-medium leading-relaxed text-[#4b4356] md:text-base">
                         Maquinaria profesional para tu evento, con envíos coordinados a todo el país.
                     </p>
-                </div>
-
-                <div className="inline-flex w-fit items-center gap-3 rounded-full border border-[#6000ca]/15 bg-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-[0.08em] text-[#6000ca] shadow-sm">
-                    <TruckIcon />
-                    Cobertura nacional
                 </div>
             </div>
 
@@ -87,10 +82,7 @@ export default function RentalMachine() {
 
                 <div className="grid lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
                     <div className="flex flex-col items-start bg-[#6000ca] p-7 text-white md:p-10 lg:p-12">
-                        <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/70 md:text-xs">
-                            Servicio para eventos
-                        </span>
-                        <h3 className="mt-4 max-w-xl text-3xl font-black uppercase leading-[0.98] tracking-tight md:text-[2.5rem]">
+                        <h3 className="max-w-xl text-3xl font-black uppercase leading-[0.98] tracking-tight md:text-[2.5rem]">
                             El efecto que imaginás, listo para usar.
                         </h3>
                         <p className="mt-5 max-w-xl text-sm font-medium leading-relaxed text-white/80 md:text-base">
@@ -115,17 +107,9 @@ export default function RentalMachine() {
                     </div>
 
                     <div className="p-7 md:p-10 lg:p-12">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                                <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca] md:text-xs">
-                                    Nuestro equipamiento
-                                </span>
-                                <h3 className="mt-2 text-2xl font-black uppercase leading-tight text-[#1c1b1b] md:text-3xl">
-                                    Maquinaria disponible
-                                </h3>
-                            </div>
-                            <p className="text-xs font-medium text-[#4b4356]">Sujeto a disponibilidad.</p>
-                        </div>
+                        <h3 className="text-2xl font-black uppercase leading-tight text-[#1c1b1b] md:text-3xl">
+                            Maquinaria disponible
+                        </h3>
 
                         <ul className="mt-7 grid gap-3 sm:grid-cols-2">
                             {MACHINES.map((machine, index) => (
