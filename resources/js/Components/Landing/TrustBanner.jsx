@@ -4,6 +4,8 @@ const Star = () => (
     </svg>
 );
 
+const GOOGLE_REVIEWS_URL = 'https://www.google.com/search?q=chisperio&oq=chisperio&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg8MgYIAhBFGDwyBwgDEAAYgAQyBggEEAAYHjIGCAUQRRg8MgYIBhBFGDwyBggHEEUYPNIBCDQ4ODlqMGo3qAIAsAIA&sourceid=chrome&source=chrome.ob&ie=UTF-8#lrd=0x8f7e9e5929cf69c9:0xd23641ad42e2ddaf,1,,,,';
+
 const GoogleIcon = () => (
     <svg className="h-9 w-9" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -49,6 +51,15 @@ export default function TrustBanner() {
                         <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[#4b4356]">
                             +80 reseñas de Google
                         </p>
+                        <a
+                            href={GOOGLE_REVIEWS_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#4f00a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
+                            aria-label="Ver reseñas de Chisperío en Google (se abre en una pestaña nueva)"
+                        >
+                            Ver reseñas
+                        </a>
                     </div>
                 </article>
 

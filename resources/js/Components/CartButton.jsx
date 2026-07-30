@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/Context/CartContext';
 
 const EXCLUDED_PREFIXES = [
@@ -213,9 +214,7 @@ export default function CartButton() {
                 aria-label="Abrir carrito"
                 className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] hover:bg-[#5000aa] hover:scale-110 active:scale-95 transition-all duration-200"
             >
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+                <ShoppingCart className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden="true" />
 
                 {cartCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-[#FF00D4] text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center leading-none shadow-sm">

@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/Context/CartContext';
 
 const TOPBAR_MESSAGES = [
@@ -87,9 +88,7 @@ function CartButton({ cartCount, invert = false }) {
             }`}
             aria-label="Carrito de compras"
         >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+            <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
             {cartCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF00D4] px-1 text-[10px] font-bold leading-none text-white">
                     {cartCount > 99 ? '99+' : cartCount}
@@ -123,7 +122,7 @@ function DesktopNavLink({ item, currentUrl, currentHash }) {
 }
 
 function MobileNavLink({ item, onNavigate }) {
-    const className = 'text-2xl font-medium uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-80';
+    const className = 'text-2xl font-semibold uppercase tracking-[0.12em] text-white transition-opacity duration-150 hover:opacity-80';
 
     if (item.type === 'route') {
         return (
@@ -178,10 +177,45 @@ export default function LandingHeader() {
                     0% { transform: translate3d(0, 0, 0); }
                     100% { transform: translate3d(-33.333333%, 0, 0); }
                 }
+
+                @keyframes chisperio-mobile-menu-enter {
+                    from { opacity: 0; transform: translate3d(0, -0.5rem, 0); }
+                    to { opacity: 1; transform: translate3d(0, 0, 0); }
+                }
             `}</style>
 
             <header className="sticky top-0 z-50">
-                <div className="overflow-hidden bg-[#6000ca] text-white">
+                {menuOpen && (
+                    <div
+                        id="mobile-navigation"
+                        className="fixed inset-0 z-[60] flex h-[100dvh] flex-col bg-[#6000ca] [animation:chisperio-mobile-menu-enter_160ms_ease-out] motion-reduce:[animation:none] md:hidden"
+                    >
+                        <div className="flex items-center justify-between px-5 py-4">
+                            <Link href="/" onClick={() => setMenuOpen(false)} aria-label="Ir al inicio">
+                                <Logo className="h-20" />
+                            </Link>
+
+                            <button
+                                type="button"
+                                onClick={() => setMenuOpen(false)}
+                                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#6000ca]"
+                                aria-label="Cerrar menú"
+                            >
+                                <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <nav aria-label="Navegación principal" className="flex flex-1 flex-col items-center justify-center gap-7 px-6 pb-20 text-center">
+                            {NAV_LINKS.map((item) => (
+                                <MobileNavLink key={item.id} item={item} onNavigate={() => setMenuOpen(false)} />
+                            ))}
+                        </nav>
+                    </div>
+                )}
+
+                <div className={`${menuOpen ? 'hidden md:block' : ''} overflow-hidden bg-[#6000ca] text-white`}>
                     <div className="inline-flex w-max whitespace-nowrap [animation:chisperio-topbar-loop_22s_linear_infinite] will-change-transform">
                         {[0, 1, 2].map((groupIndex) => (
                             <div
@@ -205,24 +239,19 @@ export default function LandingHeader() {
                     </div>
                 </div>
 
-                <div className={`${menuOpen ? 'bg-[#6000ca]' : 'bg-white/95'} border-b border-[#6000ca] backdrop-blur-xl transition-colors duration-300`}>
+                <div className={`${menuOpen ? 'hidden md:block' : ''} border-b border-[#6000ca] bg-white/95 backdrop-blur-xl`}>
                     <div className="flex w-full items-center justify-between px-5 py-2 md:grid md:grid-cols-[1fr_auto_1fr] md:px-8">
                         <div className="flex items-center md:hidden">
                             <button
                                 type="button"
-                                onClick={() => setMenuOpen((open) => !open)}
-                                className={`flex h-11 w-11 items-center justify-center rounded-full border transition-colors ${
-                                    menuOpen
-                                        ? 'border-white/20 bg-white/10 text-white'
-                                        : 'border-[#6000ca]/10 bg-white text-[#6000ca]'
-                                }`}
-                                aria-label={menuOpen ? 'Cerrar menu' : 'Abrir menu'}
+                                onClick={() => setMenuOpen(true)}
+                                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#6000ca]/10 bg-white text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06]"
+                                aria-label="Abrir menú"
                                 aria-expanded={menuOpen}
+                                aria-controls="mobile-navigation"
                             >
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                                    {menuOpen
-                                        ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-                                        : <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />}
+                                <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
                                 </svg>
                             </button>
                         </div>
@@ -234,29 +263,13 @@ export default function LandingHeader() {
                         </nav>
 
                         <Link href="/" className="flex items-center justify-center">
-                            <Logo invert={menuOpen} className="h-[3.75rem] md:h-[4.5rem]" />
+                            <Logo className="h-[3.75rem] md:h-[4.5rem]" />
                         </Link>
 
                         <div className="flex justify-end">
-                            <CartButton cartCount={cartCount} invert={menuOpen} />
+                            <CartButton cartCount={cartCount} />
                         </div>
                     </div>
-
-                    {menuOpen && (
-                        <div className="md:hidden border-t border-white/10 bg-[#6000ca]">
-                            <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center px-6 pb-10 pt-8 text-center">
-                                <Link href="/" onClick={() => setMenuOpen(false)} className="mb-10">
-                                    <Logo invert className="h-16" />
-                                </Link>
-
-                                <nav className="flex w-full flex-col items-center gap-6">
-                                    {NAV_LINKS.map((item) => (
-                                        <MobileNavLink key={item.id} item={item} onNavigate={() => setMenuOpen(false)} />
-                                    ))}
-                                </nav>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </header>
         </>
