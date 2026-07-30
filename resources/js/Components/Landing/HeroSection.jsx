@@ -9,7 +9,7 @@ const SLIDES = [
         image: '/images/img-hero-maletin.png',
         mobileImage: '/images/img-hero-maletin-mobile.png',
         imageAlt: 'Maletín Chisperio para efectos especiales',
-        imagePosition: 'object-center md:object-contain md:object-right',
+        imagePosition: 'object-center md:object-right',
         layout: 'left',
         title: [
             { text: 'Combo de maletines', color: 'text-[#1c1b1b]' },
@@ -24,7 +24,7 @@ const SLIDES = [
         image: '/images/img-hero-pistolas.png',
         mobileImage: '/images/img-hero-pistolas-mobile.png',
         imageAlt: 'Pistolas AK-47 y bastones tirachispas Chisperio',
-        imagePosition: 'object-center md:object-contain md:object-left',
+        imagePosition: 'object-center md:object-left',
         layout: 'right',
         title: [
             { text: 'Encendé la pista.', color: 'text-[#1c1b1b]' },
@@ -39,7 +39,7 @@ const SLIDES = [
         image: '/images/img-hero-efectos.png',
         mobileImage: '/images/img-hero-efectos-mobile.png',
         imageAlt: 'Bengalas, chispas frías y efectos visuales para eventos',
-        imagePosition: 'object-center md:object-contain md:object-center',
+        imagePosition: 'object-center',
         layout: 'top',
         title: [
             { text: 'Ese momento especial', color: 'text-[#1c1b1b]' },

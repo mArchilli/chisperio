@@ -45,9 +45,9 @@ export default function TrustBanner() {
                         <div className="flex gap-0.5 text-[#fbbc05]">
                             {Array.from({ length: 5 }, (_, index) => <Star key={index} />)}
                         </div>
-                        <p className="mt-1 text-xl font-black text-[#1c1b1b]">4.9 / 5.0</p>
+                        <p className="mt-1 text-xl font-black text-[#1c1b1b]">5.0 / 5.0</p>
                         <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[#4b4356]">
-                            Basado en 250+ opiniones en Google
+                            +80 reseñas de Google
                         </p>
                     </div>
                 </article>
@@ -72,7 +72,7 @@ export default function TrustBanner() {
                 <article className={`${itemClassName} lg:border-l lg:border-[#6000ca]/15`}>
                     <CrownIcon />
                     <h2 className="text-lg font-black uppercase leading-tight text-[#1c1b1b]">
-                        MercadoLíder <span className="block text-[#6000ca]">Platinum</span>
+                        MercadoLíder <span className="block text-[#6000ca]">Gold</span>
                     </h2>
                 </article>
             </div>

@@ -251,7 +251,7 @@ function OrderSummary({ subtotal, cartCount }) {
                     href={route('checkout.index')}
                     className="mt-5 flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_14px_28px_-14px_rgba(96,0,202,0.85)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_18px_34px_-15px_rgba(96,0,202,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
                 >
-                    Finalizar compra
+                    Pasar al checkout
                     <ArrowIcon />
                 </Link>
 
@@ -301,12 +301,9 @@ export default function Carrito({ canLogin }) {
                 <div className="pointer-events-none absolute -left-52 top-16 h-[30rem] w-[30rem] rounded-full bg-[#6000ca]/[0.035] blur-3xl" />
                 <div className="pointer-events-none absolute -right-40 top-[34rem] h-[26rem] w-[26rem] rounded-full bg-[#FF00D4]/[0.025] blur-3xl" />
 
-                <div className="relative mx-auto max-w-[1280px] px-4 pt-8 sm:px-6 md:px-8 md:pt-12">
+                <div className="relative w-full px-3 pt-8 sm:px-4 md:pt-12">
                     <header className="mb-8 flex flex-col gap-6 md:mb-12 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-3xl">
-                            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#6000ca]">
-                                Tu selección
-                            </p>
                             <h1 className="text-[clamp(2.5rem,11vw,5.25rem)] font-black uppercase leading-[0.92] tracking-[-0.055em] text-[#1c1b1b]">
                                 Tu <span className="text-[#6000ca]">carrito</span>
                             </h1>

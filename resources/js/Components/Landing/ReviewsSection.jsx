@@ -72,7 +72,7 @@ export default function ReviewsSection() {
                             <div className="flex text-yellow-400 gap-0.5">
                                 {[...Array(5)].map((_, i) => <Star key={i} size={4} />)}
                             </div>
-                            <span className="text-[#4b4356] text-sm">basado en 253 reseñas de Google</span>
+                            <span className="text-[#4b4356] text-sm">+80 reseñas de Google</span>
                         </div>
                     </div>
                     <div className="hidden md:flex items-center gap-2">

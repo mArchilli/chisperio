@@ -205,7 +205,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
 
                 <nav
                     aria-label="Migas de pan"
-                    className="relative mx-auto hidden max-w-[1280px] flex-wrap items-center gap-2 px-8 py-6 text-xs font-semibold text-[#81788a] md:flex"
+                    className="relative hidden w-full flex-wrap items-center gap-2 px-3 py-6 text-xs font-semibold text-[#81788a] sm:px-4 md:flex"
                 >
                     <Link
                         href="/"
@@ -235,7 +235,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                     <span className="max-w-xs truncate font-extrabold text-[#1c1b1b]">{producto.titulo}</span>
                 </nav>
 
-                <section className="relative mx-auto max-w-[1280px] px-3 pt-3 sm:px-5 md:pt-0 lg:px-8">
+                <section className="relative w-full px-3 pt-3 sm:px-4 md:pt-0">
                     <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
                         <ProductGallery imagenes={producto.imagenes} titulo={producto.titulo} />
 
@@ -394,7 +394,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                 </section>
 
                 {relacionados?.length > 0 && (
-                    <section className="relative mx-auto mt-16 max-w-[1280px] md:mt-24 md:px-8">
+                    <section className="relative mt-16 w-full md:mt-24 md:px-4">
                         <div className="mb-7 flex items-end justify-between gap-5 px-4 md:px-0">
                             <div className="max-w-3xl">
                                 <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#6000ca]">
@@ -437,7 +437,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                     </section>
                 )}
 
-                <section className="relative mx-auto mt-16 max-w-[1280px] px-4 md:mt-24 md:px-8">
+                <section className="relative mt-16 w-full px-3 sm:px-4 md:mt-24">
                     <div className="relative overflow-hidden rounded-[2rem] bg-[#6000ca] px-6 py-10 shadow-[0_28px_60px_-35px_rgba(96,0,202,0.85)] sm:px-9 sm:py-12 md:rounded-[2.5rem] md:px-14 md:py-16 lg:px-16">
                         <div className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full border-[64px] border-white/[0.055]" />
                         <div className="pointer-events-none absolute -bottom-28 right-36 h-64 w-64 rounded-full bg-[#FF00D4]/20 blur-3xl" />

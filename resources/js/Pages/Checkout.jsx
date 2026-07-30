@@ -291,7 +291,7 @@ export default function Checkout({ canLogin }) {
                 <div className="pointer-events-none absolute -left-52 top-16 h-[30rem] w-[30rem] rounded-full bg-[#6000ca]/[0.035] blur-3xl" />
                 <div className="pointer-events-none absolute -right-40 top-[36rem] h-[26rem] w-[26rem] rounded-full bg-[#FF00D4]/[0.025] blur-3xl" />
 
-                <div className="relative mx-auto max-w-[1280px] px-4 pt-8 sm:px-6 md:px-8 md:pt-12">
+                <div className="relative w-full px-3 pt-8 sm:px-4 md:pt-12">
                 <header className="mb-8 flex flex-col gap-6 md:mb-12 lg:flex-row lg:items-end lg:justify-between">
                     <div className="max-w-3xl">
                         <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#6000ca]">

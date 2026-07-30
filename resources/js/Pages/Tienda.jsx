@@ -373,9 +373,6 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                 <section className="border-b border-[#6000ca]/10 bg-[#f7f6fb]">
                     <div className="flex flex-col gap-7 px-3 py-9 sm:px-4 md:flex-row md:items-end md:justify-between md:py-11 xl:py-12">
                         <div className="max-w-4xl">
-                            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#6000ca] md:text-xs">
-                                Todo para tu próximo evento
-                            </p>
                             <h1 className="text-[clamp(2.35rem,6.5vw,4.75rem)] font-black uppercase leading-[0.94] tracking-tight text-[#1c1b1b]">
                                 Catálogo de <span className="text-[#6000ca]">productos</span>
                             </h1>
@@ -408,6 +405,10 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M7 12h10m-7 6h4" />
                                 </svg>
                             </span>
+
+                            <h2 className="flex-shrink-0 pt-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#1c1b1b] md:pt-0">
+                                Filtros
+                            </h2>
 
                             <div className="min-w-0 flex-1 overflow-x-auto no-scrollbar">
                                 <div className="flex w-max min-w-full items-center gap-2 lg:w-full lg:flex-wrap">
