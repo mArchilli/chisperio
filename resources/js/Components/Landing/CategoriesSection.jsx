@@ -79,9 +79,10 @@ export default function CategoriesSection({ categorias = [] }) {
                         ¿Qué tipo de efecto estás buscando?
                     </h2>
 
-                    <div className="no-scrollbar mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:pb-0 lg:gap-6 xl:gap-7">
-                        {filters.map(({ key, label, image, category }) => {
+                    <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-5 lg:gap-6 xl:gap-7">
+                        {filters.map(({ key, label, image, category }, index) => {
                             const isActive = activeCategoryId === category.id;
+                            const isLastUnpaired = filters.length % 2 === 1 && index === filters.length - 1;
 
                             return (
                                 <Link
@@ -89,7 +90,11 @@ export default function CategoriesSection({ categorias = [] }) {
                                     href={catalogHref(category.id)}
                                     onClick={() => setActiveCategoryId(category.id)}
                                     aria-current={isActive ? 'page' : undefined}
-                                    className="group flex w-[8.25rem] flex-none snap-start flex-col rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 md:w-auto"
+                                    className={`group flex w-full flex-col rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 ${
+                                        isLastUnpaired
+                                            ? 'col-span-2 w-[calc(50%_-_0.5rem)] justify-self-center md:col-span-1 md:w-auto'
+                                            : ''
+                                    }`}
                                 >
                                     <span
                                         className={`relative block aspect-square overflow-hidden rounded-[1.4rem] border bg-white shadow-[0_10px_28px_-20px_rgba(28,27,27,0.45)] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_32px_-20px_rgba(96,0,202,0.5)] group-active:scale-[0.98] ${
