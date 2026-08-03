@@ -21,6 +21,12 @@ Route::get('/contacto', function () {
     ]);
 })->name('contacto.index');
 
+Route::get('/mayoristas', function () {
+    return Inertia::render('Mayoristas', [
+        'canLogin' => Route::has('login'),
+    ]);
+})->name('mayoristas.index');
+
 Route::get('/carrito', function () {
     return Inertia::render('Carrito', [
         'canLogin' => Route::has('login'),

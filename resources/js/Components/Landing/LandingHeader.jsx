@@ -52,11 +52,11 @@ const NAV_LINKS = [
         active: (url) => url.startsWith('/tienda'),
     },
     {
-        id: 'sobre-nosotros',
-        label: 'Sobre nosotros',
-        href: '/#sobre-nosotros',
-        type: 'anchor',
-        active: (url, hash) => url === '/' && hash === '#sobre-nosotros',
+        id: 'mayoristas',
+        label: 'Mayoristas',
+        href: 'mayoristas.index',
+        type: 'route',
+        active: (url) => url === '/mayoristas',
     },
     {
         id: 'contacto',
