@@ -48,7 +48,7 @@ Route::get('/confirmacion-pedido', function () {
 })->name('confirmacion.index');
 
 Route::get('/', function () {
-    $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
+    $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias', 'escalasPrecio'])
         ->where('is_active', true)
         ->where('is_featured', true)
         ->latest('updated_at')

@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTransferObjects\PriceResult;
 use App\Models\Categoria;
+use App\Models\EscalaPrecio;
 use App\Models\Producto;
+use App\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 class TiendaController extends Controller
 {
-    public function show(Producto $producto)
+    public function show(Producto $producto, PricingService $pricingService)
     {
         abort_if(!$producto->is_active, 404);
 
@@ -20,7 +23,22 @@ class TiendaController extends Controller
             'ofertaVigente',
             'categorias',
             'subcategorias',
+            'escalasPrecio',
         ]);
+
+        $escalasPrecio = $producto->escalasPrecio->map(fn (EscalaPrecio $escala) => [
+            'id' => $escala->id,
+            'cantidad_minima' => $escala->cantidad_minima,
+            'precio_unitario' => (float) $escala->precio_unitario,
+        ])->values();
+
+        $precioActual = $this->serializarPrecio($pricingService->calcularPrecio($producto, 1));
+
+        // La relación cargada se serializaría con el shape completo de EscalaPrecio bajo
+        // la misma clave 'escalas_precio'; la quitamos para que prevalezca el array recortado.
+        $producto->unsetRelation('escalasPrecio');
+        $producto->setAttribute('escalas_precio', $escalasPrecio);
+        $producto->setAttribute('precio_actual', $precioActual);
 
         $categoriaIds = $producto->categorias->pluck('id');
 
@@ -58,6 +76,7 @@ class TiendaController extends Controller
             'ofertaVigente',
             'categorias',
             'subcategorias',
+            'escalasPrecio',
         ])->where('is_active', true);
 
         if ($request->filled('categoria')) {
@@ -94,5 +113,35 @@ class TiendaController extends Controller
             'filters'    => $request->only(['categoria', 'subcategoria', 'filter']),
             'canLogin'   => Route::has('login'),
         ]);
+    }
+
+    /**
+     * Recalcula el precio de un producto para una cantidad dada. Pensado para
+     * que el front (ficha de producto, carrito) lo consulte al cambiar cantidad
+     * sin duplicar la lógica de PricingService en JS.
+     */
+    public function precio(Request $request, Producto $producto, PricingService $pricingService)
+    {
+        $validated = $request->validate([
+            'cantidad' => 'required|integer|min:1',
+        ]);
+
+        $resultado = $pricingService->calcularPrecio($producto, (int) $validated['cantidad']);
+
+        return response()->json($this->serializarPrecio($resultado));
+    }
+
+    /**
+     * Reduce un PriceResult al subconjunto de campos que necesita el front
+     * para pintar precio y badge de descuento, sin exponer el objeto Oferta.
+     */
+    private function serializarPrecio(PriceResult $resultado): array
+    {
+        return [
+            'precio_lista' => $resultado->precio_lista,
+            'precio_unitario_final' => $resultado->precio_unitario_final,
+            'ahorro_porcentaje' => $resultado->ahorro_porcentaje,
+            'oferta_aplicada' => $resultado->oferta_aplicada !== null,
+        ];
     }
 }

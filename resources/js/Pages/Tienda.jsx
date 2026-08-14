@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useCart } from '@/Context/CartContext';
+import { resolverPrecio } from '@/lib/pricing';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -90,11 +91,10 @@ function Chip({ active, onClick, children, sub = false }) {
 }
 
 function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
-    const hasOffer = !!producto.oferta_vigente;
-    const displayPrice = hasOffer ? producto.oferta_vigente.precio_oferta : producto.precio;
-    const discount = hasOffer
-        ? Math.round(Number(producto.oferta_vigente.porcentaje_descuento))
-        : null;
+    const precioInfo = resolverPrecio(producto, qty);
+    const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
+    const displayPrice = precioInfo.precioFinal;
+    const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
 
     return (
         <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)]">

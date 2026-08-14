@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { Pencil, Trash2, Tag } from 'lucide-react';
+import { resolverPrecio } from '@/lib/pricing';
 
 export default function Index({ productos }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -489,9 +490,13 @@ export default function Index({ productos }) {
                                 )}
                             </div>
                         ) : (
-                            productosFiltrados.map((producto, index) => (
-                                <div 
-                                    key={producto.id} 
+                            productosFiltrados.map((producto, index) => {
+                                const precioInfo = resolverPrecio(producto, 1);
+                                const tieneOferta = precioInfo.precioFinal < precioInfo.precioBase;
+
+                                return (
+                                <div
+                                    key={producto.id}
                                     className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
@@ -541,9 +546,9 @@ export default function Index({ productos }) {
                                                     ⭐ Destacado
                                                 </span>
                                             )}
-                                            {producto.oferta_vigente && (
+                                            {tieneOferta && (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-orange-400 to-red-500 text-white shadow-lg animate-bounceIn">
-                                                    🔥 {Math.round(producto.oferta_vigente.porcentaje_descuento)}% OFF
+                                                    🔥 {Math.round(precioInfo.ahorroTotalPorcentaje)}% OFF
                                                 </span>
                                             )}
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-lg ${
@@ -607,13 +612,13 @@ export default function Index({ productos }) {
 
                                         {/* Precio */}
                                         <div className="flex items-baseline gap-2 mb-3">
-                                            {producto.oferta_vigente ? (
+                                            {tieneOferta ? (
                                                 <>
                                                     <span className="text-sm text-gray-400 line-through">
-                                                        {formatearPrecio(producto.precio)}
+                                                        {formatearPrecio(precioInfo.precioBase)}
                                                     </span>
                                                     <span className="text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                                                        {formatearPrecio(producto.oferta_vigente.precio_oferta)}
+                                                        {formatearPrecio(precioInfo.precioFinal)}
                                                     </span>
                                                 </>
                                             ) : (
@@ -664,7 +669,8 @@ export default function Index({ productos }) {
                                         </div>
                                     </div>
                                 </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>

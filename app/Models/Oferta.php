@@ -2,15 +2,24 @@
 
 namespace App\Models;
 
+use App\Enums\AlcanceOferta;
+use App\Enums\TipoDescuento;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Oferta extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'producto_id',
         'precio_oferta',
         'porcentaje_descuento',
+        'tipo_descuento',
+        'valor_descuento',
+        'alcance',
+        'producto_escala_precio_id',
         'fecha_inicio',
         'fecha_fin',
         'is_active',
@@ -19,6 +28,9 @@ class Oferta extends Model
     protected $casts = [
         'precio_oferta' => 'decimal:2',
         'porcentaje_descuento' => 'decimal:2',
+        'tipo_descuento' => TipoDescuento::class,
+        'valor_descuento' => 'decimal:2',
+        'alcance' => AlcanceOferta::class,
         'fecha_inicio' => 'datetime',
         'fecha_fin' => 'datetime',
         'is_active' => 'boolean',
@@ -30,6 +42,15 @@ class Oferta extends Model
     public function producto(): BelongsTo
     {
         return $this->belongsTo(Producto::class);
+    }
+
+    /**
+     * Relación opcional con la escala de precio a la que aplica esta oferta.
+     * null = aplica sobre el precio base del producto.
+     */
+    public function escalaPrecio(): BelongsTo
+    {
+        return $this->belongsTo(EscalaPrecio::class, 'producto_escala_precio_id');
     }
 
     /**

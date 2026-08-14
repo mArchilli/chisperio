@@ -52,6 +52,20 @@ export default function Index({ ofertas }) {
         });
     };
 
+    // Describe a qué nivel de precio del producto aplica la oferta, para que el
+    // admin distinga de un vistazo varias ofertas sobre el mismo producto.
+    const describirAlcance = (oferta) => {
+        if (oferta.alcance === 'todos') return 'Todos los precios';
+        if (oferta.escala_precio) return `Solo ${oferta.escala_precio.cantidad_minima}+ unidades`;
+        return 'Solo precio base';
+    };
+
+    const formatearDescuento = (oferta) => {
+        return oferta.tipo_descuento === 'porcentaje'
+            ? `${parseFloat(oferta.valor_descuento).toFixed(0)}%`
+            : formatearPrecio(oferta.valor_descuento);
+    };
+
     // Verificar si una oferta está vigente
     const estaVigente = (oferta) => {
         if (!oferta.is_active) return false;
@@ -151,9 +165,9 @@ export default function Index({ ofertas }) {
                                     {/* Header con producto */}
                                     <div className="relative h-32 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
                                         <div className="text-white text-5xl font-bold opacity-30">
-                                            {parseFloat(oferta.porcentaje_descuento).toFixed(0)}%
+                                            {formatearDescuento(oferta)}
                                         </div>
-                                        
+
                                         {/* Badge de estado */}
                                         <div className="absolute top-3 right-3 flex flex-col gap-2">
                                             {estaVigente(oferta) && (
@@ -166,6 +180,13 @@ export default function Index({ ofertas }) {
                                                     ✕ Inactiva
                                                 </span>
                                             )}
+                                        </div>
+
+                                        {/* Badge de alcance */}
+                                        <div className="absolute top-3 left-3">
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/90 text-gray-800 shadow-lg">
+                                                {describirAlcance(oferta)}
+                                            </span>
                                         </div>
                                     </div>
 
@@ -184,14 +205,9 @@ export default function Index({ ofertas }) {
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm font-semibold text-gray-900">Precio oferta:</span>
+                                                <span className="text-sm font-semibold text-gray-900">Descuento:</span>
                                                 <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                                                    {formatearPrecio(oferta.precio_oferta)}
-                                                </span>
-                                            </div>
-                                            <div className="mt-2 text-center">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-500 text-white">
-                                                    Ahorrás {parseFloat(oferta.porcentaje_descuento).toFixed(0)}%
+                                                    {formatearDescuento(oferta)}
                                                 </span>
                                             </div>
                                         </div>

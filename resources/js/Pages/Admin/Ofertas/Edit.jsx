@@ -1,20 +1,28 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import OfertaDescuentoFields, { validarOfertaDescuento } from '@/Components/OfertaDescuentoFields';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function Edit({ oferta, productos }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, transform, processing, errors } = useForm({
         producto_id: oferta.producto_id || '',
-        precio_oferta: oferta.precio_oferta || '',
+        tipo_descuento: oferta.tipo_descuento || 'porcentaje',
+        valor_descuento: oferta.valor_descuento ?? '',
+        alcance: oferta.alcance || 'todos',
+        producto_escala_precio_id: oferta.alcance === 'especifico'
+            ? (oferta.producto_escala_precio_id === null ? 'base' : String(oferta.producto_escala_precio_id))
+            : '',
         fecha_inicio: oferta.fecha_inicio ? oferta.fecha_inicio.substring(0, 16) : '',
         fecha_fin: oferta.fecha_fin ? oferta.fecha_fin.substring(0, 16) : '',
         is_active: oferta.is_active ?? true,
     });
 
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-    const [porcentajeDescuento, setPorcentajeDescuento] = useState(parseFloat(oferta.porcentaje_descuento) || 0);
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [selectAbierto, setSelectAbierto] = useState(false);
+    // El primer efecto de producto_id (al montar, con el producto ya guardado de la
+    // oferta) no debe pisar el producto_escala_precio_id precargado desde `oferta`.
+    const esPrimeraCarga = useRef(true);
 
     // Función para formatear precios en pesos argentinos
     const formatearPrecio = (precio) => {
@@ -39,26 +47,31 @@ export default function Edit({ oferta, productos }) {
         } else {
             setProductoSeleccionado(null);
         }
-    }, [data.producto_id]);
 
-    useEffect(() => {
-        if (productoSeleccionado && data.precio_oferta) {
-            const precioOriginal = parseFloat(productoSeleccionado.precio);
-            const precioOferta = parseFloat(data.precio_oferta);
-            
-            if (precioOferta > 0 && precioOferta < precioOriginal) {
-                const descuento = ((precioOriginal - precioOferta) / precioOriginal) * 100;
-                setPorcentajeDescuento(descuento);
-            } else {
-                setPorcentajeDescuento(0);
-            }
+        if (esPrimeraCarga.current) {
+            esPrimeraCarga.current = false;
         } else {
-            setPorcentajeDescuento(0);
+            // Cambió el producto respecto al guardado: el precio específico elegido
+            // pertenece al producto anterior, hay que volver a elegirlo.
+            setData('producto_escala_precio_id', '');
         }
-    }, [data.precio_oferta, productoSeleccionado]);
+    }, [data.producto_id]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        const { esValido } = validarOfertaDescuento(data);
+        if (!esValido) {
+            return;
+        }
+
+        transform((data) => ({
+            ...data,
+            producto_escala_precio_id: data.alcance === 'especifico'
+                ? (data.producto_escala_precio_id === 'base' ? null : Number(data.producto_escala_precio_id))
+                : null,
+        }));
+
         put(route('ofertas.update', oferta.id));
     };
 
@@ -203,52 +216,13 @@ export default function Edit({ oferta, productos }) {
                                 </div>
                             )}
 
-                            {/* Grid de Precio */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                {/* Precio de Oferta */}
-                                <div>
-                                    <label htmlFor="precio_oferta" className="block text-sm font-bold text-gray-900 mb-2">
-                                        Precio de Oferta *
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            id="precio_oferta"
-                                            value={data.precio_oferta}
-                                            onChange={e => setData('precio_oferta', e.target.value)}
-                                            className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
-                                            step="0.01"
-                                            min="0"
-                                            placeholder="0.00"
-                                            required
-                                            disabled={!productoSeleccionado}
-                                        />
-                                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold text-base pointer-events-none">
-                                            $
-                                        </span>
-                                    </div>
-                                    {errors.precio_oferta && (
-                                        <p className="mt-2 text-sm text-red-600">{errors.precio_oferta}</p>
-                                    )}
-                                </div>
-
-                                {/* Porcentaje de descuento calculado */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                                        Descuento Calculado
-                                    </label>
-                                    <div className="flex items-center justify-center h-[52px] bg-gradient-to-r from-orange-100 to-red-100 rounded-xl border-2 border-orange-200">
-                                        <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                                            {porcentajeDescuento > 0 ? `${porcentajeDescuento.toFixed(0)}%` : '0%'}
-                                        </span>
-                                    </div>
-                                    {porcentajeDescuento > 0 && productoSeleccionado && data.precio_oferta && (
-                                        <p className="mt-2 text-xs text-center text-gray-600 font-medium">
-                                            El cliente ahorrará {formatearPrecio(parseFloat(productoSeleccionado.precio) - parseFloat(data.precio_oferta))}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+                            {/* Descuento (tipo, valor, alcance y preview) */}
+                            <OfertaDescuentoFields
+                                producto={productoSeleccionado}
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                            />
 
                             {/* Grid de Fechas */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

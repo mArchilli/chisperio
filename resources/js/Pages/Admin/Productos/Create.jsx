@@ -1,11 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import EscalasPrecioRepeater, { validarEscalasPrecio } from '@/Components/EscalasPrecioRepeater';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
 export default function Create({ categorias, subcategorias }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         titulo: '',
         descripcion: '',
         precio: '',
@@ -16,6 +17,7 @@ export default function Create({ categorias, subcategorias }) {
         imagenes: [],
         videos: [],
         imagen_principal: null,
+        escalas_precio: [],
     });
 
     const [imagenesPreview, setImagenesPreview] = useState([]);
@@ -48,49 +50,16 @@ export default function Create({ categorias, subcategorias }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('titulo', data.titulo);
-        formData.append('descripcion', data.descripcion || '');
-        formData.append('precio', data.precio);
-        formData.append('is_active', data.is_active ? '1' : '0');
-        formData.append('is_featured', data.is_featured ? '1' : '0');
-        
-        // Categorías
-        data.categorias.forEach((id) => {
-            formData.append('categorias[]', id);
-        });
-        
-        // Subcategorías
-        data.subcategorias.forEach((id) => {
-            formData.append('subcategorias[]', id);
-        });
-        
-        // Imágenes
-        data.imagenes.forEach((file) => {
-            formData.append('imagenes[]', file);
-        });
-        
-        // Videos
-        data.videos.forEach((file) => {
-            formData.append('videos[]', file);
-        });
-        
-        // Imagen principal
-        if (data.imagen_principal !== null) {
-            formData.append('imagen_principal', data.imagen_principal);
+
+        const { esValido } = validarEscalasPrecio(data.escalas_precio);
+        if (!esValido) {
+            return;
         }
-        
-        router.post(route('productos.store'), formData, {
+
+        post(route('productos.store'), {
             forceFormData: true,
             preserveState: true,
             preserveScroll: true,
-            onSuccess: () => {
-                // Redirección manejada por el controlador
-            },
-            onError: (errors) => {
-                console.error('Errores:', errors);
-            }
         });
     };
 
@@ -218,6 +187,13 @@ export default function Create({ categorias, subcategorias }) {
                                         )}
                                     </div>
                                 </div>
+
+                                <EscalasPrecioRepeater
+                                    escalas={data.escalas_precio}
+                                    onChange={(nuevas) => setData('escalas_precio', nuevas)}
+                                    precioBase={data.precio}
+                                    errors={errors}
+                                />
 
                                 <div className="mb-6">
                                     <label className="block text-sm font-bold text-gray-700 mb-2">

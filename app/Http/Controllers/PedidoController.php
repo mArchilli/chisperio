@@ -6,6 +6,7 @@ use App\Enums\EstadoPedido;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Producto;
+use App\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -80,7 +81,7 @@ class PedidoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, PricingService $pricingService)
     {
         $validated = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
@@ -96,8 +97,8 @@ class PedidoController extends Controller
             'items.*.cantidad' => 'required|integer|min:1',
         ]);
 
-        $pedido = DB::transaction(function () use ($validated) {
-            $productos = Producto::with('ofertaVigente')
+        $pedido = DB::transaction(function () use ($validated, $pricingService) {
+            $productos = Producto::with(['escalasPrecio', 'ofertaVigente'])
                 ->whereIn('id', collect($validated['items'])->pluck('producto_id'))
                 ->get()
                 ->keyBy('id');
@@ -108,9 +109,7 @@ class PedidoController extends Controller
             foreach ($validated['items'] as $item) {
                 $producto = $productos->get($item['producto_id']);
 
-                $precioUnitario = $producto->ofertaVigente
-                    ? (float) $producto->ofertaVigente->precio_oferta
-                    : (float) $producto->precio;
+                $precioUnitario = $pricingService->calcularPrecio($producto, $item['cantidad'])->precio_unitario_final;
 
                 $itemSubtotal = round($precioUnitario * $item['cantidad'], 2);
                 $subtotal += $itemSubtotal;

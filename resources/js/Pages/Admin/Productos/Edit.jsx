@@ -1,11 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import EscalasPrecioRepeater, { validarEscalasPrecio } from '@/Components/EscalasPrecioRepeater';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
 export default function Edit({ producto, categorias, subcategorias }) {
-    const { data, setData, put, post, processing, errors } = useForm({
+    const { data, setData, post, transform, processing, errors } = useForm({
         titulo: producto.titulo || '',
         descripcion: producto.descripcion || '',
         precio: producto.precio || '',
@@ -17,6 +18,11 @@ export default function Edit({ producto, categorias, subcategorias }) {
         videos: [],
         imagen_principal: null,
         media_eliminar: [],
+        escalas_precio: (producto.escalas_precio || []).map(e => ({
+            id: e.id,
+            cantidad_minima: e.cantidad_minima,
+            precio_unitario: e.precio_unitario,
+        })),
     });
 
     const [imagenesPreview, setImagenesPreview] = useState([]);
@@ -54,50 +60,21 @@ export default function Edit({ producto, categorias, subcategorias }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('_method', 'PUT');
-        formData.append('titulo', data.titulo);
-        formData.append('descripcion', data.descripcion || '');
-        formData.append('precio', data.precio);
-        formData.append('is_active', data.is_active ? '1' : '0');
-        formData.append('is_featured', data.is_featured ? '1' : '0');
-        
-        // Categorías
-        data.categorias.forEach((id) => {
-            formData.append('categorias[]', id);
-        });
-        
-        // Subcategorías
-        data.subcategorias.forEach((id) => {
-            formData.append('subcategorias[]', id);
-        });
-        
-        // Media a eliminar
-        data.media_eliminar.forEach((id) => {
-            formData.append('media_eliminar[]', id);
-        });
-        
-        // Nuevas Imágenes
-        data.imagenes.forEach((file) => {
-            formData.append('imagenes[]', file);
-        });
-        
-        // Nuevos Videos
-        data.videos.forEach((file) => {
-            formData.append('videos[]', file);
-        });
-        
-        router.post(route('productos.update', producto.id), formData, {
+
+        const { esValido } = validarEscalasPrecio(data.escalas_precio);
+        if (!esValido) {
+            return;
+        }
+
+        // PHP no parsea el body multipart de una request PUT (solo lo hace para POST),
+        // así que con archivos de por medio hay que mandar un POST real y spoofear el
+        // método con _method para que Laravel lo enrute como el update del resource.
+        transform((data) => ({ ...data, _method: 'put' }));
+
+        post(route('productos.update', producto.id), {
             forceFormData: true,
             preserveState: true,
             preserveScroll: true,
-            onSuccess: () => {
-                // Redirección manejada por el controlador
-            },
-            onError: (errors) => {
-                console.error('Errores:', errors);
-            }
         });
     };
 
@@ -224,6 +201,13 @@ export default function Edit({ producto, categorias, subcategorias }) {
                                         )}
                                     </div>
                                 </div>
+
+                                <EscalasPrecioRepeater
+                                    escalas={data.escalas_precio}
+                                    onChange={(nuevas) => setData('escalas_precio', nuevas)}
+                                    precioBase={data.precio}
+                                    errors={errors}
+                                />
 
                                 <div className="mb-6">
                                     <label className="block text-sm font-bold text-gray-700 mb-2">

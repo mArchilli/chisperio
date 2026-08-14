@@ -73,7 +73,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                                 {item.titulo}
                             </h2>
                             <p className="mt-2 text-[11px] font-medium text-[#81788a] sm:text-xs">
-                                {formatPrice(item.precio_display)} por unidad
+                                {formatPrice(item.precioUnitario)} por unidad
                             </p>
                         </div>
 
@@ -122,7 +122,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                                 Total del producto
                             </p>
                             <p className="text-xl font-black leading-none tracking-tight text-[#6000ca] md:text-2xl">
-                                {formatPrice(item.precio_display * item.cantidad)}
+                                {formatPrice(item.subtotalItem)}
                             </p>
                         </div>
                     </div>
@@ -155,7 +155,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                 <div className="min-w-0 text-right">
                     <p className="text-[8px] font-extrabold uppercase tracking-[0.1em] text-[#81788a]">Total</p>
                     <p className="truncate text-base font-black leading-tight text-[#6000ca]">
-                        {formatPrice(item.precio_display * item.cantidad)}
+                        {formatPrice(item.subtotalItem)}
                     </p>
                 </div>
             </div>

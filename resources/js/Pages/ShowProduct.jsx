@@ -1,8 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
 import { useCart } from '@/Context/CartContext';
+import { resolverPrecio } from '@/lib/pricing';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -115,8 +117,9 @@ function ProductGallery({ imagenes, titulo }) {
 }
 
 function RelatedCard({ producto }) {
-    const hasOffer = !!producto.oferta_vigente;
-    const displayPrice = hasOffer ? producto.oferta_vigente.precio_oferta : producto.precio;
+    const precioInfo = resolverPrecio(producto, 1);
+    const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
+    const displayPrice = precioInfo.precioFinal;
 
     return (
         <Link
@@ -183,9 +186,9 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const [toast, setToast] = useState(null);
     const { addToCart: addToCartContext } = useCart();
 
-    const hasOffer = !!producto.oferta_vigente;
-    const displayPrice = hasOffer ? producto.oferta_vigente.precio_oferta : producto.precio;
-    const discount = hasOffer ? Math.round(producto.oferta_vigente.porcentaje_descuento) : null;
+    const precioInfo = useMemo(() => resolverPrecio(producto, qty), [producto, qty]);
+    const tieneDescuento = precioInfo.precioFinal < precioInfo.precioBase;
+    const ahorroPorcentaje = Math.round(precioInfo.ahorroTotalPorcentaje);
 
     const addToCart = () => {
         addToCartContext(producto, qty);
@@ -247,12 +250,12 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                     </p>
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {hasOffer && (
+                                        {tieneDescuento && (
                                             <span className="rounded-full bg-[#FF00D4] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
-                                                {discount}% off
+                                                {ahorroPorcentaje}% off
                                             </span>
                                         )}
-                                        {!hasOffer && producto.is_featured && (
+                                        {!tieneDescuento && producto.is_featured && (
                                             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.06] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#6000ca]">
                                                 <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                                     <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.07 3.29a1 1 0 00.95.69h3.46c.97 0 1.37 1.24.59 1.81l-2.8 2.03a1 1 0 00-.36 1.12l1.07 3.29c.3.92-.76 1.69-1.54 1.12l-2.8-2.03a1 1 0 00-1.18 0l-2.8 2.03c-.78.57-1.84-.2-1.54-1.12l1.07-3.29a1 1 0 00-.36-1.12l-2.8-2.03c-.78-.57-.38-1.81.59-1.81h3.46a1 1 0 00.95-.69l1.07-3.29z" />
@@ -294,14 +297,22 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                             <div className="mt-6 rounded-[1.5rem] border border-[#6000ca]/[0.08] bg-[#f7f4fa] p-5 sm:p-6">
                                 <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
                                     <span className="text-[clamp(2.25rem,10vw,3.25rem)] font-black leading-none tracking-[-0.045em] text-[#6000ca]">
-                                        {formatPrice(displayPrice)}
+                                        {formatPrice(precioInfo.precioFinal)}
                                     </span>
-                                    {hasOffer && (
+                                    {tieneDescuento && (
                                         <span className="pb-1 text-sm font-semibold text-[#81788a] line-through">
-                                            {formatPrice(producto.precio)}
+                                            {formatPrice(precioInfo.precioBase)}
+                                        </span>
+                                    )}
+                                    {tieneDescuento && (
+                                        <span className="pb-1 text-xs font-extrabold uppercase tracking-wide text-[#6000ca]">
+                                            Ahorrás {ahorroPorcentaje}%
                                         </span>
                                     )}
                                 </div>
+                                <p className="mt-1 text-xs font-semibold text-[#81788a]">
+                                    Precio unitario para {qty} {qty === 1 ? 'unidad' : 'unidades'}
+                                </p>
                             </div>
 
                             {producto.descripcion && (
@@ -367,6 +378,8 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                     </button>
                                 </div>
                             </div>
+
+                            <TablaPreciosPorCantidad producto={producto} qty={qty} />
 
                             {producto.categorias?.length > 0 && (
                                 <div className="mt-5 flex flex-wrap gap-2">

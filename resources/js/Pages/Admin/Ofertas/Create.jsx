@@ -1,18 +1,21 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import OfertaDescuentoFields, { validarOfertaDescuento } from '@/Components/OfertaDescuentoFields';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 export default function Create({ productos, productoPreseleccionado }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, transform, processing, errors } = useForm({
         producto_id: productoPreseleccionado || '',
-        precio_oferta: '',
+        tipo_descuento: 'porcentaje',
+        valor_descuento: '',
+        alcance: 'todos',
+        producto_escala_precio_id: '',
         fecha_inicio: '',
         fecha_fin: '',
         is_active: true,
     });
 
     const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-    const [porcentajeDescuento, setPorcentajeDescuento] = useState(0);
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [selectAbierto, setSelectAbierto] = useState(false);
 
@@ -39,26 +42,26 @@ export default function Create({ productos, productoPreseleccionado }) {
         } else {
             setProductoSeleccionado(null);
         }
+        // El precio específico elegido pertenece al producto anterior: se limpia y
+        // el admin tiene que volver a elegirlo para el producto nuevo.
+        setData('producto_escala_precio_id', '');
     }, [data.producto_id]);
-
-    useEffect(() => {
-        if (productoSeleccionado && data.precio_oferta) {
-            const precioOriginal = parseFloat(productoSeleccionado.precio);
-            const precioOferta = parseFloat(data.precio_oferta);
-            
-            if (precioOferta > 0 && precioOferta < precioOriginal) {
-                const descuento = ((precioOriginal - precioOferta) / precioOriginal) * 100;
-                setPorcentajeDescuento(descuento);
-            } else {
-                setPorcentajeDescuento(0);
-            }
-        } else {
-            setPorcentajeDescuento(0);
-        }
-    }, [data.precio_oferta, productoSeleccionado]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        const { esValido } = validarOfertaDescuento(data);
+        if (!esValido) {
+            return;
+        }
+
+        transform((data) => ({
+            ...data,
+            producto_escala_precio_id: data.alcance === 'especifico'
+                ? (data.producto_escala_precio_id === 'base' ? null : Number(data.producto_escala_precio_id))
+                : null,
+        }));
+
         post(route('ofertas.store'));
     };
 
@@ -203,52 +206,13 @@ export default function Create({ productos, productoPreseleccionado }) {
                                 </div>
                             )}
 
-                            {/* Grid de Precio */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                {/* Precio de Oferta */}
-                                <div>
-                                    <label htmlFor="precio_oferta" className="block text-sm font-bold text-gray-900 mb-2">
-                                        Precio de Oferta *
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            id="precio_oferta"
-                                            value={data.precio_oferta}
-                                            onChange={e => setData('precio_oferta', e.target.value)}
-                                            className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
-                                            step="0.01"
-                                            min="0"
-                                            placeholder="0.00"
-                                            required
-                                            disabled={!productoSeleccionado}
-                                        />
-                                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold text-base pointer-events-none">
-                                            $
-                                        </span>
-                                    </div>
-                                    {errors.precio_oferta && (
-                                        <p className="mt-2 text-sm text-red-600">{errors.precio_oferta}</p>
-                                    )}
-                                </div>
-
-                                {/* Porcentaje de descuento calculado */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                                        Descuento Calculado
-                                    </label>
-                                    <div className="flex items-center justify-center h-[52px] bg-gradient-to-r from-orange-100 to-red-100 rounded-xl border-2 border-orange-200">
-                                        <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-                                            {porcentajeDescuento > 0 ? `${porcentajeDescuento.toFixed(0)}%` : '0%'}
-                                        </span>
-                                    </div>
-                                    {porcentajeDescuento > 0 && productoSeleccionado && data.precio_oferta && (
-                                        <p className="mt-2 text-xs text-center text-gray-600 font-medium">
-                                            El cliente ahorrará {formatearPrecio(parseFloat(productoSeleccionado.precio) - parseFloat(data.precio_oferta))}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+                            {/* Descuento (tipo, valor, alcance y preview) */}
+                            <OfertaDescuentoFields
+                                producto={productoSeleccionado}
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                            />
 
                             {/* Grid de Fechas */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

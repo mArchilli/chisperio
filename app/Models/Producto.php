@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Producto extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'titulo',
         'descripcion',
@@ -78,6 +81,28 @@ class Producto extends Model
     public function ofertas(): HasMany
     {
         return $this->hasMany(Oferta::class);
+    }
+
+    /**
+     * Relación uno a muchos con EscalaPrecio, ordenada por cantidad_minima ascendente
+     */
+    public function escalasPrecio(): HasMany
+    {
+        return $this->hasMany(EscalaPrecio::class)->orderBy('cantidad_minima');
+    }
+
+    /**
+     * Resuelve la escala de precio aplicable a una cantidad dada: la de mayor
+     * cantidad_minima que sea <= $cantidad. Devuelve null si ninguna aplica
+     * (en cuyo caso el llamador debe usar `precio` como fallback).
+     *
+     * Nota: base para la Fase 2 (servicio de cálculo de precio); no se usa todavía.
+     */
+    public function escalaAplicable(int $cantidad): ?EscalaPrecio
+    {
+        return $this->escalasPrecio
+            ->filter(fn (EscalaPrecio $escala) => $escala->cantidad_minima <= $cantidad)
+            ->last();
     }
 
     /**

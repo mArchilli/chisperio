@@ -38,7 +38,7 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
 
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[#1c1b1b] leading-snug line-clamp-1">{item.titulo}</p>
-                <p className="text-xs text-[#7c7388] mt-0.5">{formatPrice(item.precio_display)} c/u</p>
+                <p className="text-xs text-[#7c7388] mt-0.5">{formatPrice(item.precioUnitario)} c/u</p>
 
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center bg-gray-100 rounded-full border border-gray-200 p-0.5">
@@ -63,7 +63,7 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
 
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-[#6000ca]">
-                            {formatPrice(item.precio_display * item.cantidad)}
+                            {formatPrice(item.subtotalItem)}
                         </span>
                         <button
                             onClick={() => onRemove(item.id)}

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/Context/CartContext';
+import { resolverPrecio } from '@/lib/pricing';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -64,11 +65,10 @@ function ProductImage({ producto }) {
 }
 
 function ProductCard({ producto, added, onAddToCart }) {
-    const offer = producto.oferta_vigente;
-    const displayPrice = offer?.precio_oferta ?? producto.precio;
-    const discount = offer?.porcentaje_descuento
-        ? Math.round(Number(offer.porcentaje_descuento))
-        : null;
+    const precioInfo = resolverPrecio(producto, 1);
+    const offer = precioInfo.precioFinal < precioInfo.precioBase ? producto.oferta_vigente : null;
+    const displayPrice = precioInfo.precioFinal;
+    const discount = offer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
 
     return (
         <article className="group flex min-w-0 flex-none basis-[84%] snap-start flex-col overflow-hidden rounded-[1.75rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] sm:basis-[calc(50%-0.625rem)] lg:basis-[calc(33.333%-0.875rem)] xl:basis-[calc(20%-1.2rem)]">

@@ -114,11 +114,11 @@ function CheckoutSummary({ items, subtotal }) {
                                 {item.titulo}
                             </p>
                             <p className="mt-1 text-[10px] font-medium text-[#81788a]">
-                                {item.cantidad} × {formatPrice(item.precio_display)}
+                                {item.cantidad} × {formatPrice(item.precioUnitario)}
                             </p>
                         </div>
                         <span className="flex-shrink-0 text-xs font-black text-[#6000ca]">
-                            {formatPrice(item.precio_display * item.cantidad)}
+                            {formatPrice(item.subtotalItem)}
                         </span>
                     </div>
                 ))}
@@ -198,7 +198,7 @@ export default function Checkout({ canLogin }) {
             '📦 *Productos:*',
             ...items.map(
                 (item) =>
-                    `• ${item.titulo} x${item.cantidad} — ${formatPrice(item.precio_display * item.cantidad)}`
+                    `• ${item.titulo} x${item.cantidad} — ${formatPrice(item.subtotalItem)}`
             ),
             '',
             `*Total: ${formatPrice(subtotal)} ARS*`,

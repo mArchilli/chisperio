@@ -6,6 +6,8 @@ use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\Subcategoria;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProductoController extends Controller
@@ -15,7 +17,7 @@ class ProductoController extends Controller
      */
     public function index()
     {
-        $productos = Producto::with(['categorias', 'subcategorias', 'imagenPrincipal', 'ofertaVigente'])->get();
+        $productos = Producto::with(['categorias', 'subcategorias', 'imagenPrincipal', 'ofertaVigente', 'escalasPrecio'])->get();
         
         return Inertia::render('Admin/Productos/Index', [
             'productos' => $productos,
@@ -41,7 +43,7 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'titulo' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0',
@@ -52,24 +54,30 @@ class ProductoController extends Controller
             'imagenes.*' => 'nullable|image|max:5120', // max 5MB
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200', // max 50MB
             'imagen_principal' => 'nullable|integer',
-        ]);
+        ], $this->escalasPrecioReglas()), $this->escalasPrecioMensajes());
 
-        $producto = Producto::create([
-            'titulo' => $validated['titulo'],
-            'descripcion' => $validated['descripcion'] ?? null,
-            'precio' => $validated['precio'],
-            'is_active' => $validated['is_active'] ?? true,
-            'is_featured' => $validated['is_featured'] ?? false,
-        ]);
+        $producto = DB::transaction(function () use ($validated) {
+            $producto = Producto::create([
+                'titulo' => $validated['titulo'],
+                'descripcion' => $validated['descripcion'] ?? null,
+                'precio' => $validated['precio'],
+                'is_active' => $validated['is_active'] ?? true,
+                'is_featured' => $validated['is_featured'] ?? false,
+            ]);
 
-        // Asociar categorías y subcategorías
-        if (isset($validated['categorias'])) {
-            $producto->categorias()->sync($validated['categorias']);
-        }
-        
-        if (isset($validated['subcategorias'])) {
-            $producto->subcategorias()->sync($validated['subcategorias']);
-        }
+            // Asociar categorías y subcategorías
+            if (isset($validated['categorias'])) {
+                $producto->categorias()->sync($validated['categorias']);
+            }
+
+            if (isset($validated['subcategorias'])) {
+                $producto->subcategorias()->sync($validated['subcategorias']);
+            }
+
+            $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
+
+            return $producto;
+        });
 
         // Guardar imágenes
         if ($request->hasFile('imagenes')) {
@@ -140,7 +148,7 @@ class ProductoController extends Controller
      */
     public function edit(Producto $producto)
     {
-        $producto->load(['categorias', 'subcategorias', 'media']);
+        $producto->load(['categorias', 'subcategorias', 'media', 'escalasPrecio']);
         $categorias = Categoria::all();
         $subcategorias = Subcategoria::with('categoria')->get();
         
@@ -156,7 +164,7 @@ class ProductoController extends Controller
      */
     public function update(Request $request, Producto $producto)
     {
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'titulo' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0',
@@ -167,24 +175,28 @@ class ProductoController extends Controller
             'imagenes.*' => 'nullable|image|max:5120',
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200',
             'media_eliminar' => 'array',
-        ]);
+        ], $this->escalasPrecioReglas($producto)), $this->escalasPrecioMensajes());
 
-        $producto->update([
-            'titulo' => $validated['titulo'],
-            'descripcion' => $validated['descripcion'] ?? null,
-            'precio' => $validated['precio'],
-            'is_active' => $validated['is_active'] ?? true,
-            'is_featured' => $validated['is_featured'] ?? false,
-        ]);
+        DB::transaction(function () use ($validated, $producto) {
+            $producto->update([
+                'titulo' => $validated['titulo'],
+                'descripcion' => $validated['descripcion'] ?? null,
+                'precio' => $validated['precio'],
+                'is_active' => $validated['is_active'] ?? true,
+                'is_featured' => $validated['is_featured'] ?? false,
+            ]);
 
-        // Actualizar categorías y subcategorías
-        if (isset($validated['categorias'])) {
-            $producto->categorias()->sync($validated['categorias']);
-        }
-        
-        if (isset($validated['subcategorias'])) {
-            $producto->subcategorias()->sync($validated['subcategorias']);
-        }
+            // Actualizar categorías y subcategorías
+            if (isset($validated['categorias'])) {
+                $producto->categorias()->sync($validated['categorias']);
+            }
+
+            if (isset($validated['subcategorias'])) {
+                $producto->subcategorias()->sync($validated['subcategorias']);
+            }
+
+            $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
+        });
 
         // Eliminar media marcados para eliminar
         if (isset($validated['media_eliminar']) && is_array($validated['media_eliminar'])) {
@@ -279,5 +291,74 @@ class ProductoController extends Controller
         ]);
 
         return redirect()->back();
+    }
+
+    /**
+     * Reglas de validación para el array escalas_precio. En edición ($producto
+     * presente), valida además que cualquier id enviado pertenezca al producto
+     * que se está editando.
+     */
+    private function escalasPrecioReglas(?Producto $producto = null): array
+    {
+        $reglas = [
+            'escalas_precio' => ['array'],
+            'escalas_precio.*.cantidad_minima' => ['required', 'integer', 'gt:1', 'distinct'],
+            'escalas_precio.*.precio_unitario' => ['required', 'numeric', 'gt:0'],
+        ];
+
+        if ($producto !== null) {
+            $reglas['escalas_precio.*.id'] = [
+                'nullable',
+                'integer',
+                Rule::exists('producto_escalas_precio', 'id')->where(
+                    fn ($query) => $query->where('producto_id', $producto->id)
+                ),
+            ];
+        }
+
+        return $reglas;
+    }
+
+    /**
+     * Mensajes de validación indexados por fila (escalas_precio.{index}.campo),
+     * para que el front pueda mostrar el error junto a la fila correspondiente.
+     */
+    private function escalasPrecioMensajes(): array
+    {
+        return [
+            'escalas_precio.*.cantidad_minima.required' => 'La cantidad mínima es obligatoria.',
+            'escalas_precio.*.cantidad_minima.integer' => 'La cantidad mínima debe ser un número entero.',
+            'escalas_precio.*.cantidad_minima.gt' => 'La cantidad mínima debe ser mayor a 1.',
+            'escalas_precio.*.cantidad_minima.distinct' => 'Hay una escala repetida con la misma cantidad mínima.',
+            'escalas_precio.*.precio_unitario.required' => 'El precio unitario es obligatorio.',
+            'escalas_precio.*.precio_unitario.numeric' => 'El precio unitario debe ser un número.',
+            'escalas_precio.*.precio_unitario.gt' => 'El precio unitario debe ser mayor a 0.',
+            'escalas_precio.*.id.exists' => 'La escala indicada no pertenece a este producto.',
+        ];
+    }
+
+    /**
+     * Sincroniza las escalas de precio del producto contra el payload recibido:
+     * borra las que ya no vienen (por id) y hace upsert del resto. El id, cuando
+     * viene, ya fue validado como perteneciente a este producto en escalasPrecioReglas().
+     */
+    private function sincronizarEscalasPrecio(Producto $producto, array $escalas): void
+    {
+        $idsConservar = collect($escalas)->pluck('id')->filter()->all();
+
+        $producto->escalasPrecio()->whereNotIn('id', $idsConservar)->delete();
+
+        foreach ($escalas as $escala) {
+            $atributos = [
+                'cantidad_minima' => $escala['cantidad_minima'],
+                'precio_unitario' => $escala['precio_unitario'],
+            ];
+
+            if (!empty($escala['id'])) {
+                $producto->escalasPrecio()->whereKey($escala['id'])->update($atributos);
+            } else {
+                $producto->escalasPrecio()->create($atributos);
+            }
+        }
     }
 }
