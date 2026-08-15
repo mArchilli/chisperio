@@ -150,7 +150,7 @@ function CheckoutSummary({ items, subtotal }) {
 
 /* ─── Página principal ─────────────────────────────────────────────────────── */
 export default function Checkout({ canLogin }) {
-    const { items, subtotal, clearCart } = useCart();
+    const { items, subtotal, clearCart, hayItemsSinStock } = useCart();
 
     const [form, setForm] = useState({
         nombre: '',
@@ -238,7 +238,7 @@ export default function Checkout({ canLogin }) {
             firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
-        if (items.length === 0) return;
+        if (items.length === 0 || hayItemsSinStock) return;
         setErrors({});
         setApiError(null);
 
@@ -267,8 +267,22 @@ export default function Checkout({ canLogin }) {
             });
         } catch (error) {
             setIsSubmitting(false);
+            // El backend devuelve 422 con errors: {"stock.{producto_id}": ["mensaje"]} cuando
+            // no alcanza el stock (chequeo optimista al armar el pedido, o la condición de
+            // carrera real si cambió justo entre que el usuario armó el carrito y confirmó —
+            // ver Fase 3/StockService). Mostramos ese mensaje específico en vez del genérico,
+            // porque le dice al usuario exactamente qué producto ajustar y a cuánto.
+            const erroresBackend = error.response?.data?.errors;
+            const mensajesStock = erroresBackend
+                ? Object.entries(erroresBackend)
+                      .filter(([campo]) => campo.startsWith('stock.'))
+                      .flatMap(([, mensajes]) => mensajes)
+                : [];
+
             setApiError(
-                'No pudimos registrar tu pedido. Por favor, intentá de nuevo en unos instantes.'
+                mensajesStock.length > 0
+                    ? mensajesStock
+                    : 'No pudimos registrar tu pedido. Por favor, intentá de nuevo en unos instantes.'
             );
             return;
         }
@@ -509,15 +523,34 @@ export default function Checkout({ canLogin }) {
 
                                 {/* Error de envío */}
                                 {apiError && (
+                                    <div role="alert" className="mb-4 rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-[#ba1a1a]">
+                                        {Array.isArray(apiError) ? (
+                                            <ul className="list-disc space-y-1 pl-4">
+                                                {apiError.map((mensaje, i) => (
+                                                    <li key={i}>{mensaje}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            apiError
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Items sin stock: no dejamos ni intentar el envío (ver Carrito.jsx, mismo bloqueo) */}
+                                {hayItemsSinStock && (
                                     <p role="alert" className="mb-4 rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-[#ba1a1a]">
-                                        {apiError}
+                                        Tenés productos sin stock en el carrito.{' '}
+                                        <Link href={route('carrito.index')} className="underline underline-offset-2">
+                                            Volvé al carrito
+                                        </Link>{' '}
+                                        para quitarlos y poder continuar.
                                     </p>
                                 )}
 
                                 {/* Botón submit */}
                                 <button
                                     type="submit"
-                                    disabled={items.length === 0 || isSubmitting}
+                                    disabled={items.length === 0 || isSubmitting || hayItemsSinStock}
                                     className="flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_14px_28px_-14px_rgba(96,0,202,0.85)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_18px_34px_-15px_rgba(96,0,202,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 motion-reduce:transform-none"
                                 >
                                     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

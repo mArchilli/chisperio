@@ -51,6 +51,7 @@ Route::get('/', function () {
     $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias', 'escalasPrecio'])
         ->where('is_active', true)
         ->where('is_featured', true)
+        ->conStock()
         ->latest('updated_at')
         ->latest('id')
         ->get();

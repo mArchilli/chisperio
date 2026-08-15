@@ -45,6 +45,7 @@ class TiendaController extends Controller
         $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
             ->where('is_active', true)
             ->where('id', '!=', $producto->id)
+            ->conStock()
             ->when($categoriaIds->isNotEmpty(), fn ($q) =>
                 $q->whereHas('categorias', fn ($q2) =>
                     $q2->whereIn('categorias.id', $categoriaIds)
@@ -57,6 +58,7 @@ class TiendaController extends Controller
             $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
                 ->where('is_active', true)
                 ->where('id', '!=', $producto->id)
+                ->conStock()
                 ->where('is_featured', true)
                 ->limit(6)
                 ->get();
@@ -77,7 +79,7 @@ class TiendaController extends Controller
             'categorias',
             'subcategorias',
             'escalasPrecio',
-        ])->where('is_active', true);
+        ])->where('is_active', true)->conStock();
 
         if ($request->filled('categoria')) {
             $query->whereHas('categorias', fn ($q) =>

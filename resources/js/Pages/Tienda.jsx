@@ -4,6 +4,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
+import { cantidadMaxima, tieneStockBajo } from '@/lib/stock';
 import PillsCantidad from '@/Components/PillsCantidad';
 
 const formatPrice = (price) =>
@@ -96,6 +97,9 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
     const displayPrice = precioInfo.precioFinal;
     const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
+    const maxQty = cantidadMaxima(producto);
+    const stockBajo = tieneStockBajo(producto);
+    const enElTope = maxQty !== null && qty >= maxQty;
     // Esta card ya agrega al carrito sin pasar por la ficha (botón "Agregar" más abajo),
     // así que la cantidad elegida en los pills es la que se usa ahí directamente. Además
     // propagamos esa cantidad como ?qty= en los links a la ficha, para no resetear a 1
@@ -123,6 +127,12 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 {hasOffer && (
                     <span className="absolute right-3 top-3 z-10 rounded-full bg-[#FF00D4] px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
                         {discount}% off
+                    </span>
+                )}
+
+                {stockBajo && (
+                    <span className="absolute bottom-3 left-3 z-10 rounded-full bg-amber-400 px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
+                        {producto.stock === 1 ? '¡Última unidad!' : `Quedan ${producto.stock}`}
                     </span>
                 )}
 
@@ -169,8 +179,10 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                         </span>
                         <button
                             type="button"
-                            onClick={() => onQtyChange(qty + 1)}
-                            className="flex h-full items-center justify-center text-base font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                            onClick={() => onQtyChange(Math.min(qty + 1, maxQty ?? Infinity))}
+                            disabled={enElTope}
+                            title={enElTope ? `Solo quedan ${maxQty} disponibles` : undefined}
+                            className="flex h-full items-center justify-center text-base font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#6000ca]"
                             aria-label="Aumentar cantidad"
                         >
                             +

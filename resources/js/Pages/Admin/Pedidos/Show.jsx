@@ -195,7 +195,7 @@ export default function Show({ pedido }) {
                     <div className="px-4 sm:px-0">
                         <div className="bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones</h3>
-                            {pedido.estado === 'pendiente' ? (
+                            {pedido.estado === 'pendiente' && (
                                 <div className="flex flex-wrap gap-3">
                                     <button
                                         onClick={() => cambiarEstado('despachado')}
@@ -210,10 +210,43 @@ export default function Show({ pedido }) {
                                         Cancelar pedido
                                     </button>
                                 </div>
-                            ) : (
-                                <p className="text-sm text-gray-500">
-                                    Este pedido ya fue <strong>{estadoInfo.label.toLowerCase()}</strong>, no hay más acciones disponibles.
-                                </p>
+                            )}
+                            {pedido.estado === 'despachado' && (
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        onClick={() => cambiarEstado('pendiente')}
+                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-yellow-500 text-yellow-700 rounded-lg text-sm font-semibold hover:bg-yellow-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                    >
+                                        Volver a pendiente
+                                    </button>
+                                    <p className="w-full text-xs text-gray-400">
+                                        Usalo para corregir un error de carga. Un pedido despachado no se puede cancelar directamente.
+                                    </p>
+                                </div>
+                            )}
+                            {pedido.estado === 'cancelado' && (
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        Este pedido fue <strong>cancelado</strong>, no hay más acciones disponibles.
+                                    </p>
+                                    {pedido.movimientos_stock?.length > 0 && (
+                                        <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                                            <p className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2">
+                                                Stock repuesto al cancelar
+                                            </p>
+                                            <ul className="space-y-1">
+                                                {pedido.movimientos_stock.map((mov) => (
+                                                    <li key={mov.id} className="text-sm text-green-900">
+                                                        Se repusieron <strong>{mov.cantidad}</strong>{' '}
+                                                        {mov.cantidad === 1 ? 'unidad' : 'unidades'} de{' '}
+                                                        <strong>{mov.producto?.titulo ?? 'un producto eliminado del catálogo'}</strong>
+                                                        {' '}(quedó en {mov.stock_resultante}).
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -245,10 +278,12 @@ export default function Show({ pedido }) {
                                         <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                                             Cancelar Pedido
                                         </h3>
-                                        <div className="mt-2">
+                                        <div className="mt-2 space-y-2">
                                             <p className="text-sm text-gray-500">
                                                 ¿Estás seguro de que deseas cancelar el pedido de "<strong>{pedido.cliente_nombre}</strong>"?
-                                                Esta acción no se puede deshacer.
+                                            </p>
+                                            <p className="text-sm text-gray-500">
+                                                Se va a reponer el stock de todos los productos de este pedido. Esta acción no se puede deshacer.
                                             </p>
                                         </div>
                                     </div>

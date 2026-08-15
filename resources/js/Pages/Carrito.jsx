@@ -43,8 +43,16 @@ function BagIcon({ className = 'h-5 w-5' }) {
 }
 
 function CartItem({ item, onUpdateQty, onRemove }) {
+    const enElTope = item.stockDisponible !== null && item.cantidad >= item.stockDisponible;
+
     return (
-        <article className="group overflow-hidden rounded-[1.75rem] border border-black/[0.06] bg-white p-3 shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:border-[#6000ca]/15 hover:shadow-[0_24px_45px_-28px_rgba(96,0,202,0.4)] sm:p-4 md:rounded-[2rem] md:p-5">
+        <article
+            className={`group overflow-hidden rounded-[1.75rem] border p-3 shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 sm:p-4 md:rounded-[2rem] md:p-5 ${
+                item.sinStock
+                    ? 'border-red-200 bg-red-50/40'
+                    : 'border-black/[0.06] bg-white hover:border-[#6000ca]/15 hover:shadow-[0_24px_45px_-28px_rgba(96,0,202,0.4)]'
+            }`}
+        >
             <div className="flex items-start gap-3.5 sm:gap-5">
                 <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-[1.25rem] border border-black/[0.05] bg-[#f6f3f8] sm:h-32 sm:w-32 md:h-40 md:w-40 md:rounded-[1.5rem]">
                     <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-white/45" />
@@ -52,7 +60,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                         <img
                             src={`/${item.imagen}`}
                             alt={item.titulo}
-                            className="relative h-full w-full object-contain p-3 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.035] md:p-4 motion-reduce:transition-none"
+                            className={`relative h-full w-full object-contain p-3 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.035] md:p-4 motion-reduce:transition-none ${item.sinStock ? 'opacity-50 grayscale' : ''}`}
                         />
                     ) : (
                         <div className="relative flex h-full w-full items-center justify-center">
@@ -72,9 +80,20 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                             <h2 className="line-clamp-2 text-sm font-extrabold leading-snug text-[#1c1b1b] sm:text-lg md:text-xl">
                                 {item.titulo}
                             </h2>
-                            <p className="mt-2 text-[11px] font-medium text-[#81788a] sm:text-xs">
-                                {formatPrice(item.precioUnitario)} por unidad
-                            </p>
+                            {item.sinStock ? (
+                                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#ba1a1a] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                                    Sin stock — no disponible
+                                </p>
+                            ) : (
+                                <p className="mt-2 text-[11px] font-medium text-[#81788a] sm:text-xs">
+                                    {formatPrice(item.precioUnitario)} por unidad
+                                    {item.stockDisponible !== null && item.stockDisponible <= 3 && (
+                                        <span className="ml-1.5 font-bold text-amber-600">
+                                            · Quedan {item.stockDisponible}
+                                        </span>
+                                    )}
+                                </p>
+                            )}
                         </div>
 
                         <button
@@ -98,7 +117,8 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                                 <button
                                     type="button"
                                     onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
-                                    className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90"
+                                    disabled={item.sinStock}
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                                     aria-label="Reducir cantidad"
                                 >
                                     −
@@ -109,7 +129,9 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                                 <button
                                     type="button"
                                     onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
-                                    className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90"
+                                    disabled={item.sinStock || enElTope}
+                                    title={enElTope ? `Solo quedan ${item.stockDisponible} disponibles` : undefined}
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                                     aria-label="Aumentar cantidad"
                                 >
                                     +
@@ -134,7 +156,8 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                     <button
                         type="button"
                         onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90"
+                        disabled={item.sinStock}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Reducir cantidad"
                     >
                         −
@@ -145,7 +168,8 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                     <button
                         type="button"
                         onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90"
+                        disabled={item.sinStock || enElTope}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Aumentar cantidad"
                     >
                         +
@@ -199,7 +223,7 @@ function EmptyCart() {
     );
 }
 
-function OrderSummary({ subtotal, cartCount }) {
+function OrderSummary({ subtotal, cartCount, hayItemsSinStock }) {
     return (
         <aside
             aria-labelledby="order-summary-title"
@@ -247,13 +271,28 @@ function OrderSummary({ subtotal, cartCount }) {
                     </div>
                 </div>
 
-                <Link
-                    href={route('checkout.index')}
-                    className="mt-5 flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_14px_28px_-14px_rgba(96,0,202,0.85)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_18px_34px_-15px_rgba(96,0,202,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
-                >
-                    Pasar al checkout
-                    <ArrowIcon />
-                </Link>
+                {hayItemsSinStock ? (
+                    <>
+                        <button
+                            type="button"
+                            disabled
+                            className="mt-5 flex h-14 w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-full bg-black/10 px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-[#81788a]"
+                        >
+                            Pasar al checkout
+                        </button>
+                        <p className="mt-2 text-center text-[11px] font-semibold text-[#ba1a1a]">
+                            Quitá los productos sin stock para poder continuar.
+                        </p>
+                    </>
+                ) : (
+                    <Link
+                        href={route('checkout.index')}
+                        className="mt-5 flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_14px_28px_-14px_rgba(96,0,202,0.85)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_18px_34px_-15px_rgba(96,0,202,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
+                    >
+                        Pasar al checkout
+                        <ArrowIcon />
+                    </Link>
+                )}
 
                 <Link
                     href={route('tienda.index')}
@@ -290,7 +329,7 @@ function OrderSummary({ subtotal, cartCount }) {
 }
 
 export default function Carrito({ canLogin }) {
-    const { items, removeFromCart, updateQty, subtotal, cartCount } = useCart();
+    const { items, removeFromCart, updateQty, subtotal, cartCount, hayItemsSinStock } = useCart();
 
     return (
         <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
@@ -351,7 +390,7 @@ export default function Carrito({ canLogin }) {
 
                             <div className="lg:col-span-4">
                                 <div className="lg:sticky lg:top-28">
-                                    <OrderSummary subtotal={subtotal} cartCount={cartCount} />
+                                    <OrderSummary subtotal={subtotal} cartCount={cartCount} hayItemsSinStock={hayItemsSinStock} />
                                 </div>
                             </div>
                         </div>

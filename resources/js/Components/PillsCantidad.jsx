@@ -1,4 +1,5 @@
 import { resolverEscalaAplicable, resolverPrecio } from '@/lib/pricing';
+import { cantidadMaxima } from '@/lib/stock';
 
 /**
  * Un pill por nivel de precio del producto: "1" (precio base) + uno por cada
@@ -17,6 +18,7 @@ export default function PillsCantidad({ producto, qty, onChange, size = 'md', cl
 
     const escalaActiva = resolverEscalaAplicable(escalas, qty);
     const cantidadActiva = escalaActiva ? escalaActiva.cantidad_minima : 1;
+    const maxStock = cantidadMaxima(producto);
 
     const niveles = [
         { cantidad: 1, key: 'base' },
@@ -37,24 +39,39 @@ export default function PillsCantidad({ producto, qty, onChange, size = 'md', cl
                 const precioInfo = resolverPrecio(producto, nivel.cantidad);
                 const activo = nivel.cantidad === cantidadActiva;
                 const ahorro = Math.round(precioInfo.ahorroTotalPorcentaje);
+                // Este nivel pide más unidades de las que hay disponibles: se deshabilita en
+                // vez de ocultarse, para que el usuario entienda que existe pero no alcanza,
+                // no que el producto no tiene ese nivel de precio.
+                const sinStockSuficiente = maxStock !== null && nivel.cantidad > maxStock;
 
                 return (
                     <button
                         key={nivel.key}
                         type="button"
-                        onClick={() => onChange(nivel.cantidad)}
+                        onClick={() => !sinStockSuficiente && onChange(nivel.cantidad)}
+                        disabled={sinStockSuficiente}
                         aria-pressed={activo}
+                        aria-describedby={sinStockSuficiente ? `pill-stock-${producto.id}-${nivel.key}` : undefined}
+                        title={sinStockSuficiente ? `Solo quedan ${maxStock} disponibles` : undefined}
                         className={`inline-flex flex-shrink-0 items-center rounded-full border font-extrabold uppercase tracking-[0.04em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-1 active:scale-95 ${sizeClasses} ${
-                            activo
-                                ? 'border-[#6000ca] bg-[#6000ca] text-white shadow-sm shadow-[#6000ca]/25'
-                                : 'border-black/[0.08] bg-white text-[#4b4356] hover:border-[#6000ca]/40 hover:text-[#6000ca]'
+                            sinStockSuficiente
+                                ? 'cursor-not-allowed border-black/[0.06] bg-black/[0.02] text-[#b8afc0] line-through'
+                                : activo
+                                    ? 'border-[#6000ca] bg-[#6000ca] text-white shadow-sm shadow-[#6000ca]/25'
+                                    : 'border-black/[0.08] bg-white text-[#4b4356] hover:border-[#6000ca]/40 hover:text-[#6000ca]'
                         }`}
                     >
                         <span>{nivel.cantidad === 1 ? '1' : `${nivel.cantidad}+`}</span>
-                        {ahorro > 0 && (
-                            <span className={activo ? 'text-[#ffd8ed]' : 'text-[#FF00D4]'}>
-                                -{ahorro}%
+                        {sinStockSuficiente ? (
+                            <span className="sr-only" id={`pill-stock-${producto.id}-${nivel.key}`}>
+                                Solo quedan {maxStock} unidades disponibles, no alcanza para este nivel
                             </span>
+                        ) : (
+                            ahorro > 0 && (
+                                <span className={activo ? 'text-[#ffd8ed]' : 'text-[#FF00D4]'}>
+                                    -{ahorro}%
+                                </span>
+                            )
                         )}
                     </button>
                 );

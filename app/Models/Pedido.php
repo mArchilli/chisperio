@@ -36,6 +36,11 @@ class Pedido extends Model
         return $this->hasMany(PedidoItem::class);
     }
 
+    public function movimientosStock(): HasMany
+    {
+        return $this->hasMany(MovimientoStock::class);
+    }
+
     public function scopeFacturables(Builder $query): Builder
     {
         return $query->where('estado', '!=', EstadoPedido::Cancelado);

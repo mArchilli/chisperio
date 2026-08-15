@@ -16,6 +16,7 @@ class DashboardController extends Controller
             'stats' => [
                 'productos_count' => Producto::where('is_active', true)->count(),
                 'productos_total' => Producto::count(),
+                'productos_sin_stock_count' => Producto::where('stock', 0)->count(),
                 'pedidos_pendientes_count' => Pedido::where('estado', EstadoPedido::Pendiente)->count(),
                 'pedidos_despachados_mes' => Pedido::where('estado', EstadoPedido::Despachado)
                     ->whereBetween('despachado_at', [now()->startOfMonth(), now()->endOfMonth()])

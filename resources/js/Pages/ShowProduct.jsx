@@ -6,16 +6,19 @@ import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
 import PillsCantidad from '@/Components/PillsCantidad';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
+import { cantidadMaxima, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
 
 /**
  * Cantidad inicial: toma `?qty=` de la URL si vino de un pill tocado en una card
  * del catálogo (ver Tienda.jsx) — así la ficha abre mostrando el mismo nivel de
- * precio que el usuario ya había elegido, en vez de resetear a 1.
+ * precio que el usuario ya había elegido, en vez de resetear a 1. Capeada al stock
+ * disponible del producto (si no es ilimitado).
  */
-function qtyInicialDesdeUrl() {
+function qtyInicialDesdeUrl(producto) {
     if (typeof window === 'undefined') return 1;
     const valor = parseInt(new URLSearchParams(window.location.search).get('qty'), 10);
-    return Number.isFinite(valor) && valor >= 1 ? valor : 1;
+    const qty = Number.isFinite(valor) && valor >= 1 ? valor : 1;
+    return capearCantidad(producto, qty);
 }
 
 const formatPrice = (price) =>
@@ -192,15 +195,24 @@ function RelatedCard({ producto }) {
 }
 
 export default function ShowProduct({ producto, relacionados, canLogin }) {
-    const [qty, setQty] = useState(qtyInicialDesdeUrl);
+    const [qty, setQty] = useState(() => qtyInicialDesdeUrl(producto));
     const [isFav, setIsFav] = useState(false);
     const [expandDesc, setExpandDesc] = useState(false);
     const [toast, setToast] = useState(null);
     const { addToCart: addToCartContext } = useCart();
 
+    const agotado = sinStock(producto);
+    const stockBajo = tieneStockBajo(producto);
+    const maxQty = cantidadMaxima(producto);
+
     const precioInfo = useMemo(() => resolverPrecio(producto, qty), [producto, qty]);
     const tieneDescuento = precioInfo.precioFinal < precioInfo.precioBase;
     const ahorroPorcentaje = Math.round(precioInfo.ahorroTotalPorcentaje);
+
+    const cambiarQty = (valor) => setQty(() => {
+        const clamped = Math.max(1, valor);
+        return maxQty === null ? clamped : Math.min(clamped, maxQty);
+    });
 
     const addToCart = () => {
         addToCartContext(producto, qty);
@@ -262,6 +274,16 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                     </p>
 
                                     <div className="flex flex-wrap items-center gap-2">
+                                        {agotado && (
+                                            <span className="rounded-full bg-[#ba1a1a] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
+                                                Sin stock
+                                            </span>
+                                        )}
+                                        {stockBajo && (
+                                            <span className="rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
+                                                {producto.stock === 1 ? '¡Última unidad!' : `Quedan pocas: ${producto.stock}`}
+                                            </span>
+                                        )}
                                         {tieneDescuento && (
                                             <span className="rounded-full bg-[#FF00D4] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
                                                 {ahorroPorcentaje}% off
@@ -351,50 +373,69 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                 </div>
                             )}
 
-                            <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-[#f7f6f9] p-4 sm:p-5">
-                                <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
-                                    Elegí la cantidad
-                                </p>
-
-                                <PillsCantidad producto={producto} qty={qty} onChange={setQty} className="mb-3" />
-
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                    <div className="flex h-14 w-full items-center justify-between rounded-full border border-black/[0.08] bg-white px-1 shadow-sm sm:w-auto">
-                                        <button
-                                            type="button"
-                                            onClick={() => setQty((q) => Math.max(1, q - 1))}
-                                            className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95"
-                                            aria-label="Reducir cantidad"
-                                        >
-                                            −
-                                        </button>
-                                        <span className="min-w-10 select-none text-center text-base font-black text-[#1c1b1b]">
-                                            {qty}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setQty((q) => q + 1)}
-                                            className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95"
-                                            aria-label="Aumentar cantidad"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={addToCart}
-                                        className="flex h-14 w-full flex-1 items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
-                                    >
-                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25h10.5l.75 12H6l.75-12z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V6.75a3 3 0 016 0V9" />
-                                        </svg>
-                                        Añadir al carrito
-                                    </button>
+                            {agotado ? (
+                                <div className="mt-6 rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center sm:p-6">
+                                    <p className="text-sm font-extrabold uppercase tracking-wide text-[#ba1a1a]">
+                                        Sin stock
+                                    </p>
+                                    <p className="mt-1.5 text-sm font-medium text-[#ba1a1a]/80">
+                                        Este producto no tiene unidades disponibles en este momento.
+                                    </p>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-[#f7f6f9] p-4 sm:p-5">
+                                        <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
+                                            Elegí la cantidad
+                                        </p>
 
-                            <TablaPreciosPorCantidad producto={producto} qty={qty} />
+                                        <PillsCantidad producto={producto} qty={qty} onChange={cambiarQty} className="mb-3" />
+
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                            <div className="flex h-14 w-full items-center justify-between rounded-full border border-black/[0.08] bg-white px-1 shadow-sm sm:w-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => cambiarQty(qty - 1)}
+                                                    className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95"
+                                                    aria-label="Reducir cantidad"
+                                                >
+                                                    −
+                                                </button>
+                                                <span className="min-w-10 select-none text-center text-base font-black text-[#1c1b1b]">
+                                                    {qty}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => cambiarQty(qty + 1)}
+                                                    disabled={maxQty !== null && qty >= maxQty}
+                                                    className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                                                    aria-label="Aumentar cantidad"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={addToCart}
+                                                className="flex h-14 w-full flex-1 items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
+                                            >
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25h10.5l.75 12H6l.75-12z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V6.75a3 3 0 016 0V9" />
+                                                </svg>
+                                                Añadir al carrito
+                                            </button>
+                                        </div>
+                                        {maxQty !== null && (
+                                            <p className="mt-3 text-center text-[11px] font-semibold text-[#81788a] sm:text-left">
+                                                Quedan {maxQty} {maxQty === 1 ? 'unidad' : 'unidades'} disponibles.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <TablaPreciosPorCantidad producto={producto} qty={qty} />
+                                </>
+                            )}
 
                             {producto.categorias?.length > 0 && (
                                 <div className="mt-5 flex flex-wrap gap-2">

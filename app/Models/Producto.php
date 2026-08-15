@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,12 +18,14 @@ class Producto extends Model
         'precio',
         'is_active',
         'is_featured',
+        'stock',
     ];
 
     protected $casts = [
         'precio' => 'decimal:2',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
+        'stock' => 'integer',
     ];
 
     /**
@@ -89,6 +92,45 @@ class Producto extends Model
     public function escalasPrecio(): HasMany
     {
         return $this->hasMany(EscalaPrecio::class)->orderBy('cantidad_minima');
+    }
+
+    /**
+     * Relación uno a muchos con MovimientoStock (historial de auditoría de stock)
+     */
+    public function movimientosStock(): HasMany
+    {
+        return $this->hasMany(MovimientoStock::class);
+    }
+
+    /**
+     * `stock === null` significa stock ilimitado (comportamiento por defecto de todo
+     * el catálogo hasta que se cargue un número real).
+     */
+    public function tieneStockIlimitado(): bool
+    {
+        return $this->stock === null;
+    }
+
+    /**
+     * true si el producto tiene stock ilimitado o si el stock alcanza la cantidad pedida.
+     * Solo lectura: el descuento/reposición real lo hace el StockService (Fase 2).
+     */
+    public function tieneStockDisponible(int $cantidad): bool
+    {
+        return $this->tieneStockIlimitado() || $this->stock >= $cantidad;
+    }
+
+    /**
+     * Filtra productos con stock agotado (`stock = 0`) para los listados públicos.
+     * `stock IS NULL` (ilimitado) y `stock > 0` pasan el filtro; ojo que un simple
+     * `where('stock', '!=', 0)` NO alcanza para esto — en SQL, `NULL <> 0` no es
+     * verdadero, así que esa forma excluiría también los productos con stock
+     * ilimitado. La ficha individual (TiendaController::show) NO usa este scope
+     * a propósito: sigue siendo accesible por URL directa con stock=0.
+     */
+    public function scopeConStock(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->whereNull('stock')->orWhere('stock', '>', 0));
     }
 
     /**

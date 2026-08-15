@@ -4,6 +4,14 @@ import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { Pencil, Trash2, Tag } from 'lucide-react';
 import { resolverPrecio } from '@/lib/pricing';
+import { UMBRAL_STOCK_BAJO } from '@/lib/stock';
+
+// Si venimos de un link con ?stock=sin-stock (ej. la alerta del dashboard), arrancamos con
+// el filtro rápido ya activado en vez de resetear a "todos".
+function soloSinStockInicialDesdeUrl() {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('stock') === 'sin-stock';
+}
 
 export default function Index({ productos }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -17,6 +25,7 @@ export default function Index({ productos }) {
         precioMax: '',
         categoria: '',
         subcategoria: '',
+        soloSinStock: soloSinStockInicialDesdeUrl(),
     });
     const [ordenamiento, setOrdenamiento] = useState(''); // alfabetico-asc, alfabetico-desc, precio-asc, precio-desc
 
@@ -74,9 +83,14 @@ export default function Index({ productos }) {
             precioMax: '',
             categoria: '',
             subcategoria: '',
+            soloSinStock: false,
         });
         setSearchTerm('');
         setOrdenamiento('');
+    };
+
+    const toggleSoloSinStock = () => {
+        handleFilterChange('soloSinStock', !filters.soloSinStock);
     };
 
     // Extraer categorías únicas de los productos
@@ -150,6 +164,11 @@ export default function Index({ productos }) {
                 if (!tieneSubcategoria) return false;
             }
 
+            // Filtro rápido: solo sin stock (stock === 0; null es ilimitado, no cuenta)
+            if (filters.soloSinStock && producto.stock !== 0) {
+                return false;
+            }
+
             return true;
         });
 
@@ -182,6 +201,7 @@ export default function Index({ productos }) {
         if (filters.precioMax) count++;
         if (filters.categoria) count++;
         if (filters.subcategoria) count++;
+        if (filters.soloSinStock) count++;
         if (ordenamiento) count++;
         return count;
     }, [filters, ordenamiento]);
@@ -259,6 +279,22 @@ export default function Index({ productos }) {
                                             {activeFiltersCount}
                                         </span>
                                     )}
+                                </button>
+                                {/* Filtro rápido: sin stock (accesible sin abrir el panel de filtros avanzados) */}
+                                <button
+                                    type="button"
+                                    onClick={toggleSoloSinStock}
+                                    aria-pressed={filters.soloSinStock}
+                                    className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                        filters.soloSinStock
+                                            ? 'bg-red-600 border-red-600 text-white shadow-lg shadow-red-500/30'
+                                            : 'bg-white border-red-200 text-red-600 hover:border-red-400'
+                                    }`}
+                                >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                    </svg>
+                                    Sin stock
                                 </button>
                             </div>
 
@@ -493,6 +529,8 @@ export default function Index({ productos }) {
                             productosFiltrados.map((producto, index) => {
                                 const precioInfo = resolverPrecio(producto, 1);
                                 const tieneOferta = precioInfo.precioFinal < precioInfo.precioBase;
+                                const sinStock = producto.stock === 0;
+                                const stockBajo = producto.stock !== null && producto.stock > 0 && producto.stock <= UMBRAL_STOCK_BAJO;
 
                                 return (
                                 <div
@@ -541,6 +579,16 @@ export default function Index({ productos }) {
                                         
                                         {/* Badges en la esquina superior derecha */}
                                         <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+                                            {sinStock && (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-lg animate-bounceIn">
+                                                    ⚠ Sin stock
+                                                </span>
+                                            )}
+                                            {stockBajo && (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-amber-900 shadow-lg animate-bounceIn">
+                                                    Stock bajo: {producto.stock}
+                                                </span>
+                                            )}
                                             {producto.is_featured && (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-400 text-yellow-900 shadow-lg animate-bounceIn">
                                                     ⭐ Destacado
@@ -627,6 +675,17 @@ export default function Index({ productos }) {
                                                 </span>
                                             )}
                                         </div>
+
+                                        {/* Stock */}
+                                        <p
+                                            className={`mb-3 text-xs font-semibold ${
+                                                sinStock ? 'text-red-600' : stockBajo ? 'text-amber-600' : 'text-gray-500'
+                                            }`}
+                                        >
+                                            {producto.stock === null
+                                                ? 'Stock ilimitado'
+                                                : `Stock: ${producto.stock} ${producto.stock === 1 ? 'unidad' : 'unidades'}`}
+                                        </p>
 
                                         {/* Botones de acción */}
                                         <div className="flex items-center gap-2">

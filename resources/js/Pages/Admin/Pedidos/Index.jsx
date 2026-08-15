@@ -317,6 +317,15 @@ export default function Index({ pedidos, filtroEstado, stats }) {
                                                             </div>
                                                         </>
                                                     )}
+
+                                                    {pedido.estado === 'despachado' && (
+                                                        <button
+                                                            onClick={() => cambiarEstado(pedido, 'pendiente')}
+                                                            className="w-full inline-flex items-center justify-center p-3 bg-white border-2 border-yellow-500 text-yellow-700 rounded-lg text-sm font-semibold hover:bg-yellow-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                                        >
+                                                            Volver a pendiente
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -372,10 +381,12 @@ export default function Index({ pedidos, filtroEstado, stats }) {
                                         <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                                             Cancelar Pedido
                                         </h3>
-                                        <div className="mt-2">
+                                        <div className="mt-2 space-y-2">
                                             <p className="text-sm text-gray-500">
                                                 ¿Estás seguro de que deseas cancelar el pedido de "<strong>{pedidoACancelar.cliente_nombre}</strong>"?
-                                                Esta acción no se puede deshacer.
+                                            </p>
+                                            <p className="text-sm text-gray-500">
+                                                Se va a reponer el stock de todos los productos de este pedido. Esta acción no se puede deshacer.
                                             </p>
                                         </div>
                                     </div>

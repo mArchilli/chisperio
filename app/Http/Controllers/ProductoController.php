@@ -51,6 +51,7 @@ class ProductoController extends Controller
             'titulo' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0',
+            'stock' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
             'categorias' => 'array',
@@ -65,6 +66,7 @@ class ProductoController extends Controller
                 'titulo' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'] ?? null,
                 'precio' => $validated['precio'],
+                'stock' => $validated['stock'] ?? null,
                 'is_active' => $validated['is_active'] ?? true,
                 'is_featured' => $validated['is_featured'] ?? false,
             ]);
@@ -172,6 +174,7 @@ class ProductoController extends Controller
             'titulo' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0',
+            'stock' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
             'categorias' => 'array',
@@ -186,6 +189,7 @@ class ProductoController extends Controller
                 'titulo' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'] ?? null,
                 'precio' => $validated['precio'],
+                'stock' => $validated['stock'] ?? null,
                 'is_active' => $validated['is_active'] ?? true,
                 'is_featured' => $validated['is_featured'] ?? false,
             ]);
