@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AlcanceOferta;
 use App\Models\Producto;
 use App\Models\Categoria;
+use App\Models\EscalaPrecio;
+use App\Models\Oferta;
 use App\Models\Subcategoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ProductoController extends Controller
@@ -272,6 +276,12 @@ class ProductoController extends Controller
 
     /**
      * Remove the specified resource from storage.
+     *
+     * A diferencia de borrar una escala suelta (sincronizarEscalasPrecio), acá no hace
+     * falta bloquear por ofertas específicas vigentes: tanto `producto_escalas_precio`
+     * como `ofertas` cascadean (cascadeOnDelete) sobre producto_id, así que un borrado
+     * de producto se lleva escalas Y ofertas juntas — nunca queda una oferta huérfana
+     * reapuntando en silencio al precio base de OTRO producto.
      */
     public function destroy(Producto $producto)
     {
@@ -341,10 +351,34 @@ class ProductoController extends Controller
      * Sincroniza las escalas de precio del producto contra el payload recibido:
      * borra las que ya no vienen (por id) y hace upsert del resto. El id, cuando
      * viene, ya fue validado como perteneciente a este producto en escalasPrecioReglas().
+     *
+     * Antes de borrar, rechaza (ValidationException) cualquier escala que tenga una
+     * Oferta vigente o futura con alcance=especifico apuntándole: `producto_escala_precio_id`
+     * tiene nullOnDelete, así que sin este chequeo la oferta no se borra ni avisa, sino
+     * que pasa a aplicar en silencio sobre el precio base del producto.
      */
     private function sincronizarEscalasPrecio(Producto $producto, array $escalas): void
     {
         $idsConservar = collect($escalas)->pluck('id')->filter()->all();
+
+        $escalasAEliminar = $producto->escalasPrecio()->whereNotIn('id', $idsConservar)->get();
+
+        $bloqueos = [];
+        foreach ($escalasAEliminar as $escala) {
+            $oferta = $this->ofertaBloqueanteDe($escala);
+            if ($oferta !== null) {
+                $bloqueos["escalas_precio_bloqueadas.{$escala->id}"] = sprintf(
+                    'No se puede eliminar la escala de %d+ unidades: la oferta #%d (%s) la tiene como alcance específico. Eliminá o reasigná esa oferta primero.',
+                    $escala->cantidad_minima,
+                    $oferta->id,
+                    $this->descripcionOferta($oferta)
+                );
+            }
+        }
+
+        if (!empty($bloqueos)) {
+            throw ValidationException::withMessages($bloqueos);
+        }
 
         $producto->escalasPrecio()->whereNotIn('id', $idsConservar)->delete();
 
@@ -360,5 +394,31 @@ class ProductoController extends Controller
                 $producto->escalasPrecio()->create($atributos);
             }
         }
+    }
+
+    /**
+     * Oferta activa, con alcance=especifico, que apunta a esta escala y sigue vigente
+     * o todavía no terminó (fecha_fin nula o futura) — una oferta ya vencida no bloquea
+     * el borrado porque PricingService/ofertaVigente() ya no la va a resolver nunca más.
+     */
+    private function ofertaBloqueanteDe(EscalaPrecio $escala): ?Oferta
+    {
+        return Oferta::query()
+            ->where('producto_escala_precio_id', $escala->id)
+            ->where('alcance', AlcanceOferta::Especifico)
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now());
+            })
+            ->first();
+    }
+
+    private function descripcionOferta(Oferta $oferta): string
+    {
+        $valor = (float) $oferta->valor_descuento;
+
+        return $oferta->tipo_descuento?->value === 'porcentaje'
+            ? "{$valor}% de descuento"
+            : '$' . number_format($valor, 2) . ' de descuento';
     }
 }

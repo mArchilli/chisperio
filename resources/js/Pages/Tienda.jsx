@@ -4,6 +4,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
+import PillsCantidad from '@/Components/PillsCantidad';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -95,11 +96,16 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
     const displayPrice = precioInfo.precioFinal;
     const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
+    // Esta card ya agrega al carrito sin pasar por la ficha (botón "Agregar" más abajo),
+    // así que la cantidad elegida en los pills es la que se usa ahí directamente. Además
+    // propagamos esa cantidad como ?qty= en los links a la ficha, para no resetear a 1
+    // si el usuario prefiere seguir eligiendo ahí (ShowProduct la toma como qty inicial).
+    const productHref = route('tienda.show', qty > 1 ? { producto: producto.id, qty } : producto.id);
 
     return (
         <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)]">
             <Link
-                href={route('tienda.show', producto.id)}
+                href={productHref}
                 className="relative block aspect-[4/3] overflow-hidden bg-[#f6f3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
                 aria-label={`Ver ${producto.titulo}`}
             >
@@ -129,7 +135,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 </p>
 
                 <Link
-                    href={route('tienda.show', producto.id)}
+                    href={productHref}
                     className="line-clamp-2 min-h-10 text-sm font-extrabold leading-snug text-[#1c1b1b] transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 xl:text-[15px]"
                 >
                     {producto.titulo}
@@ -145,6 +151,8 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                         {formatPrice(displayPrice)}
                     </span>
                 </div>
+
+                <PillsCantidad producto={producto} qty={qty} onChange={onQtyChange} size="sm" className="mt-2.5" />
 
                 <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-2">
                     <div className="grid h-10 flex-shrink-0 grid-cols-[2rem_1.5rem_2rem] items-center overflow-hidden rounded-full border border-black/[0.08] bg-[#fcf9f8]">
@@ -181,7 +189,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 </div>
 
                 <Link
-                    href={route('tienda.show', producto.id)}
+                    href={productHref}
                     className="mt-2 inline-flex h-9 w-full items-center justify-center rounded-full border border-[#6000ca]/25 bg-white px-3 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#6000ca] transition-all hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
                 >
                     Ver producto

@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AlcanceOferta;
 use App\Models\EscalaPrecio;
+use App\Models\Oferta;
 use App\Models\Producto;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -177,5 +179,165 @@ class ProductoEscalasPrecioTest extends TestCase
 
         $response->assertSessionHasErrors(['escalas_precio.0.cantidad_minima']);
         $this->assertDatabaseMissing('productos', ['titulo' => 'Producto Cantidad Invalida']);
+    }
+
+    public function test_borra_escala_sin_ofertas_dependientes_normalmente(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('productos.update', $producto), [
+            'titulo' => $producto->titulo,
+            'precio' => $producto->precio,
+            'escalas_precio' => [],
+        ]);
+
+        $response->assertRedirect(route('productos.index'));
+        $this->assertModelMissing($escala);
+    }
+
+    public function test_rechaza_borrado_de_escala_con_oferta_especifica_vigente(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+            'precio_unitario' => 900,
+        ]);
+        $oferta = Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Especifico,
+            'producto_escala_precio_id' => $escala->id,
+            'is_active' => true,
+            'fecha_fin' => null,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('productos.update', $producto), [
+            'titulo' => $producto->titulo,
+            'precio' => $producto->precio,
+            'escalas_precio' => [],
+        ]);
+
+        $response->assertSessionHasErrors(["escalas_precio_bloqueadas.{$escala->id}"]);
+        $this->assertModelExists($escala);
+        $this->assertModelExists($oferta);
+    }
+
+    public function test_rechaza_borrado_de_escala_con_oferta_especifica_futura(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+        ]);
+        Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Especifico,
+            'producto_escala_precio_id' => $escala->id,
+            'is_active' => true,
+            'fecha_inicio' => now()->addWeek(),
+            'fecha_fin' => now()->addMonth(),
+        ]);
+
+        $response = $this->actingAs($user)->put(route('productos.update', $producto), [
+            'titulo' => $producto->titulo,
+            'precio' => $producto->precio,
+            'escalas_precio' => [],
+        ]);
+
+        $response->assertSessionHasErrors(["escalas_precio_bloqueadas.{$escala->id}"]);
+        $this->assertModelExists($escala);
+    }
+
+    public function test_permite_borrado_de_escala_con_oferta_especifica_ya_vencida(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+        ]);
+        $ofertaVencida = Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Especifico,
+            'producto_escala_precio_id' => $escala->id,
+            'is_active' => true,
+            'fecha_fin' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($user)->put(route('productos.update', $producto), [
+            'titulo' => $producto->titulo,
+            'precio' => $producto->precio,
+            'escalas_precio' => [],
+        ]);
+
+        $response->assertRedirect(route('productos.index'));
+        $response->assertSessionHasNoErrors();
+        $this->assertModelMissing($escala);
+        // La oferta sigue existiendo pero ahora apunta a null (nullOnDelete) — ya estaba
+        // vencida, así que no vuelve a resolverla ni PricingService ni ofertaVigente().
+        $this->assertDatabaseHas('ofertas', [
+            'id' => $ofertaVencida->id,
+            'producto_escala_precio_id' => null,
+        ]);
+    }
+
+    public function test_permite_borrado_de_escala_con_oferta_especifica_inactiva(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+        ]);
+        Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Especifico,
+            'producto_escala_precio_id' => $escala->id,
+            'is_active' => false,
+            'fecha_fin' => null,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('productos.update', $producto), [
+            'titulo' => $producto->titulo,
+            'precio' => $producto->precio,
+            'escalas_precio' => [],
+        ]);
+
+        $response->assertRedirect(route('productos.index'));
+        $this->assertModelMissing($escala);
+    }
+
+    public function test_permite_borrado_de_escala_con_oferta_alcance_todos_apuntando_a_otra_escala(): void
+    {
+        // alcance='todos' nunca setea producto_escala_precio_id (ver ofertaReglas: solo
+        // 'present' cuando alcance=especifico), así que nunca puede bloquear un borrado.
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+        ]);
+        Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Todos,
+            'producto_escala_precio_id' => null,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('productos.update', $producto), [
+            'titulo' => $producto->titulo,
+            'precio' => $producto->precio,
+            'escalas_precio' => [],
+        ]);
+
+        $response->assertRedirect(route('productos.index'));
+        $this->assertModelMissing($escala);
     }
 }

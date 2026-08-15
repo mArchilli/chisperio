@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import EscalasPrecioRepeater, { validarEscalasPrecio } from '@/Components/EscalasPrecioRepeater';
+import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar } from '@/Components/EscalasPrecioRepeater';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import Quill from 'quill';
@@ -69,7 +69,11 @@ export default function Edit({ producto, categorias, subcategorias }) {
         // PHP no parsea el body multipart de una request PUT (solo lo hace para POST),
         // así que con archivos de por medio hay que mandar un POST real y spoofear el
         // método con _method para que Laravel lo enrute como el update del resource.
-        transform((data) => ({ ...data, _method: 'put' }));
+        transform((data) => ({
+            ...data,
+            _method: 'put',
+            escalas_precio: limpiarEscalasParaEnviar(data.escalas_precio),
+        }));
 
         post(route('productos.update', producto.id), {
             forceFormData: true,

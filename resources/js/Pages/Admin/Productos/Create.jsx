@@ -1,12 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import EscalasPrecioRepeater, { validarEscalasPrecio } from '@/Components/EscalasPrecioRepeater';
+import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar } from '@/Components/EscalasPrecioRepeater';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
 export default function Create({ categorias, subcategorias }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, transform, processing, errors } = useForm({
         titulo: '',
         descripcion: '',
         precio: '',
@@ -55,6 +55,8 @@ export default function Create({ categorias, subcategorias }) {
         if (!esValido) {
             return;
         }
+
+        transform((data) => ({ ...data, escalas_precio: limpiarEscalasParaEnviar(data.escalas_precio) }));
 
         post(route('productos.store'), {
             forceFormData: true,

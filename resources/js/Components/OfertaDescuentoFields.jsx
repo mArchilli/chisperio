@@ -200,6 +200,10 @@ export default function OfertaDescuentoFields({ producto, data, setData, errors 
                     {error('producto_escala_precio_id') && (
                         <p className="mt-2 text-sm text-red-600">{error('producto_escala_precio_id')}</p>
                     )}
+                    <p className="mt-1 text-xs text-gray-500">
+                        Mientras esta oferta esté activa (o pendiente de empezar), no se va a poder borrar
+                        el precio específico elegido desde el producto.
+                    </p>
                 </div>
             )}
 

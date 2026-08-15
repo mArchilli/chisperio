@@ -3,8 +3,20 @@ import { useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
+import PillsCantidad from '@/Components/PillsCantidad';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
+
+/**
+ * Cantidad inicial: toma `?qty=` de la URL si vino de un pill tocado en una card
+ * del catálogo (ver Tienda.jsx) — así la ficha abre mostrando el mismo nivel de
+ * precio que el usuario ya había elegido, en vez de resetear a 1.
+ */
+function qtyInicialDesdeUrl() {
+    if (typeof window === 'undefined') return 1;
+    const valor = parseInt(new URLSearchParams(window.location.search).get('qty'), 10);
+    return Number.isFinite(valor) && valor >= 1 ? valor : 1;
+}
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -180,7 +192,7 @@ function RelatedCard({ producto }) {
 }
 
 export default function ShowProduct({ producto, relacionados, canLogin }) {
-    const [qty, setQty] = useState(1);
+    const [qty, setQty] = useState(qtyInicialDesdeUrl);
     const [isFav, setIsFav] = useState(false);
     const [expandDesc, setExpandDesc] = useState(false);
     const [toast, setToast] = useState(null);
@@ -343,6 +355,9 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                 <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
                                     Elegí la cantidad
                                 </p>
+
+                                <PillsCantidad producto={producto} qty={qty} onChange={setQty} className="mb-3" />
+
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                     <div className="flex h-14 w-full items-center justify-between rounded-full border border-black/[0.08] bg-white px-1 shadow-sm sm:w-auto">
                                         <button
