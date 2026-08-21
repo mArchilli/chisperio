@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { Pencil, Trash2, Tag } from 'lucide-react';
@@ -14,6 +14,7 @@ function soloSinStockInicialDesdeUrl() {
 }
 
 export default function Index({ productos }) {
+    const { auth } = usePage().props;
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [productoToDelete, setProductoToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -718,13 +719,15 @@ export default function Index({ productos }) {
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </Link>
-                                            <button
-                                                onClick={() => openDeleteModal(producto)}
-                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            {auth.user.role === 'admin' && (
+                                                <button
+                                                    onClick={() => openDeleteModal(producto)}
+                                                    className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                    title="Eliminar"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

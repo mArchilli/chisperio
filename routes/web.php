@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\TiendaController;
+use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -74,59 +75,79 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Rutas de Categorías
-    Route::resource('admin/categorias', CategoriaController::class)->names([
+    // Rutas de Categorías — destroy queda afuera del resource(): solo admin puede eliminar.
+    Route::resource('admin/categorias', CategoriaController::class)->except('destroy')->names([
         'index' => 'categorias.index',
         'create' => 'categorias.create',
         'store' => 'categorias.store',
         'show' => 'categorias.show',
         'edit' => 'categorias.edit',
         'update' => 'categorias.update',
-        'destroy' => 'categorias.destroy',
     ]);
+    Route::delete('admin/categorias/{categoria}', [CategoriaController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('categorias.destroy');
 
     // Rutas de Subcategorías
-    Route::resource('admin/subcategorias', SubcategoriaController::class)->names([
+    Route::resource('admin/subcategorias', SubcategoriaController::class)->except('destroy')->names([
         'index' => 'subcategorias.index',
         'create' => 'subcategorias.create',
         'store' => 'subcategorias.store',
         'show' => 'subcategorias.show',
         'edit' => 'subcategorias.edit',
         'update' => 'subcategorias.update',
-        'destroy' => 'subcategorias.destroy',
     ]);
+    Route::delete('admin/subcategorias/{subcategoria}', [SubcategoriaController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('subcategorias.destroy');
 
     // Rutas de Productos
-    Route::resource('admin/productos', ProductoController::class)->names([
+    Route::resource('admin/productos', ProductoController::class)->except('destroy')->names([
         'index' => 'productos.index',
         'create' => 'productos.create',
         'store' => 'productos.store',
         'show' => 'productos.show',
         'edit' => 'productos.edit',
         'update' => 'productos.update',
-        'destroy' => 'productos.destroy',
     ]);
+    Route::delete('admin/productos/{producto}', [ProductoController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('productos.destroy');
     Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
 
-    // Rutas de Pedidos
+    // Rutas de Pedidos (sin cambios)
     Route::get('admin/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
     Route::get('admin/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
     Route::patch('admin/pedidos/{pedido}/estado', [PedidoController::class, 'cambiarEstado'])->name('pedidos.cambiar-estado');
 
     // Rutas de Ofertas
-    Route::resource('admin/ofertas', OfertaController::class)->names([
+    Route::resource('admin/ofertas', OfertaController::class)->except('destroy')->names([
         'index' => 'ofertas.index',
         'create' => 'ofertas.create',
         'store' => 'ofertas.store',
         'show' => 'ofertas.show',
         'edit' => 'ofertas.edit',
         'update' => 'ofertas.update',
-        'destroy' => 'ofertas.destroy',
     ]);
+    Route::delete('admin/ofertas/{oferta}', [OfertaController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('ofertas.destroy');
     Route::patch('admin/ofertas/{oferta}/toggle-active', [OfertaController::class, 'toggleActive'])->name('ofertas.toggle-active');
 
-    // Ruta de Métricas
-    Route::get('admin/metricas', [MetricasController::class, 'index'])->name('metricas.index');
+    // Ruta de Métricas — datos de facturación, solo admin.
+    Route::get('admin/metricas', [MetricasController::class, 'index'])
+        ->middleware('role:admin')
+        ->name('metricas.index');
+
+    // Rutas de Usuarios (alta y gestión de roles) — solo admin.
+    Route::resource('admin/usuarios', UsuarioController::class)->except('show')->middleware('role:admin')->names([
+        'index' => 'usuarios.index',
+        'create' => 'usuarios.create',
+        'store' => 'usuarios.store',
+        'edit' => 'usuarios.edit',
+        'update' => 'usuarios.update',
+        'destroy' => 'usuarios.destroy',
+    ]);
 });
 
 require __DIR__.'/auth.php';

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
+    const isAdmin = user.role === 'admin';
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         // Obtener el estado guardado del localStorage
@@ -46,11 +47,16 @@ export default function AuthenticatedLayout({ header, children }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         )},
-        { name: 'Métricas', href: 'metricas.index', current: 'metricas.*', icon: (
+        ...(isAdmin ? [{ name: 'Métricas', href: 'metricas.index', current: 'metricas.*', icon: (
             <svg className={`h-5 w-5 ${!sidebarCollapsed ? 'mr-3' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-        )},
+        )}] : []),
+        ...(isAdmin ? [{ name: 'Usuarios', href: 'usuarios.index', current: 'usuarios.*', icon: (
+            <svg className={`h-5 w-5 ${!sidebarCollapsed ? 'mr-3' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 3a4 4 0 10-8 0" />
+            </svg>
+        )}] : []),
     ];
 
     return (
