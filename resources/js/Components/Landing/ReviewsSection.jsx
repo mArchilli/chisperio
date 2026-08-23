@@ -204,7 +204,7 @@ export default function ReviewsSection() {
     };
 
     return (
-        <section className="bg-[#f8f9fa] px-6 pb-12 pt-6 md:px-10 md:pb-16 md:pt-8 lg:px-12 xl:px-16" aria-labelledby="reviews-title">
+        <section id="resenas" className="bg-[#f8f9fa] px-6 pb-12 pt-6 md:px-10 md:pb-16 md:pt-8 lg:px-12 xl:px-16" aria-labelledby="reviews-title">
             <div className="w-full">
                 <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>

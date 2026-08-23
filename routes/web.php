@@ -15,6 +15,10 @@ use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// Redirects 301 de las URLs indexadas del WordPress anterior — ver el archivo para
+// el detalle. Van primero para que no puedan quedar sombreados por otra ruta.
+require __DIR__.'/legacy_redirects.php';
+
 Route::get('/tienda', [TiendaController::class, 'index'])->name('tienda.index');
 Route::get('/tienda/{producto}', [TiendaController::class, 'show'])->name('tienda.show');
 
