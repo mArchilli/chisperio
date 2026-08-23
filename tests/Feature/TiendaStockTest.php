@@ -11,8 +11,11 @@ class TiendaStockTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_listado_de_tienda_excluye_sin_stock_e_incluye_ilimitado_y_con_stock(): void
+    public function test_listado_de_tienda_incluye_sin_stock_ilimitado_y_con_stock(): void
     {
+        // El catálogo público lista también los productos sin stock (se marcan "Sin
+        // stock" y no se pueden agregar al carrito desde el frontend — ver Tienda.jsx);
+        // solo la home (destacados) y los relacionados de la ficha siguen ocultándolos.
         $sinStock = Producto::factory()->create(['is_active' => true, 'stock' => 0]);
         $ilimitado = Producto::factory()->create(['is_active' => true, 'stock' => null]);
         $conStock = Producto::factory()->create(['is_active' => true, 'stock' => 5]);
@@ -22,13 +25,13 @@ class TiendaStockTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Tienda')
-            ->has('productos.data', 2)
+            ->has('productos.data', 3)
         );
 
         $ids = collect($response->viewData('page')['props']['productos']['data'])->pluck('id');
         $this->assertTrue($ids->contains($ilimitado->id));
         $this->assertTrue($ids->contains($conStock->id));
-        $this->assertFalse($ids->contains($sinStock->id));
+        $this->assertTrue($ids->contains($sinStock->id));
     }
 
     public function test_ficha_individual_sigue_devolviendo_producto_con_stock_cero(): void

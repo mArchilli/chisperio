@@ -8,7 +8,7 @@ import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 
 // Reemplazar con el número de WhatsApp del negocio (formato internacional sin +)
-const WHATSAPP_NUMBER = '5491133973222';
+const WHATSAPP_NUMBER = '5491127930349';
 
 const PROVINCIAS = [
     'Buenos Aires',

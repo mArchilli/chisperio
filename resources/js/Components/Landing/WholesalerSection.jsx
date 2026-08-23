@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 
-const WHOLESALER_WHATSAPP_URL = `https://wa.me/5491133973222?text=${encodeURIComponent('¡Hola! Quiero recibir información sobre compras mayoristas.')}`;
+const WHOLESALER_WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent('¡Hola! Quiero recibir información sobre compras mayoristas.')}`;
 
 const benefits = [
     {

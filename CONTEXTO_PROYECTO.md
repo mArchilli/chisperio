@@ -101,7 +101,7 @@ No existen tablas de `orders`/`pedidos` ni carrito en backend — todo el carrit
 
 ## 9. Integración WhatsApp
 
-- Número **hardcodeado en 3 archivos distintos** (`WhatsAppButton.jsx`, `Checkout.jsx`, `ConfirmacionPedido.jsx`): `5491133973222`. No hay una constante/config compartida — sería una buena mejora a futuro centralizarlo (env var o config JS único).
+- Número **hardcodeado en 7 archivos distintos** (`WhatsAppButton.jsx`, `Checkout.jsx`, `ConfirmacionPedido.jsx`, `WholesalerSection.jsx`, `RentalMachine.jsx`, `LandingFooter.jsx`, `FAQSection.jsx`): `5491127930349`. No hay una constante/config compartida — sería una buena mejora a futuro centralizarlo (env var o config JS único).
 - El pedido nunca se persiste en backend: se arma el texto en el cliente, se abre `wa.me`/`whatsapp://` y se guarda una copia en `sessionStorage['chisperio_last_order']` para poder reenviarlo desde la pantalla de confirmación.
 
 ## 10. Puntos importantes / deuda técnica a tener en cuenta

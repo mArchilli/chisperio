@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const WHATSAPP_MESSAGE = '¡Hola! Tengo una consulta para Chisperío.';
-const WHATSAPP_URL = `https://wa.me/5491133973222?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 const INSTAGRAM_URL = 'https://www.instagram.com/chisperio.argentina/';
 
 const FAQS = [

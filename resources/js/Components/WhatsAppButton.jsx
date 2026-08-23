@@ -14,7 +14,7 @@ const EXCLUDED_PREFIXES = [
     '/profile',
 ];
 
-const WHATSAPP_URL = `https://wa.me/5491133973222?text=${encodeURIComponent('¡Hola! Necesito ayuda con mi pedido 😊')}`;
+const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent('¡Hola! Necesito ayuda con mi pedido 😊')}`;
 
 function shouldShow(path) {
     return !EXCLUDED_PREFIXES.some((p) => path.startsWith(p));

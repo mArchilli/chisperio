@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 
-const WHATSAPP_NUMBER = '5491133973222';
+const WHATSAPP_NUMBER = '5491127930349';
 
 function openWhatsApp(message) {
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(

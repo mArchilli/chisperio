@@ -344,9 +344,11 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                         </span>
                                     )}
                                 </div>
-                                <p className="mt-1 text-xs font-semibold text-[#81788a]">
-                                    Precio unitario para {qty} {qty === 1 ? 'unidad' : 'unidades'}
-                                </p>
+                                {!agotado && (
+                                    <p className="mt-1 text-xs font-semibold text-[#81788a]">
+                                        Precio unitario para {qty} {qty === 1 ? 'unidad' : 'unidades'}
+                                    </p>
+                                )}
                             </div>
 
                             {producto.descripcion && (

@@ -7,7 +7,7 @@ const MACHINES = [
 ];
 
 const RENTAL_MESSAGE = '¡Hola! Quiero consultar por el alquiler de maquinaria para mi evento.';
-const RENTAL_WHATSAPP_URL = `https://wa.me/5491133973222?text=${encodeURIComponent(RENTAL_MESSAGE)}`;
+const RENTAL_WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent(RENTAL_MESSAGE)}`;
 
 function ArrowIcon() {
     return (

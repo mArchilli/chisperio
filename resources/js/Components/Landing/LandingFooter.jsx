@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 
 const WHATSAPP_MESSAGE = '¡Hola! Quiero asesoramiento para mi evento.';
-const WHATSAPP_URL = `https://wa.me/5491133973222?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
 const FOOTER_LINKS = [
     {

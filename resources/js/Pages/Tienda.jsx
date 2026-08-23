@@ -4,7 +4,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
-import { cantidadMaxima, tieneStockBajo } from '@/lib/stock';
+import { cantidadMaxima, sinStock, tieneStockBajo } from '@/lib/stock';
 import PillsCantidad from '@/Components/PillsCantidad';
 
 const formatPrice = (price) =>
@@ -100,6 +100,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
     const maxQty = cantidadMaxima(producto);
     const stockBajo = tieneStockBajo(producto);
+    const agotado = sinStock(producto);
     const enElTope = maxQty !== null && qty >= maxQty;
     // Esta card ya agrega al carrito sin pasar por la ficha (botón "Agregar" más abajo),
     // así que la cantidad elegida en los pills es la que se usa ahí directamente. Además
@@ -114,7 +115,13 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 className="relative block aspect-[4/3] overflow-hidden bg-[#f6f3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
                 aria-label={`Ver ${producto.titulo}`}
             >
-                {!hasOffer && producto.is_featured && (
+                {agotado && (
+                    <span className="absolute left-3 top-3 z-10 rounded-full bg-[#ba1a1a] px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
+                        Sin stock
+                    </span>
+                )}
+
+                {!agotado && !hasOffer && producto.is_featured && (
                     <span
                         className="absolute left-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center text-[#6000ca] drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]"
                         aria-label="Producto destacado"
@@ -125,7 +132,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                     </span>
                 )}
 
-                {hasOffer && (
+                {!agotado && hasOffer && (
                     <span className="absolute right-3 top-3 z-10 rounded-full bg-[#FF00D4] px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
                         {discount}% off
                     </span>
@@ -137,7 +144,9 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                     </span>
                 )}
 
-                <ProductImage producto={producto} />
+                <div className={`h-full w-full ${agotado ? 'opacity-50 grayscale' : ''}`}>
+                    <ProductImage producto={producto} />
+                </div>
             </Link>
 
             <div className="flex min-w-0 flex-1 flex-col p-3.5 xl:p-4">
@@ -168,43 +177,53 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                     )}
                 </div>
 
-                <PillsCantidad producto={producto} qty={qty} onChange={onQtyChange} size="sm" className="mt-2.5" />
-
-                <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-2">
-                    <div className="grid h-10 flex-shrink-0 grid-cols-[2rem_1.5rem_2rem] items-center overflow-hidden rounded-full border border-black/[0.08] bg-[#fcf9f8]">
-                        <button
-                            type="button"
-                            onClick={() => onQtyChange(qty - 1)}
-                            className="flex h-full items-center justify-center text-base font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
-                            aria-label="Reducir cantidad"
-                        >
-                            −
-                        </button>
-                        <span className="text-center text-xs font-extrabold text-[#1c1b1b] select-none">
-                            {qty}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => onQtyChange(Math.min(qty + 1, maxQty ?? Infinity))}
-                            disabled={enElTope}
-                            title={enElTope ? `Solo quedan ${maxQty} disponibles` : undefined}
-                            className="flex h-full items-center justify-center text-base font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#6000ca]"
-                            aria-label="Aumentar cantidad"
-                        >
-                            +
-                        </button>
+                {agotado ? (
+                    <div className="mt-3 rounded-2xl border border-red-100 bg-red-50 px-3 py-2.5 text-center">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#ba1a1a]">
+                            Sin stock
+                        </p>
                     </div>
+                ) : (
+                    <>
+                        <PillsCantidad producto={producto} qty={qty} onChange={onQtyChange} size="sm" className="mt-2.5" />
 
-                    <button
-                        type="button"
-                        onClick={onAddToCart}
-                        className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-3 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
-                        aria-label={`Agregar ${producto.titulo} al carrito`}
-                    >
-                        <BagIcon className="h-4 w-4 flex-shrink-0" />
-                        <span className="hidden truncate sm:inline">Agregar</span>
-                    </button>
-                </div>
+                        <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-2">
+                            <div className="grid h-10 flex-shrink-0 grid-cols-[2rem_1.5rem_2rem] items-center overflow-hidden rounded-full border border-black/[0.08] bg-[#fcf9f8]">
+                                <button
+                                    type="button"
+                                    onClick={() => onQtyChange(qty - 1)}
+                                    className="flex h-full items-center justify-center text-base font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                                    aria-label="Reducir cantidad"
+                                >
+                                    −
+                                </button>
+                                <span className="text-center text-xs font-extrabold text-[#1c1b1b] select-none">
+                                    {qty}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => onQtyChange(Math.min(qty + 1, maxQty ?? Infinity))}
+                                    disabled={enElTope}
+                                    title={enElTope ? `Solo quedan ${maxQty} disponibles` : undefined}
+                                    className="flex h-full items-center justify-center text-base font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#6000ca]"
+                                    aria-label="Aumentar cantidad"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={onAddToCart}
+                                className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-3 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
+                                aria-label={`Agregar ${producto.titulo} al carrito`}
+                            >
+                                <BagIcon className="h-4 w-4 flex-shrink-0" />
+                                <span className="hidden truncate sm:inline">Agregar</span>
+                            </button>
+                        </div>
+                    </>
+                )}
 
                 <Link
                     href={productHref}

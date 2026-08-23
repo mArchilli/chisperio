@@ -73,13 +73,17 @@ class TiendaController extends Controller
 
     public function index(Request $request)
     {
+        // A diferencia de los "relacionados" de la ficha y los destacados de la home,
+        // acá NO se usa conStock(): el catálogo tiene que listar también los productos
+        // sin stock (marcados "Sin stock" y sin poder agregarse al carrito en el
+        // frontend — ver Tienda.jsx), no ocultarlos.
         $query = Producto::with([
             'imagenPrincipal',
             'ofertaVigente',
             'categorias',
             'subcategorias',
             'escalasPrecio',
-        ])->where('is_active', true)->conStock();
+        ])->where('is_active', true);
 
         if ($request->filled('categoria')) {
             $query->whereHas('categorias', fn ($q) =>
@@ -115,7 +119,13 @@ class TiendaController extends Controller
             });
         }
 
-        $productos = $query->latest()->paginate(12)->withQueryString();
+        // Productos sin stock al final del listado (stock NULL = ilimitado siempre
+        // cuenta como "con stock" acá, igual que Producto::scopeConStock).
+        $productos = $query
+            ->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END')
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
         return Inertia::render('Tienda', [
             'productos'  => $productos,
