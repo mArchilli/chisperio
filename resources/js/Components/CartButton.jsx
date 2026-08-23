@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { ShoppingCart } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCart } from '@/Context/CartContext';
+import { useNotificacionEnvioGratis } from '@/hooks/useNotificacionEnvioGratis';
+import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 
 const EXCLUDED_PREFIXES = [
     '/carrito', '/checkout', '/login',
@@ -86,6 +89,11 @@ export default function CartButton() {
     const [open, setOpen] = useState(false);
     const { items, removeFromCart, updateQty, cartCount, subtotal } = useCart();
     const wrapperRef = useRef(null);
+    const { configuracionEnvio } = usePage().props;
+
+    useNotificacionEnvioGratis(subtotal, configuracionEnvio?.montoMinimo, () => {
+        toast.success('¡Desbloqueaste envío gratis! 🎉');
+    });
 
     useEffect(() => {
         return router.on('navigate', (event) => {
@@ -186,6 +194,9 @@ export default function CartButton() {
                 {/* Footer */}
                 {items.length > 0 && (
                     <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/80">
+                        <div className="mb-3">
+                            <BarraEnvioGratis subtotal={subtotal} />
+                        </div>
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-sm text-[#7c7388]">Total</span>
                             <span className="font-black text-base text-[#6000ca]">{formatPrice(subtotal)}</span>

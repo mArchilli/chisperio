@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ConfiguracionEnvioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\OfertaController;
@@ -148,6 +149,14 @@ Route::middleware('auth')->group(function () {
         'update' => 'usuarios.update',
         'destroy' => 'usuarios.destroy',
     ]);
+
+    // Configuración de envío gratis — solo admin.
+    Route::get('admin/configuracion/envio', [ConfiguracionEnvioController::class, 'edit'])
+        ->middleware('role:admin')
+        ->name('configuracion-envio.edit');
+    Route::patch('admin/configuracion/envio', [ConfiguracionEnvioController::class, 'update'])
+        ->middleware('role:admin')
+        ->name('configuracion-envio.update');
 });
 
 require __DIR__.'/auth.php';

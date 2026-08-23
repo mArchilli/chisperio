@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useCart } from '@/Context/CartContext';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -223,7 +224,7 @@ function EmptyCart() {
     );
 }
 
-function OrderSummary({ subtotal, cartCount, hayItemsSinStock }) {
+function OrderSummary({ subtotal, cartCount, hayItemsSinStock, envioGratisAlcanzado }) {
     return (
         <aside
             aria-labelledby="order-summary-title"
@@ -239,6 +240,10 @@ function OrderSummary({ subtotal, cartCount, hayItemsSinStock }) {
                     Tu pedido
                 </h2>
 
+                <div className="mt-5">
+                    <BarraEnvioGratis subtotal={subtotal} />
+                </div>
+
                 <div className="mt-7 space-y-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                         <span className="font-medium text-[#81788a]">
@@ -248,9 +253,15 @@ function OrderSummary({ subtotal, cartCount, hayItemsSinStock }) {
                     </div>
                     <div className="flex items-start justify-between gap-4">
                         <span className="font-medium text-[#81788a]">Envío</span>
-                        <span className="max-w-[12rem] text-right text-xs font-extrabold leading-snug text-[#6000ca]">
-                            A calcular al finalizar
-                        </span>
+                        {envioGratisAlcanzado ? (
+                            <span className="max-w-[12rem] text-right text-xs font-extrabold leading-snug text-[#1c8a4c]">
+                                ¡Gratis! 🎉
+                            </span>
+                        ) : (
+                            <span className="max-w-[12rem] text-right text-xs font-extrabold leading-snug text-[#6000ca]">
+                                A calcular al finalizar
+                            </span>
+                        )}
                     </div>
                     <div className="hidden items-center justify-between gap-4 md:flex">
                         <span className="font-medium text-[#81788a]">Impuestos</span>
@@ -328,8 +339,10 @@ function OrderSummary({ subtotal, cartCount, hayItemsSinStock }) {
     );
 }
 
-export default function Carrito({ canLogin }) {
+export default function Carrito({ canLogin, configuracionEnvio }) {
     const { items, removeFromCart, updateQty, subtotal, cartCount, hayItemsSinStock } = useCart();
+    const montoMinimoEnvio = configuracionEnvio?.montoMinimo ?? 0;
+    const envioGratisAlcanzado = montoMinimoEnvio > 0 && subtotal >= montoMinimoEnvio;
 
     return (
         <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
@@ -390,7 +403,12 @@ export default function Carrito({ canLogin }) {
 
                             <div className="lg:col-span-4">
                                 <div className="lg:sticky lg:top-28">
-                                    <OrderSummary subtotal={subtotal} cartCount={cartCount} hayItemsSinStock={hayItemsSinStock} />
+                                    <OrderSummary
+                                        subtotal={subtotal}
+                                        cartCount={cartCount}
+                                        hayItemsSinStock={hayItemsSinStock}
+                                        envioGratisAlcanzado={envioGratisAlcanzado}
+                                    />
                                 </div>
                             </div>
                         </div>
