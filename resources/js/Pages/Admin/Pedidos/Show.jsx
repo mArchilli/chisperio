@@ -90,7 +90,7 @@ export default function Show({ pedido }) {
                                 <DatoCliente label="Correo electrónico" value={pedido.cliente_email} />
                                 <DatoCliente label="Teléfono" value={pedido.cliente_telefono} />
                                 <DatoCliente label="Provincia" value={pedido.cliente_provincia} />
-                                <DatoCliente label="Dirección" value={pedido.cliente_direccion} />
+                                <DatoCliente label="Ciudad" value={pedido.cliente_ciudad} />
                                 <DatoCliente label="Código Postal" value={pedido.cliente_codigo_postal} />
                                 <DatoCliente label="Fecha del pedido" value={formatearFecha(pedido.created_at)} />
                             </div>

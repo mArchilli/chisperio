@@ -17,7 +17,7 @@ class Pedido extends Model
         'cliente_telefono',
         'cliente_email',
         'cliente_provincia',
-        'cliente_direccion',
+        'cliente_ciudad',
         'cliente_codigo_postal',
         'observaciones',
         'subtotal',

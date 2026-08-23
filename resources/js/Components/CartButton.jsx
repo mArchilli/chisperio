@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -88,7 +88,6 @@ export default function CartButton() {
     const [pageVisible, setPageVisible] = useState(() => shouldShow(window.location.pathname));
     const [open, setOpen] = useState(false);
     const { items, removeFromCart, updateQty, cartCount, subtotal } = useCart();
-    const wrapperRef = useRef(null);
     const { configuracionEnvio } = usePage().props;
 
     useNotificacionEnvioGratis(subtotal, configuracionEnvio?.montoMinimo, () => {
@@ -102,18 +101,6 @@ export default function CartButton() {
         });
     }, []);
 
-    // Cerrar al hacer click fuera
-    useEffect(() => {
-        if (!open) return;
-        function handler(e) {
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-                setOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [open]);
-
     // Cerrar con Escape
     useEffect(() => {
         if (!open) return;
@@ -124,25 +111,42 @@ export default function CartButton() {
         return () => document.removeEventListener('keydown', handler);
     }, [open]);
 
+    // Bloquear el scroll del body mientras el drawer está abierto
+    useEffect(() => {
+        if (!open) return;
+        const original = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = original;
+        };
+    }, [open]);
+
     if (!pageVisible) return null;
 
     return (
-        <div ref={wrapperRef} className="fixed bottom-24 md:bottom-8 right-20 md:right-[6.5rem] z-40">
-            {/* Panel */}
+        <>
+            {/* Overlay blureado: por encima del header (sticky z-50) y del menú mobile
+                (z-[60]) para que abrir el carrito difumine realmente todo lo demás.
+                Click afuera cierra el drawer. */}
             <div
-                className={`
-                    absolute bottom-[4.5rem] right-0
-                    w-[min(340px,calc(100vw-2rem))]
-                    bg-white rounded-2xl shadow-2xl border border-gray-100
-                    overflow-hidden
-                    transition-all duration-200 origin-bottom-right
-                    ${open
-                        ? 'opacity-100 scale-100 pointer-events-auto'
-                        : 'opacity-0 scale-90 pointer-events-none'}
-                `}
+                onClick={() => setOpen(false)}
+                aria-hidden="true"
+                className={`fixed inset-0 z-[65] bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
+                    open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+            />
+
+            {/* Drawer: alto completo, pegado a la derecha, ancho completo en mobile */}
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Tu carrito"
+                className={`fixed inset-y-0 right-0 z-[70] flex h-full w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out sm:w-[420px] ${
+                    open ? 'translate-x-0' : 'translate-x-full'
+                }`}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <svg className="w-5 h-5 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -159,7 +163,7 @@ export default function CartButton() {
                         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                         aria-label="Cerrar carrito"
                     >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
@@ -167,7 +171,7 @@ export default function CartButton() {
 
                 {/* Items */}
                 {items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                    <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
                         <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mb-3">
                             <svg className="w-7 h-7 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -179,7 +183,7 @@ export default function CartButton() {
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-y-auto max-h-[50vh] px-1 py-1 divide-y divide-gray-50">
+                    <div className="flex-1 overflow-y-auto px-2 py-1 divide-y divide-gray-50">
                         {items.map((item) => (
                             <MiniCartItem
                                 key={item.id}
@@ -193,7 +197,7 @@ export default function CartButton() {
 
                 {/* Footer */}
                 {items.length > 0 && (
-                    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/80">
+                    <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/80 flex-shrink-0">
                         <div className="mb-3">
                             <BarraEnvioGratis subtotal={subtotal} />
                         </div>
@@ -222,8 +226,8 @@ export default function CartButton() {
             {/* Botón flotante */}
             <button
                 onClick={() => setOpen((v) => !v)}
-                aria-label="Abrir carrito"
-                className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] hover:bg-[#5000aa] hover:scale-110 active:scale-95 transition-all duration-200"
+                aria-label={open ? 'Cerrar carrito' : 'Abrir carrito'}
+                className="fixed bottom-24 md:bottom-8 right-20 md:right-[6.5rem] z-40 flex items-center justify-center w-14 h-14 rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] hover:bg-[#5000aa] hover:scale-110 active:scale-95 transition-all duration-200"
             >
                 <ShoppingCart className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden="true" />
 
@@ -233,6 +237,6 @@ export default function CartButton() {
                     </span>
                 )}
             </button>
-        </div>
+        </>
     );
 }

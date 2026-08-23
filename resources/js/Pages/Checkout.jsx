@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useCart } from '@/Context/CartContext';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
+import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 
 // Reemplazar con el número de WhatsApp del negocio (formato internacional sin +)
 const WHATSAPP_NUMBER = '5491133973222';
@@ -80,7 +82,18 @@ function FormField({ label, required, error, children }) {
 }
 
 /* ─── Resumen lateral ──────────────────────────────────────────────────────── */
-function CheckoutSummary({ items, subtotal, codigoAplicado, montoDescuento, totalConDescuento, codigoDescuentoError }) {
+function CheckoutSummary({
+    items,
+    subtotal,
+    codigoAplicado,
+    descuentoInfo,
+    montoDescuento,
+    totalConDescuento,
+    validandoCodigo,
+    onAplicarCodigo,
+    onQuitarCodigo,
+    codigoDescuentoError,
+}) {
     return (
         <aside className="relative overflow-hidden rounded-[2rem] border border-black/[0.06] bg-white p-5 shadow-[0_24px_55px_-38px_rgba(28,27,27,0.55)] sm:p-6 lg:p-7">
             <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full border-[36px] border-[#6000ca]/[0.035]" />
@@ -90,6 +103,23 @@ function CheckoutSummary({ items, subtotal, codigoAplicado, montoDescuento, tota
             <h2 className="relative mb-6 text-2xl font-black leading-tight tracking-tight text-[#1c1b1b] lg:text-[2rem]">
                 Resumen
             </h2>
+
+            {/* OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre el
+                total con descuento — mismo criterio que Carrito.jsx. */}
+            <div className="relative mb-6">
+                <BarraEnvioGratis subtotal={subtotal} />
+            </div>
+
+            <div className="relative">
+                <CodigoDescuentoBlock
+                    codigoAplicado={codigoAplicado}
+                    descuentoInfo={descuentoInfo}
+                    montoDescuento={montoDescuento}
+                    validando={validandoCodigo}
+                    onAplicar={onAplicarCodigo}
+                    onQuitar={onQuitarCodigo}
+                />
+            </div>
 
             <div className="relative mb-6 space-y-3">
                 {items.map((item) => (
@@ -177,19 +207,27 @@ export default function Checkout({ canLogin }) {
         clearCart,
         hayItemsSinStock,
         codigoAplicado,
+        descuentoInfo,
         montoDescuento,
         totalConDescuento,
+        validandoCodigo,
+        aplicarCodigoDescuento,
         quitarCodigoDescuento,
     } = useCart();
+
+    // Igual criterio que BarraEnvioGratis: montoMinimo <= 0 significa que la feature
+    // está desactivada desde el admin, y el envío gratis se evalúa sobre el subtotal
+    // bruto (nunca sobre el total con descuento).
+    const { configuracionEnvio } = usePage().props;
+    const montoMinimoEnvioGratis = configuracionEnvio?.montoMinimo ?? 0;
+    const envioGratisAlcanzado = montoMinimoEnvioGratis > 0 && subtotal >= montoMinimoEnvioGratis;
 
     const [form, setForm] = useState({
         nombre: '',
         apellido: '',
         dni: '',
         provincia: '',
-        direccion: '',
-        numero: '',
-        entreCalles: '',
+        ciudad: '',
         codigoPostal: '',
         telefono: '',
         email: '',
@@ -210,8 +248,7 @@ export default function Checkout({ canLogin }) {
         if (!form.apellido.trim()) e.apellido = 'El apellido es requerido';
         if (!form.dni.trim()) e.dni = 'El DNI es requerido';
         if (!form.provincia) e.provincia = 'Seleccioná una provincia';
-        if (!form.direccion.trim()) e.direccion = 'La dirección es requerida';
-        if (!form.numero.trim()) e.numero = 'El número es requerido';
+        if (!form.ciudad.trim()) e.ciudad = 'La ciudad es requerida';
         if (!form.codigoPostal.trim()) e.codigoPostal = 'El código postal es requerido';
         if (!form.telefono.trim()) e.telefono = 'El teléfono es requerido';
         if (!form.email.trim()) {
@@ -224,13 +261,19 @@ export default function Checkout({ canLogin }) {
 
     const buildMessage = () =>
         [
-            '🛒 *Nuevo pedido — Chisperío*',
+            '*Nuevo Pedido Web - Chisperío*',
+            '',
+            `Nombre: ${form.nombre} ${form.apellido}`,
             '',
             '📦 *Productos:*',
             ...items.map(
                 (item) =>
                     `• ${item.titulo} x${item.cantidad} — ${formatPrice(item.subtotalItem)}`
             ),
+            envioGratisAlcanzado ? '' : null,
+            envioGratisAlcanzado
+                ? `🚚 Envío gratis por superar el monto de ${formatPrice(montoMinimoEnvioGratis)}`
+                : null,
             '',
             `Subtotal: ${formatPrice(subtotal)}`,
             codigoAplicado ? `Descuento (${codigoAplicado}): -${formatPrice(montoDescuento)}` : null,
@@ -240,14 +283,14 @@ export default function Checkout({ canLogin }) {
             `Nombre: ${form.nombre} ${form.apellido}`,
             `DNI: ${form.dni}`,
             `Provincia: ${form.provincia}`,
-            `Dirección: ${form.direccion} ${form.numero}`,
-            form.entreCalles ? `Entre calles: ${form.entreCalles}` : null,
+            `Ciudad: ${form.ciudad}`,
             `Código Postal: ${form.codigoPostal}`,
             `Teléfono: ${form.telefono}`,
             `Email: ${form.email}`,
-            form.observaciones ? `\n📝 *Observaciones:* ${form.observaciones}` : null,
+            form.observaciones ? '' : null,
+            form.observaciones ? `📝 *Observaciones:* ${form.observaciones}` : null,
         ]
-            .filter(Boolean)
+            .filter((linea) => linea !== null)
             .join('\n');
 
     const openWhatsApp = (message) => {
@@ -286,12 +329,7 @@ export default function Checkout({ canLogin }) {
                 cliente_telefono: form.telefono,
                 cliente_email: form.email,
                 cliente_provincia: form.provincia,
-                cliente_direccion: [
-                    `${form.direccion} ${form.numero}`.trim(),
-                    form.entreCalles ? `(entre calles: ${form.entreCalles})` : null,
-                ]
-                    .filter(Boolean)
-                    .join(', '),
+                cliente_ciudad: form.ciudad,
                 cliente_codigo_postal: form.codigoPostal,
                 observaciones: form.observaciones,
                 codigo_descuento: codigoAplicado,
@@ -445,12 +483,15 @@ export default function Checkout({ canLogin }) {
                                         Entrega y contacto
                                     </p>
                                     <h3 className="text-xl font-black leading-tight tracking-tight text-[#1c1b1b]">
-                                        ¿Dónde te encontramos?
+                                        ¿A qué sucursal te lo enviamos?
                                     </h3>
+                                    <p className="mt-1.5 text-sm font-medium text-[#81788a]">
+                                        El envío es a sucursal, no a domicilio. Contanos provincia y ciudad para coordinar la más cercana.
+                                    </p>
                                 </div>
 
-                                {/* Provincia */}
-                                <div className="mb-5">
+                                {/* Provincia / Ciudad */}
+                                <div className="mb-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                                     <FormField label="Provincia" required error={errors.provincia}>
                                         <select
                                             value={form.provincia}
@@ -467,43 +508,19 @@ export default function Checkout({ canLogin }) {
                                             ))}
                                         </select>
                                     </FormField>
-                                </div>
-
-                                {/* Dirección / Número */}
-                                <div className="mb-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
-                                    <div className="sm:col-span-2">
-                                        <FormField label="Dirección" required error={errors.direccion}>
-                                            <input
-                                                type="text"
-                                                placeholder="Nombre de la calle"
-                                                value={form.direccion}
-                                                onChange={update('direccion')}
-                                                className={ic('direccion')}
-                                            />
-                                        </FormField>
-                                    </div>
-                                    <FormField label="Número/Altura" required error={errors.numero}>
+                                    <FormField label="Ciudad" required error={errors.ciudad}>
                                         <input
                                             type="text"
-                                            placeholder="1234"
-                                            value={form.numero}
-                                            onChange={update('numero')}
-                                            className={ic('numero')}
+                                            placeholder="Tu ciudad"
+                                            value={form.ciudad}
+                                            onChange={update('ciudad')}
+                                            className={ic('ciudad')}
                                         />
                                     </FormField>
                                 </div>
 
-                                {/* Entre calles / Código Postal */}
+                                {/* Código Postal */}
                                 <div className="mb-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                    <FormField label="Entre calles (opcional)">
-                                        <input
-                                            type="text"
-                                            placeholder="Ej: Entre Av. Corrientes y Sarmiento"
-                                            value={form.entreCalles}
-                                            onChange={update('entreCalles')}
-                                            className={`${inputBase} border-black/[0.08]`}
-                                        />
-                                    </FormField>
                                     <FormField label="Código Postal" required error={errors.codigoPostal}>
                                         <input
                                             type="text"
@@ -616,8 +633,12 @@ export default function Checkout({ canLogin }) {
                                 items={items}
                                 subtotal={subtotal}
                                 codigoAplicado={codigoAplicado}
+                                descuentoInfo={descuentoInfo}
                                 montoDescuento={montoDescuento}
                                 totalConDescuento={totalConDescuento}
+                                validandoCodigo={validandoCodigo}
+                                onAplicarCodigo={aplicarCodigoDescuento}
+                                onQuitarCodigo={quitarCodigoDescuento}
                                 codigoDescuentoError={codigoDescuentoError}
                             />
                         </div>

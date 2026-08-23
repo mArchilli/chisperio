@@ -22,7 +22,7 @@ class CheckoutStockTest extends TestCase
             'cliente_telefono' => null,
             'cliente_email' => null,
             'cliente_provincia' => null,
-            'cliente_direccion' => null,
+            'cliente_ciudad' => null,
             'cliente_codigo_postal' => null,
             'observaciones' => null,
             'items' => $items,

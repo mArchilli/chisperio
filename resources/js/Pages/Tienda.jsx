@@ -96,6 +96,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     const precioInfo = resolverPrecio(producto, qty);
     const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
     const displayPrice = precioInfo.precioFinal;
+    const totalPrice = displayPrice * qty;
     const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
     const maxQty = cantidadMaxima(producto);
     const stockBajo = tieneStockBajo(producto);
@@ -154,12 +155,17 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 <div className="mt-auto border-t border-black/[0.06] pt-3.5">
                     {hasOffer && (
                         <span className="block text-[10px] font-medium leading-none text-[#81788a] line-through">
-                            {formatPrice(producto.precio)}
+                            {formatPrice(precioInfo.precioBase * qty)}
                         </span>
                     )}
                     <span className={`block whitespace-nowrap text-lg font-black leading-none text-[#6000ca] ${hasOffer ? 'mt-1.5' : ''}`}>
-                        {formatPrice(displayPrice)}
+                        {formatPrice(totalPrice)}
                     </span>
+                    {qty > 1 && (
+                        <span className="mt-0.5 block whitespace-nowrap text-[10px] font-semibold text-[#81788a]">
+                            {formatPrice(displayPrice)} c/u
+                        </span>
+                    )}
                 </div>
 
                 <PillsCantidad producto={producto} qty={qty} onChange={onQtyChange} size="sm" className="mt-2.5" />
@@ -318,6 +324,11 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
     const activeCategoriaId = filters.categoria ? Number(filters.categoria) : null;
     const activeSubcategoriaId = filters.subcategoria ? Number(filters.subcategoria) : null;
     const activeCat = categorias.find((category) => category.id === activeCategoriaId) ?? null;
+    const [searchTerm, setSearchTerm] = useState(filters.q || '');
+
+    useEffect(() => {
+        setSearchTerm(filters.q || '');
+    }, [filters.q]);
 
     useEffect(() => {
         if (window.location.hash !== '#productos') return undefined;
@@ -348,12 +359,14 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
             filter,
             categoria: activeCategoriaId,
             subcategoria: activeSubcategoriaId,
+            q: filters.q,
         });
 
     const handleCategory = (categoryId) =>
         navigate({
             filter: activeFilter,
             categoria: activeCategoriaId === categoryId ? null : categoryId,
+            q: filters.q,
         });
 
     const handleSubcategory = (subcategoryId) =>
@@ -361,6 +374,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
             filter: activeFilter,
             categoria: activeCategoriaId,
             subcategoria: activeSubcategoriaId === subcategoryId ? null : subcategoryId,
+            q: filters.q,
         });
 
     const handlePageChange = (page) => {
@@ -368,9 +382,27 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
         if (filters.filter && filters.filter !== 'todos') params.filter = filters.filter;
         if (filters.categoria) params.categoria = filters.categoria;
         if (filters.subcategoria) params.subcategoria = filters.subcategoria;
+        if (filters.q) params.q = filters.q;
         params.page = page;
         router.get(route('tienda.index'), params, { preserveScroll: false });
     };
+
+    useEffect(() => {
+        const trimmed = searchTerm.trim();
+        if (trimmed === (filters.q || '')) return undefined;
+
+        const timeoutId = setTimeout(() => {
+            navigate({
+                filter: activeFilter,
+                categoria: activeCategoriaId,
+                subcategoria: activeSubcategoriaId,
+                q: trimmed,
+            });
+        }, 400);
+
+        return () => clearTimeout(timeoutId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchTerm]);
 
     const getQty = (id) => quantities[id] ?? 1;
     const setQty = (id, value) =>
@@ -419,6 +451,44 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
 
                 <section className="px-3 py-5 sm:px-4 md:py-6">
                     <div className="overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-28px_rgba(28,27,27,0.45)]">
+                        <div className="border-b border-black/[0.06] p-3 md:p-4">
+                            <label htmlFor="tienda-search" className="sr-only">
+                                Buscar productos
+                            </label>
+                            <div className="relative">
+                                <svg
+                                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6000ca]/50"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    aria-hidden="true"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m1.85-5.4a7.25 7.25 0 11-14.5 0 7.25 7.25 0 0114.5 0z" />
+                                </svg>
+                                <input
+                                    id="tienda-search"
+                                    type="search"
+                                    value={searchTerm}
+                                    onChange={(event) => setSearchTerm(event.target.value)}
+                                    placeholder="Buscar productos por nombre o descripción…"
+                                    className="w-full rounded-full border border-black/[0.08] bg-[#fcf9f8] py-3 pl-11 pr-11 text-sm font-medium text-[#1c1b1b] placeholder:text-[#81788a] transition-all focus:border-[#6000ca]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6000ca]/20"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute right-3.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[#81788a] transition-colors hover:bg-black/5 hover:text-[#1c1b1b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
+                                        aria-label="Limpiar búsqueda"
+                                    >
+                                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="flex min-w-0 items-start gap-3 p-3 md:items-center md:p-4">
                             <span className="hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#6000ca]/10 text-[#6000ca] sm:flex" aria-hidden="true">
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

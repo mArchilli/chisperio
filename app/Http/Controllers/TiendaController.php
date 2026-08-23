@@ -93,6 +93,14 @@ class TiendaController extends Controller
             );
         }
 
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                    ->orWhere('descripcion', 'like', "%{$search}%");
+            });
+        }
+
         if ($request->filter === 'destacados') {
             $query->where('is_featured', true);
         } elseif ($request->filter === 'ofertas') {
@@ -112,7 +120,7 @@ class TiendaController extends Controller
         return Inertia::render('Tienda', [
             'productos'  => $productos,
             'categorias' => Categoria::with('subcategorias')->get(),
-            'filters'    => $request->only(['categoria', 'subcategoria', 'filter']),
+            'filters'    => $request->only(['categoria', 'subcategoria', 'filter', 'q']),
             'canLogin'   => Route::has('login'),
         ]);
     }

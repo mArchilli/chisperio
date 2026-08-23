@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\RolUsuario;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -20,6 +21,7 @@ class UserSeeder extends Seeder
             'name' => 'Admin',
             'email' => 'admin@admin',
             'password' => Hash::make('1234'),
+            'role' => RolUsuario::Admin->value,
         ]);
     }
 }
