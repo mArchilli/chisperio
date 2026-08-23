@@ -4,6 +4,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
 import PillsCantidad from '@/Components/PillsCantidad';
+import ProductImageLightbox from '@/Components/ProductImageLightbox';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
 import { cantidadMaxima, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
@@ -44,11 +45,63 @@ function ArrowIcon({ className = 'h-4 w-4' }) {
     );
 }
 
-function ProductGallery({ imagenes, titulo }) {
-    const [activeIdx, setActiveIdx] = useState(0);
-    const imgs = imagenes?.length > 0 ? imagenes : null;
+function PlayIcon({ className = 'h-5 w-5' }) {
+    return (
+        <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86A1 1 0 008 5.14z" />
+        </svg>
+    );
+}
 
-    if (!imgs) {
+function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
+    const isVideo = item.kind === 'video';
+
+    return (
+        <button
+            type="button"
+            onClick={() => onSelect(i)}
+            aria-label={`Ver ${isVideo ? 'video' : 'imagen'} ${i + 1} de ${total}`}
+            aria-pressed={i === activeIdx}
+            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-[#f6f3f8] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
+                i === activeIdx
+                    ? 'border-[#6000ca] shadow-[0_10px_25px_-18px_rgba(96,0,202,0.8)]'
+                    : 'border-black/[0.06] hover:border-[#6000ca]/35'
+            }`}
+        >
+            {isVideo ? (
+                <>
+                    <video src={`/${item.ruta}`} muted preload="metadata" className="h-full w-full object-cover" />
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">
+                        <PlayIcon className="h-6 w-6" />
+                    </span>
+                </>
+            ) : (
+                <img
+                    src={`/${item.ruta}`}
+                    alt=""
+                    className="h-full w-full object-contain p-2.5 mix-blend-multiply transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none"
+                />
+            )}
+            {i === activeIdx && (
+                <span className="absolute inset-x-3 bottom-1.5 h-0.5 rounded-full bg-[#6000ca]" />
+            )}
+        </button>
+    );
+}
+
+function ProductGallery({ imagenes, videos, titulo }) {
+    const [activeIdx, setActiveIdx] = useState(0);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+
+    const items = useMemo(
+        () => [
+            ...(imagenes ?? []).map((item) => ({ ...item, kind: 'imagen' })),
+            ...(videos ?? []).map((item) => ({ ...item, kind: 'video' })),
+        ],
+        [imagenes, videos]
+    );
+
+    if (items.length === 0) {
         return (
             <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
                 <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[38px] border-[#6000ca]/[0.035]" />
@@ -60,7 +113,11 @@ function ProductGallery({ imagenes, titulo }) {
         );
     }
 
-    const current = imgs[activeIdx];
+    const current = items[activeIdx];
+    // Las imágenes ocupan siempre los primeros índices de `items` (se arman antes que
+    // los videos), así que mientras el activo sea una imagen, su índice acá es
+    // directamente el mismo que necesita el lightbox (que solo conoce imágenes).
+    const imagenesSolas = items.filter((item) => item.kind === 'imagen');
 
     return (
         <div className="space-y-3 lg:space-y-4">
@@ -68,21 +125,38 @@ function ProductGallery({ imagenes, titulo }) {
                 <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full border-[46px] border-white/45" />
                 <div className="pointer-events-none absolute -bottom-20 -left-12 h-60 w-60 rounded-full bg-[#6000ca]/[0.035] blur-2xl" />
 
-                <img
-                    src={`/${current.ruta}`}
-                    alt={titulo}
-                    className="relative h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
-                />
+                {current.kind === 'video' ? (
+                    <video
+                        key={current.id}
+                        src={`/${current.ruta}`}
+                        controls
+                        playsInline
+                        className="relative h-full w-full object-contain p-3 sm:p-5"
+                    />
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setLightboxOpen(true)}
+                        aria-label="Ver imagen ampliada"
+                        className="relative block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                    >
+                        <img
+                            src={`/${current.ruta}`}
+                            alt={titulo}
+                            className="relative h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
+                        />
+                    </button>
+                )}
 
-                {imgs.length > 1 && (
+                {items.length > 1 && (
                     <div className="absolute inset-x-0 bottom-3 flex justify-center sm:bottom-4 md:hidden">
                         <div className="flex items-center rounded-full border border-white/70 bg-white/85 px-1.5 shadow-lg shadow-[#1c1b1b]/10 backdrop-blur-md">
-                            {imgs.map((_, i) => (
+                            {items.map((_, i) => (
                                 <button
                                     key={i}
                                     type="button"
                                     onClick={() => setActiveIdx(i)}
-                                    aria-label={`Ver imagen ${i + 1} de ${imgs.length}`}
+                                    aria-label={`Ver ${items[i].kind === 'video' ? 'video' : 'imagen'} ${i + 1} de ${items.length}`}
                                     aria-pressed={i === activeIdx}
                                     className="flex h-10 w-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
                                 >
@@ -100,32 +174,28 @@ function ProductGallery({ imagenes, titulo }) {
                 )}
             </div>
 
-            {imgs.length > 1 && (
+            {items.length > 1 && (
                 <div className="hidden gap-3 overflow-x-auto md:flex lg:grid lg:grid-cols-4 lg:overflow-visible">
-                    {imgs.slice(0, 4).map((img, i) => (
-                        <button
+                    {items.slice(0, 4).map((item, i) => (
+                        <GalleryThumb
                             key={i}
-                            type="button"
-                            onClick={() => setActiveIdx(i)}
-                            aria-label={`Ver imagen ${i + 1} de ${imgs.length}`}
-                            aria-pressed={i === activeIdx}
-                            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-[#f6f3f8] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
-                                i === activeIdx
-                                    ? 'border-[#6000ca] shadow-[0_10px_25px_-18px_rgba(96,0,202,0.8)]'
-                                    : 'border-black/[0.06] hover:border-[#6000ca]/35'
-                            }`}
-                        >
-                            <img
-                                src={`/${img.ruta}`}
-                                alt=""
-                                className="h-full w-full object-contain p-2.5 mix-blend-multiply transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none"
-                            />
-                            {i === activeIdx && (
-                                <span className="absolute inset-x-3 bottom-1.5 h-0.5 rounded-full bg-[#6000ca]" />
-                            )}
-                        </button>
+                            item={item}
+                            i={i}
+                            total={items.length}
+                            activeIdx={activeIdx}
+                            onSelect={setActiveIdx}
+                        />
                     ))}
                 </div>
+            )}
+
+            {lightboxOpen && (
+                <ProductImageLightbox
+                    images={imagenesSolas}
+                    index={activeIdx}
+                    onIndexChange={setActiveIdx}
+                    onClose={() => setLightboxOpen(false)}
+                />
             )}
         </div>
     );
@@ -264,7 +334,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
 
                 <section className="relative w-full px-3 pt-3 sm:px-4 md:pt-0">
                     <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
-                        <ProductGallery imagenes={producto.imagenes} titulo={producto.titulo} />
+                        <ProductGallery imagenes={producto.imagenes} videos={producto.videos} titulo={producto.titulo} />
 
                         <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
                             <div className="mb-4 flex items-start justify-between gap-4">

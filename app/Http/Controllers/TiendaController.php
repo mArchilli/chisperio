@@ -19,6 +19,7 @@ class TiendaController extends Controller
 
         $producto->load([
             'imagenes',
+            'videos',
             'imagenPrincipal',
             'ofertaVigente',
             'categorias',
