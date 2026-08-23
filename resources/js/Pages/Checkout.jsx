@@ -80,7 +80,7 @@ function FormField({ label, required, error, children }) {
 }
 
 /* ─── Resumen lateral ──────────────────────────────────────────────────────── */
-function CheckoutSummary({ items, subtotal }) {
+function CheckoutSummary({ items, subtotal, codigoAplicado, montoDescuento, totalConDescuento, codigoDescuentoError }) {
     return (
         <aside className="relative overflow-hidden rounded-[2rem] border border-black/[0.06] bg-white p-5 shadow-[0_24px_55px_-38px_rgba(28,27,27,0.55)] sm:p-6 lg:p-7">
             <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full border-[36px] border-[#6000ca]/[0.035]" />
@@ -124,13 +124,34 @@ function CheckoutSummary({ items, subtotal }) {
                 ))}
             </div>
 
+            <div className="relative mb-5 space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                    <span className="font-medium text-[#81788a]">Subtotal</span>
+                    <span className="font-extrabold text-[#1c1b1b]">{formatPrice(subtotal)}</span>
+                </div>
+                {codigoAplicado && (
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="font-medium text-[#81788a]">
+                            Descuento <span className="text-[#4b4356]">({codigoAplicado})</span>
+                        </span>
+                        <span className="font-extrabold text-[#1c8a4c]">-{formatPrice(montoDescuento)}</span>
+                    </div>
+                )}
+            </div>
+
+            {codigoDescuentoError && (
+                <div role="alert" className="relative mb-5 rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-[#ba1a1a]">
+                    {codigoDescuentoError}
+                </div>
+            )}
+
             <div className="relative mb-5 rounded-[1.5rem] border border-[#6000ca]/10 bg-[#f7f4fa] p-5">
                 <div className="flex items-end justify-between gap-4">
                     <div>
                         <p className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">Total del pedido</p>
                     </div>
                     <span className="text-[clamp(1.8rem,7vw,2.35rem)] font-black leading-none tracking-[-0.04em] text-[#6000ca]">
-                        {formatPrice(subtotal)}
+                        {formatPrice(totalConDescuento)}
                     </span>
                 </div>
             </div>
@@ -150,7 +171,16 @@ function CheckoutSummary({ items, subtotal }) {
 
 /* ─── Página principal ─────────────────────────────────────────────────────── */
 export default function Checkout({ canLogin }) {
-    const { items, subtotal, clearCart, hayItemsSinStock } = useCart();
+    const {
+        items,
+        subtotal,
+        clearCart,
+        hayItemsSinStock,
+        codigoAplicado,
+        montoDescuento,
+        totalConDescuento,
+        quitarCodigoDescuento,
+    } = useCart();
 
     const [form, setForm] = useState({
         nombre: '',
@@ -169,6 +199,7 @@ export default function Checkout({ canLogin }) {
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
+    const [codigoDescuentoError, setCodigoDescuentoError] = useState(null);
 
     const update = (field) => (e) =>
         setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -201,7 +232,9 @@ export default function Checkout({ canLogin }) {
                     `• ${item.titulo} x${item.cantidad} — ${formatPrice(item.subtotalItem)}`
             ),
             '',
-            `*Total: ${formatPrice(subtotal)} ARS*`,
+            `Subtotal: ${formatPrice(subtotal)}`,
+            codigoAplicado ? `Descuento (${codigoAplicado}): -${formatPrice(montoDescuento)}` : null,
+            `*Total: ${formatPrice(totalConDescuento)} ARS*`,
             '',
             '📋 *Datos del cliente:*',
             `Nombre: ${form.nombre} ${form.apellido}`,
@@ -241,6 +274,7 @@ export default function Checkout({ canLogin }) {
         if (items.length === 0 || hayItemsSinStock) return;
         setErrors({});
         setApiError(null);
+        setCodigoDescuentoError(null);
 
         const message = buildMessage();
 
@@ -260,6 +294,7 @@ export default function Checkout({ canLogin }) {
                     .join(', '),
                 cliente_codigo_postal: form.codigoPostal,
                 observaciones: form.observaciones,
+                codigo_descuento: codigoAplicado,
                 items: items.map((item) => ({
                     producto_id: item.id,
                     cantidad: item.cantidad,
@@ -278,11 +313,21 @@ export default function Checkout({ canLogin }) {
                       .filter(([campo]) => campo.startsWith('stock.'))
                       .flatMap(([, mensajes]) => mensajes)
                 : [];
+            // El código pudo invalidarse (vencer, agotar su límite de usos) entre que se
+            // aplicó en el carrito y que se confirmó el pedido — resolverParaCheckout()
+            // lo revalida con lock y devuelve 422 sobre este campo (Fase 4). Se muestra
+            // aparte, junto al resumen, en vez de mezclado con errores de stock.
+            const mensajesCodigo = erroresBackend?.codigo_descuento ?? null;
+            if (mensajesCodigo) {
+                setCodigoDescuentoError(mensajesCodigo.join(' '));
+            }
 
             setApiError(
                 mensajesStock.length > 0
                     ? mensajesStock
-                    : 'No pudimos registrar tu pedido. Por favor, intentá de nuevo en unos instantes.'
+                    : mensajesCodigo
+                        ? null
+                        : 'No pudimos registrar tu pedido. Por favor, intentá de nuevo en unos instantes.'
             );
             return;
         }
@@ -290,6 +335,7 @@ export default function Checkout({ canLogin }) {
         sessionStorage.setItem('chisperio_last_order', message);
         openWhatsApp(message);
         clearCart();
+        quitarCodigoDescuento();
         router.visit(route('confirmacion.index'));
     };
 
@@ -566,7 +612,14 @@ export default function Checkout({ canLogin }) {
                     {/* ── Resumen ── */}
                     <div className="order-1 lg:order-2 lg:col-span-4">
                         <div className="lg:sticky lg:top-28">
-                            <CheckoutSummary items={items} subtotal={subtotal} />
+                            <CheckoutSummary
+                                items={items}
+                                subtotal={subtotal}
+                                codigoAplicado={codigoAplicado}
+                                montoDescuento={montoDescuento}
+                                totalConDescuento={totalConDescuento}
+                                codigoDescuentoError={codigoDescuentoError}
+                            />
                         </div>
                     </div>
 

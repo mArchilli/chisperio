@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { useCart } from '@/Context/CartContext';
 import LandingHeader from '@/Components/Landing/LandingHeader';
@@ -224,7 +225,80 @@ function EmptyCart() {
     );
 }
 
-function OrderSummary({ subtotal, cartCount, hayItemsSinStock, envioGratisAlcanzado }) {
+function CodigoDescuentoBlock({ codigoAplicado, descuentoInfo, montoDescuento, validando, onAplicar, onQuitar }) {
+    const [inputValue, setInputValue] = useState('');
+    const mostrarError = !codigoAplicado && descuentoInfo && !descuentoInfo.valido;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!inputValue.trim() || validando) return;
+        onAplicar(inputValue);
+    };
+
+    if (codigoAplicado) {
+        return (
+            <div className="mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] border border-[#1c8a4c]/20 bg-[#1c8a4c]/5 p-4">
+                <div className="min-w-0">
+                    <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#1c8a4c]">
+                        Código aplicado
+                    </p>
+                    <p className="truncate text-sm font-black text-[#1c1b1b]">
+                        {codigoAplicado} <span className="font-medium text-[#1c8a4c]">(-{formatPrice(montoDescuento)})</span>
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={onQuitar}
+                    className="flex-shrink-0 text-xs font-extrabold uppercase tracking-wide text-[#6000ca] hover:underline"
+                >
+                    Quitar
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="mb-5">
+            <label htmlFor="codigo-descuento" className="mb-2 block text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#81788a]">
+                ¿Tenés un código de descuento?
+            </label>
+            <div className="flex gap-2">
+                <input
+                    id="codigo-descuento"
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value.toUpperCase())}
+                    placeholder="Ej: VERANO10"
+                    className="min-w-0 flex-1 rounded-full border border-black/[0.08] bg-[#f7f6f9] px-4 py-2.5 text-sm font-semibold text-[#1c1b1b] focus:border-[#6000ca] focus:outline-none focus:ring-2 focus:ring-[#6000ca]/20"
+                />
+                <button
+                    type="submit"
+                    disabled={validando || !inputValue.trim()}
+                    className="flex-shrink-0 rounded-full bg-[#6000ca] px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white transition-all hover:bg-[#4f00a8] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    {validando ? 'Validando…' : 'Aplicar'}
+                </button>
+            </div>
+            {mostrarError && (
+                <p className="mt-2 text-xs font-semibold text-[#ba1a1a]">{descuentoInfo.motivo}</p>
+            )}
+        </form>
+    );
+}
+
+function OrderSummary({
+    subtotal,
+    cartCount,
+    hayItemsSinStock,
+    envioGratisAlcanzado,
+    codigoAplicado,
+    descuentoInfo,
+    montoDescuento,
+    totalConDescuento,
+    validandoCodigo,
+    onAplicarCodigo,
+    onQuitarCodigo,
+}) {
     return (
         <aside
             aria-labelledby="order-summary-title"
@@ -241,16 +315,37 @@ function OrderSummary({ subtotal, cartCount, hayItemsSinStock, envioGratisAlcanz
                 </h2>
 
                 <div className="mt-5">
+                    {/* OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre
+                        el total con descuento — ver Fase 3 del plan de códigos de descuento. */}
                     <BarraEnvioGratis subtotal={subtotal} />
                 </div>
 
-                <div className="mt-7 space-y-4 text-sm">
+                <div className="mt-5">
+                    <CodigoDescuentoBlock
+                        codigoAplicado={codigoAplicado}
+                        descuentoInfo={descuentoInfo}
+                        montoDescuento={montoDescuento}
+                        validando={validandoCodigo}
+                        onAplicar={onAplicarCodigo}
+                        onQuitar={onQuitarCodigo}
+                    />
+                </div>
+
+                <div className="mt-2 space-y-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                         <span className="font-medium text-[#81788a]">
                             Productos <span className="text-[#4b4356]">({cartCount})</span>
                         </span>
                         <span className="font-extrabold text-[#1c1b1b]">{formatPrice(subtotal)}</span>
                     </div>
+                    {codigoAplicado && (
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="font-medium text-[#81788a]">
+                                Descuento <span className="text-[#4b4356]">({codigoAplicado})</span>
+                            </span>
+                            <span className="font-extrabold text-[#1c8a4c]">-{formatPrice(montoDescuento)}</span>
+                        </div>
+                    )}
                     <div className="flex items-start justify-between gap-4">
                         <span className="font-medium text-[#81788a]">Envío</span>
                         {envioGratisAlcanzado ? (
@@ -277,7 +372,7 @@ function OrderSummary({ subtotal, cartCount, hayItemsSinStock, envioGratisAlcanz
                             </p>
                         </div>
                         <p className="text-[clamp(1.8rem,7vw,2.4rem)] font-black leading-none tracking-[-0.04em] text-[#6000ca]">
-                            {formatPrice(subtotal)}
+                            {formatPrice(totalConDescuento)}
                         </p>
                     </div>
                 </div>
@@ -340,8 +435,24 @@ function OrderSummary({ subtotal, cartCount, hayItemsSinStock, envioGratisAlcanz
 }
 
 export default function Carrito({ canLogin, configuracionEnvio }) {
-    const { items, removeFromCart, updateQty, subtotal, cartCount, hayItemsSinStock } = useCart();
+    const {
+        items,
+        removeFromCart,
+        updateQty,
+        subtotal,
+        cartCount,
+        hayItemsSinStock,
+        codigoAplicado,
+        descuentoInfo,
+        montoDescuento,
+        totalConDescuento,
+        validandoCodigo,
+        aplicarCodigoDescuento,
+        quitarCodigoDescuento,
+    } = useCart();
     const montoMinimoEnvio = configuracionEnvio?.montoMinimo ?? 0;
+    // OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre el total
+    // con descuento — ver Fase 3 del plan de códigos de descuento.
     const envioGratisAlcanzado = montoMinimoEnvio > 0 && subtotal >= montoMinimoEnvio;
 
     return (
@@ -408,6 +519,13 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
                                         cartCount={cartCount}
                                         hayItemsSinStock={hayItemsSinStock}
                                         envioGratisAlcanzado={envioGratisAlcanzado}
+                                        codigoAplicado={codigoAplicado}
+                                        descuentoInfo={descuentoInfo}
+                                        montoDescuento={montoDescuento}
+                                        totalConDescuento={totalConDescuento}
+                                        validandoCodigo={validandoCodigo}
+                                        onAplicarCodigo={aplicarCodigoDescuento}
+                                        onQuitarCodigo={quitarCodigoDescuento}
                                     />
                                 </div>
                             </div>

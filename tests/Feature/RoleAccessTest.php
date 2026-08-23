@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Categoria;
+use App\Models\CodigoDescuento;
 use App\Models\Oferta;
 use App\Models\Producto;
 use App\Models\Subcategoria;
@@ -102,6 +103,28 @@ class RoleAccessTest extends TestCase
 
         $response->assertRedirect(route('ofertas.index'));
         $this->assertDatabaseMissing('ofertas', ['id' => $oferta->id]);
+    }
+
+    public function test_vendedor_no_puede_eliminar_codigo_descuento(): void
+    {
+        $vendedor = User::factory()->vendedor()->create();
+        $codigo = CodigoDescuento::factory()->create();
+
+        $response = $this->actingAs($vendedor)->delete(route('codigos-descuento.destroy', $codigo));
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('codigos_descuento', ['id' => $codigo->id]);
+    }
+
+    public function test_admin_puede_eliminar_codigo_descuento(): void
+    {
+        $admin = User::factory()->create();
+        $codigo = CodigoDescuento::factory()->create();
+
+        $response = $this->actingAs($admin)->delete(route('codigos-descuento.destroy', $codigo));
+
+        $response->assertRedirect(route('codigos-descuento.index'));
+        $this->assertDatabaseMissing('codigos_descuento', ['id' => $codigo->id]);
     }
 
     public function test_vendedor_no_puede_ver_metricas(): void

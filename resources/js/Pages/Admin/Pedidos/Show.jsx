@@ -179,6 +179,16 @@ export default function Show({ pedido }) {
                                                 {formatearPrecio(pedido.subtotal)}
                                             </td>
                                         </tr>
+                                        {pedido.codigo_descuento_texto && (
+                                            <tr className="bg-gray-50">
+                                                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-gray-600 text-right">
+                                                    Descuento ({pedido.codigo_descuento_texto})
+                                                </td>
+                                                <td className="px-6 py-3 text-sm font-semibold text-green-700 text-right whitespace-nowrap">
+                                                    -{formatearPrecio(pedido.descuento_monto)}
+                                                </td>
+                                            </tr>
+                                        )}
                                         <tr className="bg-gray-50">
                                             <td colSpan={3} className="px-6 py-4 text-base font-bold text-gray-900 text-right">Total</td>
                                             <td className="px-6 py-4 text-base font-bold text-right whitespace-nowrap bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">

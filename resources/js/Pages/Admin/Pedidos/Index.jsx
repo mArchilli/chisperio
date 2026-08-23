@@ -244,6 +244,13 @@ export default function Index({ pedidos, filtroEstado, stats }) {
                                                     {pedido.cliente_telefono || <span className="italic text-gray-400">Sin teléfono</span>}
                                                 </p>
 
+                                                {pedido.codigo_descuento_texto && (
+                                                    <div className="mb-2 flex justify-end">
+                                                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">
+                                                            {pedido.codigo_descuento_texto}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <div className="flex items-center justify-between py-3 px-4 mb-4 bg-gradient-to-r from-[#40B0C2]/10 to-[#A72DAB]/10 rounded-xl">
                                                     <div className="text-sm text-gray-600">
                                                         {pedido.items.length} {pedido.items.length === 1 ? 'item' : 'items'}

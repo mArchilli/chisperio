@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\CodigoDescuentoController;
 use App\Http\Controllers\ConfiguracionEnvioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MetricasController;
@@ -134,6 +135,20 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:admin')
         ->name('ofertas.destroy');
     Route::patch('admin/ofertas/{oferta}/toggle-active', [OfertaController::class, 'toggleActive'])->name('ofertas.toggle-active');
+
+    // Rutas de Códigos de Descuento — destroy queda afuera del resource(): solo admin puede eliminar.
+    Route::resource('admin/codigos-descuento', CodigoDescuentoController::class)->except('destroy')->names([
+        'index' => 'codigos-descuento.index',
+        'create' => 'codigos-descuento.create',
+        'store' => 'codigos-descuento.store',
+        'show' => 'codigos-descuento.show',
+        'edit' => 'codigos-descuento.edit',
+        'update' => 'codigos-descuento.update',
+    ]);
+    Route::delete('admin/codigos-descuento/{codigo_descuento}', [CodigoDescuentoController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('codigos-descuento.destroy');
+    Route::patch('admin/codigos-descuento/{codigo_descuento}/toggle-active', [CodigoDescuentoController::class, 'toggleActive'])->name('codigos-descuento.toggle-active');
 
     // Ruta de Métricas — datos de facturación, solo admin.
     Route::get('admin/metricas', [MetricasController::class, 'index'])

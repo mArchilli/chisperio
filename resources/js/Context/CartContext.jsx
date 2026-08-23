@@ -4,6 +4,7 @@ import { cantidadMaxima } from '@/lib/stock';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'chisperio_cart';
+const STORAGE_KEY_CODIGO = 'chisperio_cart_codigo';
 
 /**
  * Subconjunto de `producto` que necesita resolverPrecio (precio base, escalas,
@@ -57,6 +58,14 @@ function loadFromStorage() {
         return parsed;
     } catch {
         return [];
+    }
+}
+
+function loadCodigoFromStorage() {
+    try {
+        return localStorage.getItem(STORAGE_KEY_CODIGO) || null;
+    } catch {
+        return null;
     }
 }
 
@@ -139,10 +148,102 @@ export function CartProvider({ children }) {
     );
 
     const cartCount = items.reduce((acc, item) => acc + item.cantidad, 0);
+    // OJO: este `subtotal` es la base del envío gratis y NO debe redefinirse para
+    // reflejar el descuento del código — ver totalConDescuento más abajo, que es el
+    // valor con descuento, y BarraEnvioGratis/envioGratisAlcanzado en Carrito.jsx,
+    // que deben seguir leyendo `subtotal` (Fase 3 del plan de códigos de descuento).
     const subtotal = itemsConPrecio.reduce((acc, item) => acc + item.subtotalItem, 0);
     // Última foto de stock conocida para cada item (ver snapshotProducto): si algún item
     // quedó en 0, no tiene sentido dejar avanzar al checkout con ese carrito tal cual.
     const hayItemsSinStock = itemsConPrecio.some((item) => item.sinStock);
+
+    // --- Código de descuento ---
+    // `codigoAplicado` persiste igual que `items` (localStorage), para que sobreviva
+    // a la navegación de Carrito.jsx a Checkout.jsx. `descuentoInfo` NO se persiste:
+    // es el último resultado de CodigoDescuentoService::validar() (vía el endpoint
+    // público) y se vuelve a pedir al montar y cada vez que cambia `subtotal`.
+    const [codigoAplicado, setCodigoAplicado] = useState(loadCodigoFromStorage);
+    const [descuentoInfo, setDescuentoInfo] = useState(null);
+    const [validandoCodigo, setValidandoCodigo] = useState(false);
+
+    useEffect(() => {
+        try {
+            if (codigoAplicado) {
+                localStorage.setItem(STORAGE_KEY_CODIGO, codigoAplicado);
+            } else {
+                localStorage.removeItem(STORAGE_KEY_CODIGO);
+            }
+        } catch {}
+    }, [codigoAplicado]);
+
+    // Valida `codigo` contra el subtotal BRUTO actual. Esto es solo una previsualización
+    // para UX (ver CodigoDescuentoService::validar en el backend) — no incrementa
+    // usos_actuales ni garantiza nada por sí sola; eso es responsabilidad del checkout
+    // real en la Fase 4.
+    const aplicarCodigoDescuento = useCallback(async (codigoInput) => {
+        const codigo = String(codigoInput ?? '').trim().toUpperCase();
+        if (!codigo) return;
+
+        setValidandoCodigo(true);
+
+        try {
+            const response = await fetch('/api/codigos-descuento/validar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ codigo, subtotal }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const resultado = await response.json();
+            setDescuentoInfo(resultado);
+            // Si el backend lo rechaza (inexistente, inactivo, vencido, límite de usos),
+            // no queda nada "aplicado" — el motivo se expone igual vía descuentoInfo
+            // para mostrarlo como error.
+            setCodigoAplicado(resultado.valido ? codigo : null);
+        } catch {
+            // Red caída, timeout o el servidor no responde: no dejamos el spinner
+            // colgado ni un código "aplicado" que en realidad no pudimos confirmar.
+            setDescuentoInfo({
+                valido: false,
+                motivo: 'No pudimos validar el código. Probá de nuevo en un momento.',
+                monto_descuento: 0,
+                subtotal_con_descuento: subtotal,
+            });
+            setCodigoAplicado(null);
+        } finally {
+            setValidandoCodigo(false);
+        }
+    }, [subtotal]);
+
+    const quitarCodigoDescuento = useCallback(() => {
+        setCodigoAplicado(null);
+        setDescuentoInfo(null);
+    }, []);
+
+    // Revalidación automática: si el subtotal cambia mientras hay un código aplicado
+    // (se agregó/sacó/cambió cantidad de algún ítem), se vuelve a validar contra el
+    // nuevo subtotal. Si el código deja de ser válido (p. ej. otro cliente agotó el
+    // límite de usos mientras este carrito estaba abierto), aplicarCodigoDescuento ya
+    // lo deja en codigoAplicado=null y expone el motivo — no queda un descuento
+    // aplicado que el backend ya no considera válido. También corre al montar, para
+    // revalidar un código que persistió desde una sesión anterior.
+    useEffect(() => {
+        if (!codigoAplicado) return;
+        aplicarCodigoDescuento(codigoAplicado);
+        // Solo debe reaccionar a cambios de `subtotal`: `codigoAplicado` y
+        // `aplicarCodigoDescuento` ya están al día en cada render por el closure de
+        // este efecto, y sumarlos como dependencias duplicaría el fetch al aplicar
+        // manualmente un código nuevo (eso ya dispara su propio setCodigoAplicado).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subtotal]);
+
+    const montoDescuento = descuentoInfo?.monto_descuento ?? 0;
+    // Total a pagar con el descuento ya aplicado. Es el valor que eventualmente viaja
+    // a checkout — `subtotal` sigue siendo la base del envío gratis, nunca este valor.
+    const totalConDescuento = redondear2(subtotal - montoDescuento);
 
     return (
         <CartContext.Provider
@@ -155,6 +256,13 @@ export function CartProvider({ children }) {
                 cartCount,
                 subtotal,
                 hayItemsSinStock,
+                codigoAplicado,
+                descuentoInfo,
+                validandoCodigo,
+                montoDescuento,
+                totalConDescuento,
+                aplicarCodigoDescuento,
+                quitarCodigoDescuento,
             }}
         >
             {children}

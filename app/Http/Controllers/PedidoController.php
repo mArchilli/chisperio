@@ -8,6 +8,7 @@ use App\Exceptions\StockInsuficienteException;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Producto;
+use App\Services\CodigoDescuentoService;
 use App\Services\PricingService;
 use App\Services\StockService;
 use Illuminate\Http\Request;
@@ -72,7 +73,7 @@ class PedidoController extends Controller
     /**
      * Update the estado of the specified resource.
      */
-    public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService)
+    public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService, CodigoDescuentoService $codigoDescuentoService)
     {
         $validated = $request->validate([
             'estado' => ['required', new Enum(EstadoPedido::class)],
@@ -97,14 +98,18 @@ class PedidoController extends Controller
         };
 
         if ($estadoDestino === EstadoPedido::Cancelado) {
-            // reponer() dentro de la misma transacción que el update: si por lo que sea
-            // falla, el estado no queda cambiado a medias (rollback también del estado).
-            DB::transaction(function () use ($pedido, $stockService, $guardarEstado) {
+            // reponer() y liberarUso() dentro de la misma transacción que el update: si
+            // por lo que sea algo falla, el estado no queda cambiado a medias (rollback
+            // también del estado). La protección contra doble cancelación es la
+            // validación de transición de arriba (Cancelado es terminal); ver el test
+            // "cancelar dos veces seguidas" — la segunda llamada ni siquiera llega acá.
+            DB::transaction(function () use ($pedido, $stockService, $codigoDescuentoService, $guardarEstado) {
                 $stockService->reponer($pedido);
+                $codigoDescuentoService->liberarUso($pedido);
                 $guardarEstado();
             });
         } else {
-            // pendiente↔despachado no toca stock.
+            // pendiente↔despachado no toca stock ni el código de descuento.
             $guardarEstado();
         }
 
@@ -136,7 +141,7 @@ class PedidoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, PricingService $pricingService, StockService $stockService)
+    public function store(Request $request, PricingService $pricingService, StockService $stockService, CodigoDescuentoService $codigoDescuentoService)
     {
         $validated = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
@@ -147,6 +152,7 @@ class PedidoController extends Controller
             'cliente_direccion' => 'nullable|string|max:500',
             'cliente_codigo_postal' => 'nullable|string|max:20',
             'observaciones' => 'nullable|string',
+            'codigo_descuento' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|integer|exists:productos,id',
             'items.*.cantidad' => 'required|integer|min:1',
@@ -161,7 +167,7 @@ class PedidoController extends Controller
         }
 
         try {
-            $pedido = DB::transaction(function () use ($validated, $pricingService, $stockService) {
+            $pedido = DB::transaction(function () use ($validated, $pricingService, $stockService, $codigoDescuentoService) {
                 $productos = Producto::with(['escalasPrecio', 'ofertaVigente'])
                     ->whereIn('id', collect($validated['items'])->pluck('producto_id'))
                     ->get()
@@ -187,6 +193,16 @@ class PedidoController extends Controller
                     ];
                 }
 
+                // Código de descuento: se resuelve y lockea ACÁ, dentro de la transacción —
+                // nunca se confía en lo que mandó el frontend (Fases 2 y 3 son solo
+                // previsualización de UX). Si no es válido, resolverParaCheckout() lanza
+                // ValidationException y aborta toda la creación del pedido (rollback), no
+                // lo crea sin el descuento en silencio.
+                $datosDescuento = $codigoDescuentoService->resolverParaCheckout(
+                    $validated['codigo_descuento'] ?? null,
+                    $subtotal
+                );
+
                 $pedido = Pedido::create([
                     'cliente_nombre' => $validated['cliente_nombre'],
                     'cliente_dni' => $validated['cliente_dni'] ?? null,
@@ -197,11 +213,23 @@ class PedidoController extends Controller
                     'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
                     'observaciones' => $validated['observaciones'] ?? null,
                     'subtotal' => $subtotal,
-                    'total' => $subtotal,
+                    'total' => round($subtotal - $datosDescuento['descuento_monto'], 2),
                     'estado' => EstadoPedido::Pendiente,
+                    'codigo_descuento_id' => $datosDescuento['codigo_descuento_id'],
+                    'codigo_descuento_texto' => $datosDescuento['codigo_descuento_texto'],
+                    'codigo_descuento_tipo' => $datosDescuento['codigo_descuento_tipo'],
+                    'codigo_descuento_valor' => $datosDescuento['codigo_descuento_valor'],
+                    'descuento_monto' => $datosDescuento['descuento_monto'],
                 ]);
 
                 $pedido->items()->createMany($itemsData);
+
+                // Recién con el pedido ya creado consumimos el cupo: si algo de lo que sigue
+                // falla (stock insuficiente más abajo), el rollback de la transacción
+                // deshace también este increment junto con todo lo demás.
+                if ($datosDescuento['codigoDescuento'] !== null) {
+                    $datosDescuento['codigoDescuento']->increment('usos_actuales');
+                }
 
                 // Dentro de la misma transacción: si el stock cambió entre la validación
                 // optimista de arriba y este momento (carrera real), descontar() lanza
