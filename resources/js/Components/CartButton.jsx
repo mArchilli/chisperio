@@ -4,6 +4,7 @@ import { ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/Context/CartContext';
 import { useNotificacionEnvioGratis } from '@/hooks/useNotificacionEnvioGratis';
+import { useScrolledPast } from '@/hooks/useScrolledPast';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 
 const EXCLUDED_PREFIXES = [
@@ -86,9 +87,12 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
 
 export default function CartButton() {
     const [pageVisible, setPageVisible] = useState(() => shouldShow(window.location.pathname));
-    const [open, setOpen] = useState(false);
-    const { items, removeFromCart, updateQty, cartCount, subtotal } = useCart();
+    const { items, removeFromCart, updateQty, cartCount, subtotal, cartDrawerOpen, closeCartDrawer, toggleCartDrawer } = useCart();
     const { configuracionEnvio } = usePage().props;
+    // En mobile el botón flotante queda oculto (el ícono del navbar dispara este mismo
+    // drawer — ver LandingHeader) y en desktop no aparece hasta que el usuario scrollea
+    // un poco, para no taparle el hero apenas entra al sitio.
+    const scrolled = useScrolledPast();
 
     useNotificacionEnvioGratis(subtotal, configuracionEnvio?.montoMinimo, () => {
         toast.success('¡Desbloqueaste envío gratis! 🎉');
@@ -97,29 +101,29 @@ export default function CartButton() {
     useEffect(() => {
         return router.on('navigate', (event) => {
             setPageVisible(shouldShow(new URL(event.detail.page.url, window.location.origin).pathname));
-            setOpen(false);
+            closeCartDrawer();
         });
-    }, []);
+    }, [closeCartDrawer]);
 
     // Cerrar con Escape
     useEffect(() => {
-        if (!open) return;
+        if (!cartDrawerOpen) return;
         function handler(e) {
-            if (e.key === 'Escape') setOpen(false);
+            if (e.key === 'Escape') closeCartDrawer();
         }
         document.addEventListener('keydown', handler);
         return () => document.removeEventListener('keydown', handler);
-    }, [open]);
+    }, [cartDrawerOpen, closeCartDrawer]);
 
     // Bloquear el scroll del body mientras el drawer está abierto
     useEffect(() => {
-        if (!open) return;
+        if (!cartDrawerOpen) return;
         const original = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         return () => {
             document.body.style.overflow = original;
         };
-    }, [open]);
+    }, [cartDrawerOpen]);
 
     if (!pageVisible) return null;
 
@@ -129,10 +133,10 @@ export default function CartButton() {
                 (z-[60]) para que abrir el carrito difumine realmente todo lo demás.
                 Click afuera cierra el drawer. */}
             <div
-                onClick={() => setOpen(false)}
+                onClick={closeCartDrawer}
                 aria-hidden="true"
                 className={`fixed inset-0 z-[65] bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-                    open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                    cartDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
             />
 
@@ -142,7 +146,7 @@ export default function CartButton() {
                 aria-modal="true"
                 aria-label="Tu carrito"
                 className={`fixed inset-y-0 right-0 z-[70] flex h-full w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out sm:w-[420px] ${
-                    open ? 'translate-x-0' : 'translate-x-full'
+                    cartDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}
             >
                 {/* Header */}
@@ -159,7 +163,7 @@ export default function CartButton() {
                         )}
                     </div>
                     <button
-                        onClick={() => setOpen(false)}
+                        onClick={closeCartDrawer}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                         aria-label="Cerrar carrito"
                     >
@@ -208,14 +212,14 @@ export default function CartButton() {
                         <Link
                             href={route('checkout.index')}
                             className="block w-full bg-[#6000ca] text-white text-sm font-bold py-3 rounded-xl text-center hover:bg-[#4f00a8] active:scale-95 transition-all shadow-sm shadow-[#6000ca]/20"
-                            onClick={() => setOpen(false)}
+                            onClick={closeCartDrawer}
                         >
                             Finalizar Compra
                         </Link>
                         <Link
                             href={route('carrito.index')}
                             className="block w-full mt-2 border border-[#6000ca]/30 text-[#6000ca] text-sm font-semibold py-2.5 rounded-xl text-center hover:bg-purple-50 active:scale-95 transition-all"
-                            onClick={() => setOpen(false)}
+                            onClick={closeCartDrawer}
                         >
                             Ver carrito completo
                         </Link>
@@ -223,11 +227,14 @@ export default function CartButton() {
                 )}
             </div>
 
-            {/* Botón flotante */}
+            {/* Botón flotante: solo desktop (en mobile el ícono del navbar abre este
+                mismo drawer, ver LandingHeader) y recién visible tras scrollear un poco. */}
             <button
-                onClick={() => setOpen((v) => !v)}
-                aria-label={open ? 'Cerrar carrito' : 'Abrir carrito'}
-                className="fixed bottom-24 md:bottom-8 right-20 md:right-[6.5rem] z-40 flex items-center justify-center w-14 h-14 rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] hover:bg-[#5000aa] hover:scale-110 active:scale-95 transition-all duration-200"
+                onClick={toggleCartDrawer}
+                aria-label={cartDrawerOpen ? 'Cerrar carrito' : 'Abrir carrito'}
+                className={`fixed bottom-8 right-[6.5rem] z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] transition-all duration-200 hover:scale-110 hover:bg-[#5000aa] active:scale-95 ${
+                    scrolled ? 'md:flex' : 'md:hidden'
+                }`}
             >
                 <ShoppingCart className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden="true" />
 

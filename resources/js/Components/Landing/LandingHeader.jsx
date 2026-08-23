@@ -77,24 +77,43 @@ function Logo({ invert = false, className = '' }) {
     );
 }
 
-function CartButton({ cartCount, invert = false }) {
+function CartButton({ cartCount, invert = false, onOpenDrawer }) {
+    const baseClasses = `relative flex h-11 w-11 items-center justify-center rounded-full border transition-all ${
+        invert
+            ? 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+            : 'border-[#6000ca] bg-[#6000ca] text-white hover:bg-[#4f00a8]'
+    }`;
+
+    const badge = cartCount > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF00D4] px-1 text-[10px] font-bold leading-none text-white">
+            {cartCount > 99 ? '99+' : cartCount}
+        </span>
+    );
+
     return (
-        <Link
-            href={route('carrito.index')}
-            className={`relative flex h-11 w-11 items-center justify-center rounded-full border transition-all ${
-                invert
-                    ? 'border-white/20 bg-white/10 text-white hover:bg-white/15'
-                    : 'border-[#6000ca] bg-[#6000ca] text-white hover:bg-[#4f00a8]'
-            }`}
-            aria-label="Carrito de compras"
-        >
-            <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
-            {cartCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF00D4] px-1 text-[10px] font-bold leading-none text-white">
-                    {cartCount > 99 ? '99+' : cartCount}
-                </span>
-            )}
-        </Link>
+        <>
+            {/* Mobile: abre el drawer flotante del carrito en vez de navegar — hay
+                menos espacio para tener además el botón flotante propio. */}
+            <button
+                type="button"
+                onClick={onOpenDrawer}
+                className={`${baseClasses} flex md:hidden`}
+                aria-label="Abrir carrito"
+            >
+                <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
+                {badge}
+            </button>
+
+            {/* Desktop: navega a la página completa del carrito, como siempre. */}
+            <Link
+                href={route('carrito.index')}
+                className={`${baseClasses} hidden md:flex`}
+                aria-label="Carrito de compras"
+            >
+                <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
+                {badge}
+            </Link>
+        </>
     );
 }
 
@@ -142,7 +161,7 @@ function MobileNavLink({ item, onNavigate }) {
 export default function LandingHeader() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [currentHash, setCurrentHash] = useState('');
-    const { cartCount } = useCart();
+    const { cartCount, openCartDrawer } = useCart();
     const { url } = usePage();
 
     useEffect(() => {
@@ -267,7 +286,7 @@ export default function LandingHeader() {
                         </Link>
 
                         <div className="flex justify-end">
-                            <CartButton cartCount={cartCount} />
+                            <CartButton cartCount={cartCount} onOpenDrawer={openCartDrawer} />
                         </div>
                     </div>
                 </div>

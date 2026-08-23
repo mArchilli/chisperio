@@ -72,6 +72,14 @@ function loadCodigoFromStorage() {
 export function CartProvider({ children }) {
     const [items, setItems] = useState(loadFromStorage);
 
+    // Estado del drawer flotante del carrito, compartido entre el ícono del navbar
+    // (en mobile dispara este drawer en vez de navegar a /carrito, para no competir
+    // por espacio con el botón flotante) y el botón flotante de CartButton.jsx.
+    const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+    const openCartDrawer = useCallback(() => setCartDrawerOpen(true), []);
+    const closeCartDrawer = useCallback(() => setCartDrawerOpen(false), []);
+    const toggleCartDrawer = useCallback(() => setCartDrawerOpen((prev) => !prev), []);
+
     useEffect(() => {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
@@ -253,6 +261,10 @@ export function CartProvider({ children }) {
                 removeFromCart,
                 updateQty,
                 clearCart,
+                cartDrawerOpen,
+                openCartDrawer,
+                closeCartDrawer,
+                toggleCartDrawer,
                 cartCount,
                 subtotal,
                 hayItemsSinStock,

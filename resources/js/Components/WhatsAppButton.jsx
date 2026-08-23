@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
+import { useScrolledPast } from '@/hooks/useScrolledPast';
 
 const EXCLUDED_PREFIXES = [
     '/carrito',
@@ -16,12 +17,29 @@ const EXCLUDED_PREFIXES = [
 
 const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent('¡Hola! Necesito ayuda con mi pedido 😊')}`;
 
+// Cuánto esperar, una vez que el botón ya está visible, antes de mostrar la leyenda.
+const CALLOUT_DELAY_MS = 1500;
+const CALLOUT_DISMISSED_KEY = 'whatsappCalloutDismissed';
+
 function shouldShow(path) {
     return !EXCLUDED_PREFIXES.some((p) => path.startsWith(p));
 }
 
 export default function WhatsAppButton() {
     const [visible, setVisible] = useState(() => shouldShow(window.location.pathname));
+    // No aparece hasta que el usuario scrollea un poco, para no taparle el hero apenas
+    // entra al sitio (mismo criterio que el botón flotante del carrito).
+    const scrolled = useScrolledPast();
+    const [calloutReady, setCalloutReady] = useState(false);
+    const [calloutDismissed, setCalloutDismissed] = useState(
+        () => typeof window !== 'undefined' && sessionStorage.getItem(CALLOUT_DISMISSED_KEY) === 'true'
+    );
+    // "Pegajoso": una vez que cruzó el umbral de scroll una vez, esto se queda en true
+    // aunque el usuario vuelva a subir. Si el timer de la leyenda dependiera de
+    // `scrolled` directamente, cualquier rebote hacia arriba (común en mobile, sobre
+    // todo con el bounce del emulador) cancela el timeout con el cleanup del effect y
+    // la leyenda nunca llega a dispararse.
+    const [hasScrolledOnce, setHasScrolledOnce] = useState(false);
 
     useEffect(() => {
         return router.on('navigate', (event) => {
@@ -29,25 +47,63 @@ export default function WhatsAppButton() {
         });
     }, []);
 
-    if (!visible) return null;
+    useEffect(() => {
+        if (scrolled) setHasScrolledOnce(true);
+    }, [scrolled]);
+
+    // Arranca una sola vez, apenas cruzó el umbral por primera vez, y llega a
+    // completarse pase lo que pase con el scroll después.
+    useEffect(() => {
+        if (!hasScrolledOnce || calloutDismissed) return undefined;
+        const timer = setTimeout(() => setCalloutReady(true), CALLOUT_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [hasScrolledOnce, calloutDismissed]);
+
+    const dismissCallout = () => {
+        setCalloutDismissed(true);
+        try {
+            sessionStorage.setItem(CALLOUT_DISMISSED_KEY, 'true');
+        } catch {}
+    };
+
+    if (!visible || !scrolled) return null;
+
+    const showCallout = calloutReady && !calloutDismissed;
 
     return (
-        <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40 group">
-            {/* Tooltip — solo desktop */}
-            <div className="
-                hidden md:flex items-center
-                absolute bottom-full right-0 mb-3
-                bg-white text-gray-800 text-sm font-semibold
-                px-4 py-2.5 rounded-2xl
-                shadow-xl border border-gray-100
-                whitespace-nowrap pointer-events-none
-                opacity-0 translate-y-2
-                group-hover:opacity-100 group-hover:translate-y-0
-                transition-all duration-200
-            ">
-                ¿Necesitás ayuda? ¡Contactanos!
-                <span className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45 block" />
-            </div>
+        <div className="fixed bottom-6 md:bottom-8 right-4 md:right-8 z-40">
+            {/* Leyenda: aparece sola un instante después de que el botón se muestra,
+                se puede cerrar con la cruz y queda cerrada por el resto de la sesión. */}
+            {showCallout && (
+                <div className="absolute bottom-full right-0 mb-3 flex w-56 items-start gap-2 rounded-2xl border border-gray-100 bg-white py-2.5 pl-4 pr-2 text-gray-800 shadow-xl [animation:chisperio-callout-enter_220ms_ease-out] motion-reduce:[animation:none]">
+                    <a
+                        href={WHATSAPP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 text-sm font-semibold leading-snug hover:text-[#1ebe5c]"
+                    >
+                        ¿Necesitás asesoramiento? Hacé clic acá
+                    </a>
+                    <button
+                        type="button"
+                        onClick={dismissCallout}
+                        aria-label="Cerrar mensaje"
+                        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                    >
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <span className="absolute -bottom-1.5 right-6 block h-3 w-3 rotate-45 border-b border-r border-gray-100 bg-white" />
+                </div>
+            )}
+
+            <style>{`
+                @keyframes chisperio-callout-enter {
+                    from { opacity: 0; transform: translate3d(0, 0.5rem, 0); }
+                    to { opacity: 1; transform: translate3d(0, 0, 0); }
+                }
+            `}</style>
 
             <a
                 href={WHATSAPP_URL}

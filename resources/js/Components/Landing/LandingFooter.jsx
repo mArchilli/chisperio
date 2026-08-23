@@ -20,6 +20,7 @@ const FOOTER_LINKS = [
             { label: 'Alquiler de maquinaria', href: '/#alquiler' },
             { label: 'Tu carrito', routeName: 'carrito.index' },
             { label: 'Contacto por WhatsApp', href: WHATSAPP_URL, external: true },
+            { label: 'Acceso equipo', routeName: 'login' },
         ],
     },
 ];
