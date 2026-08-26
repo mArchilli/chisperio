@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubcategoriaController;
@@ -88,93 +89,84 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Rutas de Categorías — destroy queda afuera del resource(): solo admin puede eliminar.
-    Route::resource('admin/categorias', CategoriaController::class)->except('destroy')->names([
-        'index' => 'categorias.index',
-        'create' => 'categorias.create',
-        'store' => 'categorias.store',
-        'show' => 'categorias.show',
-        'edit' => 'categorias.edit',
-        'update' => 'categorias.update',
-    ]);
-    Route::delete('admin/categorias/{categoria}', [CategoriaController::class, 'destroy'])
-        ->middleware('role:admin')
-        ->name('categorias.destroy');
-
-    // Rutas de Subcategorías
-    Route::resource('admin/subcategorias', SubcategoriaController::class)->except('destroy')->names([
-        'index' => 'subcategorias.index',
-        'create' => 'subcategorias.create',
-        'store' => 'subcategorias.store',
-        'show' => 'subcategorias.show',
-        'edit' => 'subcategorias.edit',
-        'update' => 'subcategorias.update',
-    ]);
-    Route::delete('admin/subcategorias/{subcategoria}', [SubcategoriaController::class, 'destroy'])
-        ->middleware('role:admin')
-        ->name('subcategorias.destroy');
-
-    // Rutas de Productos
-    Route::resource('admin/productos', ProductoController::class)->except('destroy')->names([
-        'index' => 'productos.index',
-        'create' => 'productos.create',
-        'store' => 'productos.store',
-        'show' => 'productos.show',
-        'edit' => 'productos.edit',
-        'update' => 'productos.update',
-    ]);
-    Route::delete('admin/productos/{producto}', [ProductoController::class, 'destroy'])
-        ->middleware('role:admin')
-        ->name('productos.destroy');
-    Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
+    // Vista de solo lectura de precios/catálogo — vendedor y admin (el vendedor no
+    // tiene acceso a los CRUDs reales de productos/categorías/ofertas/etc., ver más abajo).
+    Route::get('admin/precios', [PrecioController::class, 'index'])->name('precios.index');
 
     // Rutas de Pedidos (sin cambios)
     Route::get('admin/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
     Route::get('admin/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
     Route::patch('admin/pedidos/{pedido}/estado', [PedidoController::class, 'cambiarEstado'])->name('pedidos.cambiar-estado');
 
-    // Rutas de Ofertas
-    Route::resource('admin/ofertas', OfertaController::class)->except('destroy')->names([
-        'index' => 'ofertas.index',
-        'create' => 'ofertas.create',
-        'store' => 'ofertas.store',
-        'show' => 'ofertas.show',
-        'edit' => 'ofertas.edit',
-        'update' => 'ofertas.update',
-    ]);
-    Route::delete('admin/ofertas/{oferta}', [OfertaController::class, 'destroy'])
-        ->middleware('role:admin')
-        ->name('ofertas.destroy');
-    Route::patch('admin/ofertas/{oferta}/toggle-active', [OfertaController::class, 'toggleActive'])->name('ofertas.toggle-active');
+    // Gestión de catálogo (categorías/subcategorías/productos/ofertas/códigos de
+    // descuento/add-ons) — reservada a admin; el vendedor solo consulta desde
+    // admin/precios de arriba, sin poder crear/editar/eliminar nada de esto.
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('admin/categorias', CategoriaController::class)->names([
+            'index' => 'categorias.index',
+            'create' => 'categorias.create',
+            'store' => 'categorias.store',
+            'show' => 'categorias.show',
+            'edit' => 'categorias.edit',
+            'update' => 'categorias.update',
+            'destroy' => 'categorias.destroy',
+        ]);
 
-    // Rutas de Códigos de Descuento — destroy queda afuera del resource(): solo admin puede eliminar.
-    Route::resource('admin/codigos-descuento', CodigoDescuentoController::class)->except('destroy')->names([
-        'index' => 'codigos-descuento.index',
-        'create' => 'codigos-descuento.create',
-        'store' => 'codigos-descuento.store',
-        'show' => 'codigos-descuento.show',
-        'edit' => 'codigos-descuento.edit',
-        'update' => 'codigos-descuento.update',
-    ]);
-    Route::delete('admin/codigos-descuento/{codigo_descuento}', [CodigoDescuentoController::class, 'destroy'])
-        ->middleware('role:admin')
-        ->name('codigos-descuento.destroy');
-    Route::patch('admin/codigos-descuento/{codigo_descuento}/toggle-active', [CodigoDescuentoController::class, 'toggleActive'])->name('codigos-descuento.toggle-active');
+        Route::resource('admin/subcategorias', SubcategoriaController::class)->names([
+            'index' => 'subcategorias.index',
+            'create' => 'subcategorias.create',
+            'store' => 'subcategorias.store',
+            'show' => 'subcategorias.show',
+            'edit' => 'subcategorias.edit',
+            'update' => 'subcategorias.update',
+            'destroy' => 'subcategorias.destroy',
+        ]);
 
-    // Rutas de Add-ons — catálogo global de personalizaciones con costo. destroy
-    // queda afuera del resource(): solo admin puede eliminar.
-    Route::resource('admin/addons', AddonController::class)->except('destroy')->names([
-        'index' => 'addons.index',
-        'create' => 'addons.create',
-        'store' => 'addons.store',
-        'show' => 'addons.show',
-        'edit' => 'addons.edit',
-        'update' => 'addons.update',
-    ]);
-    Route::delete('admin/addons/{addon}', [AddonController::class, 'destroy'])
-        ->middleware('role:admin')
-        ->name('addons.destroy');
-    Route::patch('admin/addons/{addon}/toggle-active', [AddonController::class, 'toggleActive'])->name('addons.toggle-active');
+        Route::resource('admin/productos', ProductoController::class)->names([
+            'index' => 'productos.index',
+            'create' => 'productos.create',
+            'store' => 'productos.store',
+            'show' => 'productos.show',
+            'edit' => 'productos.edit',
+            'update' => 'productos.update',
+            'destroy' => 'productos.destroy',
+        ]);
+        Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
+
+        Route::resource('admin/ofertas', OfertaController::class)->names([
+            'index' => 'ofertas.index',
+            'create' => 'ofertas.create',
+            'store' => 'ofertas.store',
+            'show' => 'ofertas.show',
+            'edit' => 'ofertas.edit',
+            'update' => 'ofertas.update',
+            'destroy' => 'ofertas.destroy',
+        ]);
+        Route::patch('admin/ofertas/{oferta}/toggle-active', [OfertaController::class, 'toggleActive'])->name('ofertas.toggle-active');
+
+        Route::resource('admin/codigos-descuento', CodigoDescuentoController::class)->names([
+            'index' => 'codigos-descuento.index',
+            'create' => 'codigos-descuento.create',
+            'store' => 'codigos-descuento.store',
+            'show' => 'codigos-descuento.show',
+            'edit' => 'codigos-descuento.edit',
+            'update' => 'codigos-descuento.update',
+            'destroy' => 'codigos-descuento.destroy',
+        ]);
+        Route::patch('admin/codigos-descuento/{codigo_descuento}/toggle-active', [CodigoDescuentoController::class, 'toggleActive'])->name('codigos-descuento.toggle-active');
+
+        // Add-ons — catálogo global de personalizaciones con costo.
+        Route::resource('admin/addons', AddonController::class)->names([
+            'index' => 'addons.index',
+            'create' => 'addons.create',
+            'store' => 'addons.store',
+            'show' => 'addons.show',
+            'edit' => 'addons.edit',
+            'update' => 'addons.update',
+            'destroy' => 'addons.destroy',
+        ]);
+        Route::patch('admin/addons/{addon}/toggle-active', [AddonController::class, 'toggleActive'])->name('addons.toggle-active');
+    });
 
     // Ruta de Métricas — datos de facturación, solo admin.
     Route::get('admin/metricas', [MetricasController::class, 'index'])
