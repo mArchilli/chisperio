@@ -4,6 +4,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
+import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -87,10 +88,14 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                                 <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-[#f7f6f9] px-2.5 py-1 text-[10px] font-bold text-[#4b4356]">
                                     <span
                                         className="h-3 w-3 flex-shrink-0 rounded-full border border-black/10"
-                                        style={{ backgroundColor: item.variante.color_hex || '#e5e5e5' }}
+                                        style={
+                                            item.colorPersonalizadoTexto
+                                                ? { background: GRADIENTE_PERSONALIZADO }
+                                                : { backgroundColor: item.variante.color_hex || '#e5e5e5' }
+                                        }
                                         aria-hidden="true"
                                     />
-                                    {item.variante.nombre}
+                                    {item.colorPersonalizadoTexto || item.variante.nombre}
                                 </span>
                             )}
 

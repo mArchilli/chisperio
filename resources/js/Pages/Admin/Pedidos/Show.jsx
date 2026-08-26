@@ -166,6 +166,11 @@ export default function Show({ pedido }) {
                                                                         Color: {item.variante_nombre}
                                                                     </span>
                                                                 )}
+                                                                {item.color_personalizado_texto && (
+                                                                    <div className="mt-1.5 text-xs text-gray-600">
+                                                                        <span className="font-semibold text-gray-700">Color solicitado:</span> {item.color_personalizado_texto}
+                                                                    </div>
+                                                                )}
                                                                 {item.addons_seleccionados?.length > 0 && (
                                                                     <ul className="mt-1.5 space-y-0.5">
                                                                         {item.addons_seleccionados.map((addon, i) => (

@@ -121,30 +121,45 @@ function ProductCard({ producto, added, onAddToCart }) {
                         </span>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => onAddToCart(producto)}
-                        className={`inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-full px-4 text-xs font-extrabold uppercase tracking-[0.06em] text-white shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 ${
-                            added
-                                ? 'bg-[#1c1b1b] shadow-black/15'
-                                : 'bg-[#6000ca] shadow-[#6000ca]/20 hover:bg-[#4f00a8] hover:shadow-lg'
-                        }`}
-                        aria-label={`Agregar ${producto.titulo} al carrito`}
-                    >
-                        {added ? (
-                            <>
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                Agregado
-                            </>
-                        ) : (
-                            <>
-                                <BagIcon />
-                                Agregar
-                            </>
-                        )}
-                    </button>
+                    {producto.tiene_variantes ? (
+                        // Producto con variantes de color activas: agregar directo acá no pasa
+                        // por el selector de color, así que en vez de eso manda a la ficha (ver
+                        // PedidoController::store, que rechaza un item sin variante_id cuando
+                        // el producto la requiere) — mismo criterio que Tienda.jsx.
+                        <Link
+                            href={route('tienda.show', producto.id)}
+                            className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-4 text-xs font-extrabold uppercase tracking-[0.06em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
+                            aria-label={`Elegir color de ${producto.titulo}`}
+                        >
+                            <BagIcon />
+                            Elegir color
+                        </Link>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => onAddToCart(producto)}
+                            className={`inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-full px-4 text-xs font-extrabold uppercase tracking-[0.06em] text-white shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 ${
+                                added
+                                    ? 'bg-[#1c1b1b] shadow-black/15'
+                                    : 'bg-[#6000ca] shadow-[#6000ca]/20 hover:bg-[#4f00a8] hover:shadow-lg'
+                            }`}
+                            aria-label={`Agregar ${producto.titulo} al carrito`}
+                        >
+                            {added ? (
+                                <>
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Agregado
+                                </>
+                            ) : (
+                                <>
+                                    <BagIcon />
+                                    Agregar
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
         </article>

@@ -54,6 +54,38 @@ class PedidoShowVariantesAddonsTest extends TestCase
         );
     }
 
+    public function test_pedido_show_expone_el_color_personalizado_texto_del_item(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::factory()->create(['titulo' => 'Producto con color a elección']);
+
+        $pedido = Pedido::create([
+            'cliente_nombre' => 'Cliente de prueba',
+            'subtotal' => 1000,
+            'total' => 1000,
+            'estado' => EstadoPedido::Pendiente,
+        ]);
+
+        $pedido->items()->create([
+            'producto_id' => $producto->id,
+            'titulo' => $producto->titulo,
+            'precio_unitario' => 1000,
+            'cantidad' => 1,
+            'subtotal' => 1000,
+            'variante_nombre' => 'Otro / A elección',
+            'variante_color_hex' => '#000000',
+            'color_personalizado_texto' => 'Verde flúo (#39FF14)',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('pedidos.show', $pedido));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Admin/Pedidos/Show')
+            ->where('pedido.items.0.color_personalizado_texto', 'Verde flúo (#39FF14)')
+        );
+    }
+
     public function test_pedido_show_sin_variante_ni_addons_expone_esos_campos_en_null(): void
     {
         $user = User::factory()->create();

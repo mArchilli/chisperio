@@ -61,13 +61,16 @@ class ProductoController extends Controller
             'imagenes.*' => 'nullable|image|max:5120', // max 5MB
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200', // max 50MB
             'imagen_principal' => 'nullable|integer',
-        ], $this->escalasPrecioReglas(), $this->variantesReglas(), $this->addonsReglas()), array_merge(
+        ], $this->escalasPrecioReglas(), $this->variantesReglas(), $this->addonsReglas(), $this->mediaVarianteReglas($request)), array_merge(
             $this->escalasPrecioMensajes(),
             $this->variantesMensajes(),
-            $this->addonsMensajes()
+            $this->addonsMensajes(),
+            $this->mediaVarianteMensajes()
         ));
 
-        $producto = DB::transaction(function () use ($validated) {
+        $this->validarUnicoColorPersonalizado($validated['variantes'] ?? []);
+
+        [$producto, $mapaClaves] = DB::transaction(function () use ($validated) {
             $producto = Producto::create([
                 'titulo' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'] ?? null,
@@ -87,10 +90,10 @@ class ProductoController extends Controller
             }
 
             $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
-            $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
+            $mapaClaves = $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
             $this->sincronizarAddons($producto, $validated['addons'] ?? []);
 
-            return $producto;
+            return [$producto, $mapaClaves];
         });
 
         // Guardar imágenes
@@ -102,6 +105,8 @@ class ProductoController extends Controller
             if (!file_exists($publicImgPath)) {
                 mkdir($publicImgPath, 0755, true);
             }
+
+            $imagenesVarianteClave = $validated['imagenes_variante_clave'] ?? [];
 
             foreach ($request->file('imagenes') as $index => $imagen) {
                 $filename = time() . '_' . $index . '_' . $imagen->getClientOriginalName();
@@ -117,6 +122,7 @@ class ProductoController extends Controller
                     'ruta' => $relativePath,
                     'orden' => $index,
                     'is_principal' => $esPrincipal,
+                    'producto_variante_id' => $this->resolverVarianteIdDesdeClave($mapaClaves, $imagenesVarianteClave[$index] ?? null),
                 ]);
             }
         }
@@ -125,22 +131,25 @@ class ProductoController extends Controller
         if ($request->hasFile('videos')) {
             $videoPath = config('productos.video_path');
             $publicVideoPath = public_path($videoPath);
-            
+
             // Crear directorio si no existe
             if (!file_exists($publicVideoPath)) {
                 mkdir($publicVideoPath, 0755, true);
             }
-            
+
+            $videosVarianteClave = $validated['videos_variante_clave'] ?? [];
+
             foreach ($request->file('videos') as $index => $video) {
                 $filename = time() . '_' . $index . '_' . $video->getClientOriginalName();
                 $video->move($publicVideoPath, $filename);
                 $relativePath = $videoPath . '/' . $filename;
-                
+
                 $producto->media()->create([
                     'tipo' => 'video',
                     'ruta' => $relativePath,
                     'orden' => $index,
                     'is_principal' => false,
+                    'producto_variante_id' => $this->resolverVarianteIdDesdeClave($mapaClaves, $videosVarianteClave[$index] ?? null),
                 ]);
             }
         }
@@ -191,13 +200,16 @@ class ProductoController extends Controller
             'imagenes.*' => 'nullable|image|max:5120',
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200',
             'media_eliminar' => 'array',
-        ], $this->escalasPrecioReglas($producto), $this->variantesReglas($producto), $this->addonsReglas()), array_merge(
+        ], $this->escalasPrecioReglas($producto), $this->variantesReglas($producto), $this->addonsReglas(), $this->mediaVarianteReglas($request, $producto)), array_merge(
             $this->escalasPrecioMensajes(),
             $this->variantesMensajes(),
-            $this->addonsMensajes()
+            $this->addonsMensajes(),
+            $this->mediaVarianteMensajes()
         ));
 
-        DB::transaction(function () use ($validated, $producto) {
+        $this->validarUnicoColorPersonalizado($validated['variantes'] ?? []);
+
+        $mapaClaves = DB::transaction(function () use ($validated, $producto) {
             $producto->update([
                 'titulo' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'] ?? null,
@@ -217,8 +229,10 @@ class ProductoController extends Controller
             }
 
             $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
-            $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
+            $mapaClaves = $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
             $this->sincronizarAddons($producto, $validated['addons'] ?? []);
+
+            return $mapaClaves;
         });
 
         // Eliminar media marcados para eliminar
@@ -235,6 +249,18 @@ class ProductoController extends Controller
             }
         }
 
+        // Reasignar el color asociado de los medios ya existentes (select "Color asociado"
+        // del gestor de multimedia); la clave puede referenciar una variante recién creada
+        // en este mismo request, por eso se traduce con el mapa armado en sincronizarVariantes.
+        foreach ($validated['media_variante_asignaciones'] ?? [] as $asignacion) {
+            $media = $producto->media()->find($asignacion['id']);
+            if ($media) {
+                $media->update([
+                    'producto_variante_id' => $this->resolverVarianteIdDesdeClave($mapaClaves, $asignacion['variante_clave'] ?? null),
+                ]);
+            }
+        }
+
         // Guardar nuevas imágenes
         if ($request->hasFile('imagenes')) {
             $imgPath = config('productos.img_path');
@@ -247,6 +273,7 @@ class ProductoController extends Controller
 
             $maxOrden = $producto->media()->where('tipo', 'imagen')->max('orden') ?? -1;
             $tienePrincipal = $producto->media()->where('tipo', 'imagen')->where('is_principal', true)->exists();
+            $imagenesVarianteClave = $validated['imagenes_variante_clave'] ?? [];
 
             foreach ($request->file('imagenes') as $index => $imagen) {
                 $filename = time() . '_' . $index . '_' . $imagen->getClientOriginalName();
@@ -260,6 +287,7 @@ class ProductoController extends Controller
                     // Si el producto no tenía ninguna imagen marcada como principal,
                     // la primera imagen nueva pasa a serlo para que se muestre en catálogo/carrito.
                     'is_principal' => !$tienePrincipal && $index === 0,
+                    'producto_variante_id' => $this->resolverVarianteIdDesdeClave($mapaClaves, $imagenesVarianteClave[$index] ?? null),
                 ]);
             }
         }
@@ -268,23 +296,26 @@ class ProductoController extends Controller
         if ($request->hasFile('videos')) {
             $videoPath = config('productos.video_path');
             $publicVideoPath = public_path($videoPath);
-            
+
             // Crear directorio si no existe
             if (!file_exists($publicVideoPath)) {
                 mkdir($publicVideoPath, 0755, true);
             }
-            
+
             $maxOrden = $producto->media()->where('tipo', 'video')->max('orden') ?? -1;
+            $videosVarianteClave = $validated['videos_variante_clave'] ?? [];
+
             foreach ($request->file('videos') as $index => $video) {
                 $filename = time() . '_' . $index . '_' . $video->getClientOriginalName();
                 $video->move($publicVideoPath, $filename);
                 $relativePath = $videoPath . '/' . $filename;
-                
+
                 $producto->media()->create([
                     'tipo' => 'video',
                     'ruta' => $relativePath,
                     'orden' => $maxOrden + $index + 1,
                     'is_principal' => false,
+                    'producto_variante_id' => $this->resolverVarianteIdDesdeClave($mapaClaves, $videosVarianteClave[$index] ?? null),
                 ]);
             }
         }
@@ -427,9 +458,14 @@ class ProductoController extends Controller
             'variantes' => ['array'],
             'variantes.*.nombre' => ['required', 'string', 'max:100', 'distinct'],
             'variantes.*.color_hex' => ['nullable', 'string', 'max:7'],
+            'variantes.*.es_color_personalizado' => ['boolean'],
             'variantes.*.precio_adicional' => ['nullable', 'numeric', 'min:0'],
             'variantes.*.stock' => ['nullable', 'integer', 'min:0'],
             'variantes.*.is_active' => ['boolean'],
+            // Clave estable (uuid para filas nuevas, id real para filas existentes) que
+            // usa el gestor de multimedia para vincular imágenes/videos con esta fila
+            // antes de que el producto se guarde (ver sincronizarVariantes).
+            'variantes.*.clave' => ['nullable', 'string', 'max:64'],
         ];
 
         if ($producto !== null) {
@@ -467,17 +503,24 @@ class ProductoController extends Controller
      * ya no vengan (por id) y hace upsert del resto, mismo patrón que sincronizarEscalasPrecio.
      * `orden` se asigna según la posición dentro del array recibido (el front reordena
      * moviendo la fila entera, ver VariantesColorRepeater).
+     *
+     * Devuelve el mapa [clave del front => id real en base] para que el llamador pueda
+     * traducir la clave de color que vino de cada imagen/video (ver resolverVarianteIdDesdeClave)
+     * a producto_variante_id, incluso para variantes recién creadas en este mismo request.
      */
-    private function sincronizarVariantes(Producto $producto, array $variantes): void
+    private function sincronizarVariantes(Producto $producto, array $variantes): array
     {
         $idsConservar = collect($variantes)->pluck('id')->filter()->all();
 
         $producto->variantes()->whereNotIn('id', $idsConservar)->delete();
 
+        $mapaClaves = [];
+
         foreach ($variantes as $index => $variante) {
             $atributos = [
                 'nombre' => $variante['nombre'],
                 'color_hex' => $variante['color_hex'] ?? null,
+                'es_color_personalizado' => $variante['es_color_personalizado'] ?? false,
                 'precio_adicional' => $variante['precio_adicional'] ?? 0,
                 'stock' => $variante['stock'] ?? null,
                 'is_active' => $variante['is_active'] ?? true,
@@ -486,10 +529,102 @@ class ProductoController extends Controller
 
             if (!empty($variante['id'])) {
                 $producto->variantes()->whereKey($variante['id'])->update($atributos);
+                $varianteId = $variante['id'];
             } else {
-                $producto->variantes()->create($atributos);
+                $varianteId = $producto->variantes()->create($atributos)->id;
+            }
+
+            if (!empty($variante['clave'])) {
+                $mapaClaves[(string) $variante['clave']] = $varianteId;
             }
         }
+
+        return $mapaClaves;
+    }
+
+    /**
+     * Traduce la clave de color que vino del frontend (uuid de una variante nueva, id
+     * real de una existente, o vacío/null para "General") al producto_variante_id real
+     * usando el mapa armado en sincronizarVariantes. Una clave que ya no matchea nada
+     * (p. ej. la variante fue eliminada en el mismo request) cae a null (general).
+     */
+    private function resolverVarianteIdDesdeClave(array $mapaClaves, ?string $clave): ?int
+    {
+        if ($clave === null || $clave === '') {
+            return null;
+        }
+
+        return $mapaClaves[$clave] ?? null;
+    }
+
+    /**
+     * Como máximo una variante del producto puede representar "Otro / a elección del
+     * cliente". El frontend ya lo impide destildando la anterior al tildar una nueva
+     * (ver VariantesColorRepeater), esto es el resguardo del lado del servidor.
+     */
+    private function validarUnicoColorPersonalizado(array $variantes): void
+    {
+        $cantidadPersonalizadas = collect($variantes)
+            ->filter(fn ($variante) => !empty($variante['es_color_personalizado']))
+            ->count();
+
+        if ($cantidadPersonalizadas > 1) {
+            throw ValidationException::withMessages([
+                'variantes' => 'Como máximo una variante puede marcarse como "color a elección del cliente".',
+            ]);
+        }
+    }
+
+    /**
+     * Reglas de validación para el color asociado a cada imagen/video del gestor de
+     * multimedia: `imagenes_variante_clave`/`videos_variante_clave` son paralelos por
+     * índice a `imagenes`/`videos` (nuevos archivos); `media_variante_asignaciones` sólo
+     * aplica en edición y reasigna el color de un medio ya existente. El valor válido es
+     * '' (General) o la `clave` de alguna fila del payload `variantes` de este mismo
+     * request — incluye claves de variantes nuevas (uuid) porque igual se resuelven
+     * después con el mapa de sincronizarVariantes.
+     */
+    private function mediaVarianteReglas(Request $request, ?Producto $producto = null): array
+    {
+        $clavesVariantes = collect($request->input('variantes', []))
+            ->pluck('clave')
+            ->filter(fn ($clave) => filled($clave))
+            ->map(fn ($clave) => (string) $clave)
+            ->values()
+            ->all();
+
+        $opcionesColor = array_merge([''], $clavesVariantes);
+
+        $reglas = [
+            'imagenes_variante_clave' => ['array'],
+            'imagenes_variante_clave.*' => ['nullable', 'string', Rule::in($opcionesColor)],
+            'videos_variante_clave' => ['array'],
+            'videos_variante_clave.*' => ['nullable', 'string', Rule::in($opcionesColor)],
+        ];
+
+        if ($producto !== null) {
+            $reglas['media_variante_asignaciones'] = ['array'];
+            $reglas['media_variante_asignaciones.*.id'] = [
+                'required',
+                'integer',
+                Rule::exists('producto_media', 'id')->where(
+                    fn ($query) => $query->where('producto_id', $producto->id)
+                ),
+            ];
+            $reglas['media_variante_asignaciones.*.variante_clave'] = ['nullable', 'string', Rule::in($opcionesColor)];
+        }
+
+        return $reglas;
+    }
+
+    private function mediaVarianteMensajes(): array
+    {
+        return [
+            'imagenes_variante_clave.*.in' => 'El color asociado a una imagen no es válido.',
+            'videos_variante_clave.*.in' => 'El color asociado a un video no es válido.',
+            'media_variante_asignaciones.*.id.exists' => 'El archivo indicado no pertenece a este producto.',
+            'media_variante_asignaciones.*.variante_clave.in' => 'El color asociado a un archivo existente no es válido.',
+        ];
     }
 
     /**

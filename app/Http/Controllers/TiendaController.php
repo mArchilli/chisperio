@@ -89,7 +89,14 @@ class TiendaController extends Controller
             'categorias',
             'subcategorias',
             'escalasPrecio',
-        ])->where('is_active', true);
+        ])
+            // No se cargan las variantes completas acá (esto es un listado, no la ficha):
+            // solo hace falta saber si existe al menos una activa, para que el "Agregar"
+            // rápido de la card (Tienda.jsx) sepa que tiene que mandar al cliente a elegir
+            // color en la ficha en vez de agregar directo sin variante — ver
+            // PedidoController::store, que rechaza justamente ese caso.
+            ->withCount('variantesActivas')
+            ->where('is_active', true);
 
         if ($request->filled('categoria')) {
             $query->whereHas('categorias', fn ($q) =>
@@ -132,6 +139,10 @@ class TiendaController extends Controller
             ->latest()
             ->paginate(12)
             ->withQueryString();
+
+        $productos->getCollection()->each(
+            fn (Producto $producto) => $producto->setAttribute('tiene_variantes', $producto->variantes_activas_count > 0)
+        );
 
         return Inertia::render('Tienda', [
             'productos'  => $productos,

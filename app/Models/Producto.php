@@ -79,6 +79,35 @@ class Producto extends Model
     }
 
     /**
+     * Resuelve qué imágenes y video mostrar en la galería para un color elegido.
+     * Prioriza los medios asociados a esa variante ($varianteId); si un tipo (imagen/video)
+     * no tiene ningún medio específico de la variante, cae al medio general
+     * (producto_variante_id null) de ese mismo tipo. Si $varianteId es null, devuelve
+     * directamente los medios generales.
+     *
+     * @return array{imagenes: \Illuminate\Support\Collection<int, ProductoMedia>, video: ?ProductoMedia}
+     */
+    public function mediaParaVariante(?int $varianteId): array
+    {
+        if ($varianteId === null) {
+            return [
+                'imagenes' => $this->imagenes()->whereNull('producto_variante_id')->get(),
+                'video' => $this->videos()->whereNull('producto_variante_id')->first(),
+            ];
+        }
+
+        $imagenesVariante = $this->imagenes()->where('producto_variante_id', $varianteId)->get();
+        $videoVariante = $this->videos()->where('producto_variante_id', $varianteId)->first();
+
+        return [
+            'imagenes' => $imagenesVariante->isNotEmpty()
+                ? $imagenesVariante
+                : $this->imagenes()->whereNull('producto_variante_id')->get(),
+            'video' => $videoVariante ?? $this->videos()->whereNull('producto_variante_id')->first(),
+        ];
+    }
+
+    /**
      * Relación uno a muchos con Oferta
      */
     public function ofertas(): HasMany

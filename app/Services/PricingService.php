@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DataTransferObjects\PriceResult;
 use App\Enums\AlcanceOferta;
 use App\Enums\TipoDescuento;
+use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
@@ -24,12 +25,20 @@ class PricingService
      * el total de add-ons por encima del precio ya descontado: la oferta se calcula
      * SIEMPRE solo sobre precio_lista (base o escala), nunca sobre variante/add-ons,
      * porque esas opciones no tienen descuento propio.
+     *
+     * $exigirVariante: false por defecto para no romper los usos de "precio de
+     * vidriera" (TiendaController::show/precio, TablaPreciosPorCantidad) que
+     * deliberadamente calculan sin variante todavía elegida. El checkout
+     * (PedidoController::store) es el único caller que lo pasa en true, como
+     * defensa en profundidad detrás del guard explícito que ya corre ahí antes de
+     * llegar a este método — ver resolverVariante().
      */
     public function calcularPrecio(
         Producto $producto,
         int $cantidad,
         ?int $varianteId = null,
-        array $addonIds = []
+        array $addonIds = [],
+        bool $exigirVariante = false
     ): PriceResult {
         $escalaAplicada = $producto->escalaAplicable($cantidad);
         $precioLista = round((float) ($escalaAplicada?->precio_unitario ?? $producto->precio), 2);
@@ -53,7 +62,7 @@ class PricingService
             ? round(($ahorroUnitario / $precioLista) * 100, 2)
             : 0.0;
 
-        $varianteAplicada = $this->resolverVariante($producto, $varianteId);
+        $varianteAplicada = $this->resolverVariante($producto, $varianteId, $exigirVariante);
         $recargoVariante = round((float) ($varianteAplicada?->precio_adicional ?? 0), 2);
 
         $addonsAplicados = $this->resolverAddons($producto, $addonIds);
@@ -84,10 +93,20 @@ class PricingService
      * producto (la relación ya lo garantiza) y estar activa. Si el id no resuelve
      * ninguna fila, es un dato corrupto/manipulado del cliente — se rechaza con 422
      * en vez de ignorarlo en silencio.
+     *
+     * $varianteId === null normalmente significa "producto sin variantes, precio
+     * base" — pero con $exigirVariante = true (solo el checkout) un producto que sí
+     * tiene variantes activas y no trajo ninguna es en sí mismo un dato inválido:
+     * lanza VarianteRequeridaException en vez de calcular un precio incompleto
+     * (sin recargo) y dejar el item sin color registrado.
      */
-    private function resolverVariante(Producto $producto, ?int $varianteId): ?ProductoVariante
+    private function resolverVariante(Producto $producto, ?int $varianteId, bool $exigirVariante = false): ?ProductoVariante
     {
         if ($varianteId === null) {
+            if ($exigirVariante && $producto->variantesActivas()->exists()) {
+                throw new VarianteRequeridaException($producto->id);
+            }
+
             return null;
         }
 

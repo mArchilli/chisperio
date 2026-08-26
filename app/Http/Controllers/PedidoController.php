@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EstadoPedido;
 use App\Enums\MotivoMovimientoStock;
 use App\Exceptions\StockInsuficienteException;
+use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
@@ -161,6 +162,7 @@ class PedidoController extends Controller
             'items.*.addons' => 'nullable|array',
             'items.*.addons.*.addon_id' => 'required|integer',
             'items.*.addons.*.texto_personalizado' => 'nullable|string|max:1000',
+            'items.*.color_personalizado_texto' => 'nullable|string|max:255',
         ]);
 
         // Chequeo optimista (sin lock) para dar feedback rápido antes de intentar escribir.
@@ -186,15 +188,32 @@ class PedidoController extends Controller
                     $varianteId = $item['variante_id'] ?? null;
                     $addonsInput = collect($item['addons'] ?? []);
 
+                    // Si el producto tiene variantes activas, elegir una no es opcional: sin
+                    // esto, un item que llega sin variante_id (ej. el "Agregar" rápido del
+                    // catálogo, que nunca pasa por el selector de color de la ficha) se
+                    // vendería al precio base, sin recargo, sin descontar el stock real de
+                    // ninguna variante y sin registrar qué color preparar. Corre ANTES de
+                    // calcularPrecio() a propósito: un item inválido no debe llegar a tocar
+                    // precio ni stock. No distingue es_color_personalizado de una variante
+                    // fija — cualquier variante activa configurada es obligatoria.
+                    if ($varianteId === null && $producto->variantesActivas()->exists()) {
+                        throw ValidationException::withMessages([
+                            'variante_id' => "Elegí un color para \"{$producto->titulo}\" antes de confirmar el pedido.",
+                        ]);
+                    }
+
                     // calcularPrecio() valida acá mismo (con 422 si corresponde) que la
                     // variante y cada addon pertenezcan a este producto y estén activos —
                     // ver PricingService::resolverVariante/resolverAddons. Nunca se confía
-                    // en nombre/precio que pudo mandar el frontend.
+                    // en nombre/precio que pudo mandar el frontend. exigirVariante: true es
+                    // la misma regla de arriba, como defensa en profundidad por si algún día
+                    // otra vía llega hasta acá sin pasar por el guard explícito.
                     $priceResult = $pricingService->calcularPrecio(
                         $producto,
                         $item['cantidad'],
                         $varianteId,
-                        $addonsInput->pluck('addon_id')->all()
+                        $addonsInput->pluck('addon_id')->all(),
+                        exigirVariante: true
                     );
 
                     $addonsSeleccionados = collect($priceResult->addons_aplicados)
@@ -219,6 +238,22 @@ class PedidoController extends Controller
                         ->values()
                         ->all();
 
+                    // Si la variante elegida es "Otro / a elección del cliente" (ver
+                    // ProductoVariante::esPersonalizada), el color real pedido no vive en la
+                    // variante sino en este texto libre — sin él quien despache no sabe qué
+                    // preparar, así que se rechaza el item entero en vez de guardarlo vacío.
+                    $colorPersonalizadoTexto = null;
+
+                    if ($priceResult->variante_aplicada?->esPersonalizada()) {
+                        $colorPersonalizadoTexto = trim((string) ($item['color_personalizado_texto'] ?? ''));
+
+                        if ($colorPersonalizadoTexto === '') {
+                            throw ValidationException::withMessages([
+                                'color_personalizado_texto' => "Para \"{$priceResult->variante_aplicada->nombre}\" en {$producto->titulo} tenés que indicar el color o una descripción de lo que necesitás.",
+                            ]);
+                        }
+                    }
+
                     $itemSubtotal = round($priceResult->precio_final_con_opciones * $item['cantidad'], 2);
                     $subtotal += $itemSubtotal;
 
@@ -235,6 +270,7 @@ class PedidoController extends Controller
                         'addons_seleccionados' => $addonsSeleccionados !== [] ? $addonsSeleccionados : null,
                         'addons_total_unitario' => $priceResult->addons_total,
                         'precio_base_unitario' => $priceResult->precio_unitario_final,
+                        'color_personalizado_texto' => $colorPersonalizadoTexto,
                     ];
                 }
 
@@ -291,6 +327,15 @@ class PedidoController extends Controller
                 'cantidad' => $e->cantidadSolicitada,
                 'stock_disponible' => $e->stockDisponible,
             ]]);
+        } catch (VarianteRequeridaException $e) {
+            // No debería alcanzarse nunca: el guard explícito de arriba ya corta antes de
+            // llegar a PricingService. Si esto se dispara, es la defensa en profundidad
+            // funcionando — mismo shape de error 422 que el resto del endpoint.
+            $titulo = Producto::find($e->productoId)?->titulo ?? 'este producto';
+
+            throw ValidationException::withMessages([
+                'variante_id' => "Elegí un color para \"{$titulo}\" antes de confirmar el pedido.",
+            ]);
         }
 
         // El pedido y el descuento de stock ya están confirmados acá (transacción commiteada).

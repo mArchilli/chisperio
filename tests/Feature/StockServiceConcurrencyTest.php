@@ -11,7 +11,6 @@ use App\Models\Producto;
 use App\Services\StockService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use PDO;
 use PDOException;
 use Symfony\Component\Process\Process;
@@ -41,6 +40,13 @@ class StockServiceConcurrencyTest extends TestCase
     private const CONNECTION = 'stock_lock_test';
 
     private const DATABASE = 'chisperio_stock_lock_test';
+
+    /**
+     * Por proceso de PHPUnit, no por test: migrate:fresh es relativamente caro (dropea y
+     * recrea todas las tablas), así que solo hace falta una vez por corrida — los tests
+     * subsiguientes de esta clase solo necesitan el truncate de abajo para partir limpios.
+     */
+    private static bool $baseDeDatosMigrada = false;
 
     private ?string $originalDefaultConnection = null;
 
@@ -188,12 +194,24 @@ class StockServiceConcurrencyTest extends TestCase
             'engine' => null,
         ]]);
 
-        if (! Schema::connection(self::CONNECTION)->hasTable('productos')) {
-            Artisan::call('migrate', [
+        if (! self::$baseDeDatosMigrada) {
+            // migrate:fresh en vez de "si no existe la tabla `productos`, migrar": ese guard
+            // basado en una sola tabla vieja como proxy de "¿está todo al día?" es justo lo
+            // que rompió este test la primera vez que se agregó una migración nueva
+            // (producto_variantes) después de que esta base ya tuviera `productos` de una
+            // corrida anterior — el guard nunca disparaba y la tabla nueva nunca se creaba
+            // acá, así que el test fallaba por una tabla faltante, no por un bug real de
+            // concurrencia. migrate:fresh deja esta base (dedicada solo a este test, nunca
+            // toca la de dev/prod ni la :memory: del resto de la suite) siempre en el mismo
+            // estado que database/migrations en este momento, sin importar qué haya quedado
+            // de corridas previas — reproducible desde cero en cualquier entorno.
+            Artisan::call('migrate:fresh', [
                 '--database' => self::CONNECTION,
                 '--path' => 'database/migrations',
                 '--force' => true,
             ]);
+
+            self::$baseDeDatosMigrada = true;
         }
 
         DB::connection(self::CONNECTION)->statement('SET FOREIGN_KEY_CHECKS=0');

@@ -212,15 +212,30 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                                 </button>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={onAddToCart}
-                                className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-3 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
-                                aria-label={`Agregar ${producto.titulo} al carrito`}
-                            >
-                                <BagIcon className="h-4 w-4 flex-shrink-0" />
-                                <span className="hidden truncate sm:inline">Agregar</span>
-                            </button>
+                            {producto.tiene_variantes ? (
+                                // Producto con variantes de color activas: agregar directo acá
+                                // no pasa por el selector de color, así que en vez de eso manda
+                                // a la ficha (ver PedidoController::store, que rechaza un item
+                                // sin variante_id cuando el producto la requiere).
+                                <Link
+                                    href={productHref}
+                                    className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-3 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
+                                    aria-label={`Elegir color de ${producto.titulo}`}
+                                >
+                                    <BagIcon className="h-4 w-4 flex-shrink-0" />
+                                    <span className="hidden truncate sm:inline">Elegir color</span>
+                                </Link>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={onAddToCart}
+                                    className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-3 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
+                                    aria-label={`Agregar ${producto.titulo} al carrito`}
+                                >
+                                    <BagIcon className="h-4 w-4 flex-shrink-0" />
+                                    <span className="hidden truncate sm:inline">Agregar</span>
+                                </button>
+                            )}
                         </div>
                     </>
                 )}

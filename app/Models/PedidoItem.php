@@ -17,6 +17,7 @@ class PedidoItem extends Model
         'subtotal',
         'variante_nombre',
         'variante_color_hex',
+        'color_personalizado_texto',
         'recargo_variante_unitario',
         'addons_seleccionados',
         'addons_total_unitario',

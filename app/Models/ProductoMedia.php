@@ -11,6 +11,7 @@ class ProductoMedia extends Model
 
     protected $fillable = [
         'producto_id',
+        'producto_variante_id',
         'tipo',
         'ruta',
         'orden',
@@ -28,6 +29,15 @@ class ProductoMedia extends Model
     public function producto(): BelongsTo
     {
         return $this->belongsTo(Producto::class);
+    }
+
+    /**
+     * Variante de color a la que pertenece este medio (null = medio general,
+     * se muestra sin importar el color elegido).
+     */
+    public function productoVariante(): BelongsTo
+    {
+        return $this->belongsTo(ProductoVariante::class);
     }
 
     /**

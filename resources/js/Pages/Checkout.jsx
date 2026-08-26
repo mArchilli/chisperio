@@ -280,6 +280,7 @@ export default function Checkout({ canLogin }) {
             cantidad: item.cantidad,
             subtotalItem: item.subtotalItem,
             variante: item.variante ? { nombre: item.variante.nombre } : null,
+            colorPersonalizadoTexto: item.colorPersonalizadoTexto || null,
             addons: item.addons.map((addon) => ({
                 nombre: addon.nombre,
                 texto_personalizado: addon.texto_personalizado,
@@ -337,6 +338,7 @@ export default function Checkout({ canLogin }) {
                     producto_id: item.producto_id,
                     cantidad: item.cantidad,
                     variante_id: item.varianteId,
+                    color_personalizado_texto: item.colorPersonalizadoTexto || null,
                     addons: item.addons.map((addon) => ({
                         addon_id: addon.addon_id,
                         texto_personalizado: addon.texto_personalizado,

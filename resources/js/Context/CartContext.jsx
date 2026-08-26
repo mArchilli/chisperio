@@ -58,13 +58,14 @@ function snapshotProducto(producto) {
 
 /**
  * Identidad de una línea de carrito: dos líneas del mismo producto con distinta
- * variante, o distinta combinación de add-ons/textos de personalización, son
- * líneas separadas (no se suman cantidades entre sí). Sin variante ni add-ons
- * devuelve directamente el producto_id — mismo valor que usaba `item.id` antes de
- * esta función existir, para no duplicar líneas de carritos ya guardados en el
- * localStorage de usuarios existentes (ver normalizarItem).
+ * variante, distinta combinación de add-ons/textos de personalización, o distinta
+ * descripción de color a medida, son líneas separadas (no se suman cantidades
+ * entre sí). Sin variante ni add-ons devuelve directamente el producto_id — mismo
+ * valor que usaba `item.id` antes de esta función existir, para no duplicar
+ * líneas de carritos ya guardados en el localStorage de usuarios existentes
+ * (ver normalizarItem).
  */
-function generarLineKey(productoId, varianteId, addons) {
+function generarLineKey(productoId, varianteId, addons, colorPersonalizadoTexto = null) {
     const tieneVariante = varianteId !== null && varianteId !== undefined;
     const listaAddons = addons || [];
 
@@ -77,7 +78,9 @@ function generarLineKey(productoId, varianteId, addons) {
         .sort()
         .join('|');
 
-    return `${productoId}::v${tieneVariante ? varianteId : ''}::a[${addonsKey}]`;
+    const colorKey = (colorPersonalizadoTexto ?? '').trim();
+
+    return `${productoId}::v${tieneVariante ? varianteId : ''}::a[${addonsKey}]::c[${colorKey}]`;
 }
 
 function esItemValido(item) {
@@ -104,9 +107,10 @@ function normalizarItem(item) {
     const productoId = item.producto_id ?? item.id;
     const varianteId = item.varianteId ?? null;
     const addons = Array.isArray(item.addons) ? item.addons : [];
+    const colorPersonalizadoTexto = item.colorPersonalizadoTexto ?? null;
 
     return {
-        lineKey: generarLineKey(productoId, varianteId, addons),
+        lineKey: generarLineKey(productoId, varianteId, addons, colorPersonalizadoTexto),
         producto_id: productoId,
         titulo: item.titulo,
         imagen: item.imagen ?? null,
@@ -115,6 +119,7 @@ function normalizarItem(item) {
         varianteId,
         variante: item.variante ?? null,
         addons,
+        colorPersonalizadoTexto,
     };
 }
 
@@ -226,18 +231,18 @@ export function CartProvider({ children }) {
     // (ver generarLineKey) — agregar el mismo producto con otra variante u otros
     // add-ons crea una línea nueva en vez de sumarse a una existente.
     const addToCart = useCallback((producto, qty = 1, opciones = {}) => {
-        const { varianteId = null, variante = null, addons = [] } = opciones;
+        const { varianteId = null, variante = null, addons = [], colorPersonalizadoTexto = null } = opciones;
         const productoSnapshot = snapshotProducto(producto);
         const max = cantidadMaxima(productoSnapshot, varianteId);
         const capear = (cantidad) => (max === null ? cantidad : Math.min(cantidad, max));
-        const lineKey = generarLineKey(producto.id, varianteId, addons);
+        const lineKey = generarLineKey(producto.id, varianteId, addons, colorPersonalizadoTexto);
 
         setItems((prev) => {
             const existing = prev.find((item) => item.lineKey === lineKey);
             if (existing) {
                 return prev.map((item) =>
                     item.lineKey === lineKey
-                        ? { ...item, producto: productoSnapshot, cantidad: capear(item.cantidad + qty) }
+                        ? { ...item, producto: productoSnapshot, cantidad: capear(item.cantidad + qty), colorPersonalizadoTexto }
                         : item
                 );
             }
@@ -253,6 +258,7 @@ export function CartProvider({ children }) {
                     varianteId,
                     variante,
                     addons,
+                    colorPersonalizadoTexto,
                 },
             ];
         });
@@ -295,8 +301,9 @@ export function CartProvider({ children }) {
 
             const nuevoVarianteId = varianteInvalida ? null : item.varianteId;
             const nuevaVariante = varianteInvalida ? null : item.variante;
+            const nuevoColorPersonalizadoTexto = varianteInvalida ? null : item.colorPersonalizadoTexto;
             const nuevosAddons = item.addons.filter((a) => !addonIdsInvalidos.includes(a.addon_id));
-            const nuevoLineKey = generarLineKey(item.producto_id, nuevoVarianteId, nuevosAddons);
+            const nuevoLineKey = generarLineKey(item.producto_id, nuevoVarianteId, nuevosAddons, nuevoColorPersonalizadoTexto);
 
             const partesPerdidas = [];
             if (varianteInvalida && item.variante) {
@@ -331,6 +338,7 @@ export function CartProvider({ children }) {
                     lineKey: nuevoLineKey,
                     varianteId: nuevoVarianteId,
                     variante: nuevaVariante,
+                    colorPersonalizadoTexto: nuevoColorPersonalizadoTexto,
                     addons: nuevosAddons,
                     cantidad: capear(item.cantidad),
                 },

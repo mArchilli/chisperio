@@ -171,4 +171,122 @@ class PedidoVariantesAddonsTest extends TestCase
         // No debe descontarse stock ni quedar nada a medio crear (rollback completo).
         $this->assertSame(0, DB::table('pedido_items')->count());
     }
+
+    public function test_pedido_con_variante_de_color_personalizado_guarda_el_texto_indicado(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Otro / A elección', 'color_hex' => '#000000',
+            'es_color_personalizado' => true, 'precio_adicional' => 0, 'stock' => 10, 'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/checkout', $this->payloadBase([
+            [
+                'producto_id' => $producto->id,
+                'cantidad' => 1,
+                'variante_id' => $variante->id,
+                'color_personalizado_texto' => 'Verde flúo (#39FF14)',
+            ],
+        ]));
+
+        $response->assertCreated();
+
+        $item = PedidoItem::where('producto_id', $producto->id)->firstOrFail();
+        $this->assertSame('Verde flúo (#39FF14)', $item->color_personalizado_texto);
+    }
+
+    public function test_pedido_con_variante_de_color_personalizado_sin_texto_rechaza_todo_el_pedido(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Otro / A elección', 'color_hex' => '#000000',
+            'es_color_personalizado' => true, 'precio_adicional' => 0, 'stock' => 10, 'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/checkout', $this->payloadBase([
+            [
+                'producto_id' => $producto->id,
+                'cantidad' => 1,
+                'variante_id' => $variante->id,
+                'color_personalizado_texto' => '   ',
+            ],
+        ]));
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['color_personalizado_texto']);
+        $this->assertSame(0, Pedido::count());
+        $this->assertSame(0, DB::table('pedido_items')->count());
+    }
+
+    public function test_pedido_con_variante_fija_no_requiere_ni_guarda_color_personalizado_texto(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'color_hex' => '#ff0000',
+            'precio_adicional' => 0, 'stock' => 10, 'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/checkout', $this->payloadBase([
+            [
+                'producto_id' => $producto->id,
+                'cantidad' => 1,
+                'variante_id' => $variante->id,
+            ],
+        ]));
+
+        $response->assertCreated();
+
+        $item = PedidoItem::where('producto_id', $producto->id)->firstOrFail();
+        $this->assertNull($item->color_personalizado_texto);
+    }
+
+    /**
+     * Repro exacto del bug de QA: producto con una variante "a elección" activa,
+     * item de checkout sin `variante_id` en absoluto (el vector real es el "Agregar"
+     * rápido del catálogo/home, que nunca pasa por el selector de color de la
+     * ficha). Antes de este fix, el item se vendía al precio base, sin recargo, sin
+     * descontar stock de ninguna variante y sin registrar qué color preparar.
+     */
+    public function test_pedido_sin_variante_id_para_producto_con_variante_personalizada_activa_rechaza_todo_el_pedido(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => null]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Otro / A elección', 'color_hex' => '#000000',
+            'es_color_personalizado' => true, 'precio_adicional' => 200, 'stock' => 5, 'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/checkout', $this->payloadBase([
+            ['producto_id' => $producto->id, 'cantidad' => 1],
+        ]));
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['variante_id']);
+        $this->assertSame(0, Pedido::count());
+        $this->assertSame(0, PedidoItem::count());
+        $this->assertSame(0, MovimientoStock::count());
+        // Ni el producto ni la variante perdieron stock: el item nunca debió llegar
+        // a tocar precio ni stock (el guard corre antes de calcularPrecio()).
+        $this->assertSame(5, $variante->fresh()->stock);
+    }
+
+    /**
+     * El guard no distingue es_color_personalizado: cualquier variante activa
+     * configurada (fija o "a elección") vuelve obligatorio variante_id.
+     */
+    public function test_pedido_sin_variante_id_para_producto_con_variante_fija_activa_tambien_rechaza(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'color_hex' => '#ff0000',
+            'precio_adicional' => 0, 'stock' => 10, 'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/checkout', $this->payloadBase([
+            ['producto_id' => $producto->id, 'cantidad' => 1],
+        ]));
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['variante_id']);
+        $this->assertSame(0, Pedido::count());
+    }
 }

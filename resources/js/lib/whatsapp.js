@@ -11,6 +11,7 @@
  *   items: [{
  *     titulo, cantidad, subtotalItem,
  *     variante: { nombre } | null,
+ *     colorPersonalizadoTexto: string | null,
  *     addons: [{ nombre, texto_personalizado }],
  *   }],
  *   subtotal: number,
@@ -31,15 +32,20 @@ const formatPrice = (price) =>
 
 /**
  * Líneas de detalle de un item: cantidad + título + subtotal (ya con recargo de
- * variante y add-ons incluidos), más "Color: {nombre}" y una línea por cada
- * personalización solo cuando el item efectivamente tiene variante/add-ons — un
- * item sin ninguno de los dos no agrega ninguna línea extra.
+ * variante y add-ons incluidos), más "Color: {nombre}", "Color solicitado: {texto}"
+ * (solo cuando la variante es "Otro / a elección del cliente") y una línea por cada
+ * personalización, solo cuando el item efectivamente los tiene — un item sin nada de
+ * eso no agrega ninguna línea extra.
  */
 function lineasItem(item) {
     const lineas = [`• ${item.titulo} x${item.cantidad} — ${formatPrice(item.subtotalItem)}`];
 
     if (item.variante) {
         lineas.push(`   Color: ${item.variante.nombre}`);
+    }
+
+    if (item.colorPersonalizadoTexto) {
+        lineas.push(`   Color solicitado: ${item.colorPersonalizadoTexto}`);
     }
 
     (item.addons || []).forEach((addon) => {

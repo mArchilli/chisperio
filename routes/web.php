@@ -56,13 +56,19 @@ Route::get('/confirmacion-pedido', function () {
 })->name('confirmacion.index');
 
 Route::get('/', function () {
+    // withCount igual que TiendaController::index: OutstandingProducts.jsx tiene el
+    // mismo botón de "Agregar" rápido que Tienda.jsx, así que necesita el mismo dato
+    // para mandar al cliente a la ficha en vez de agregar sin color un producto que
+    // tiene variantes activas.
     $productosDestacados = \App\Models\Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias', 'escalasPrecio'])
+        ->withCount('variantesActivas')
         ->where('is_active', true)
         ->where('is_featured', true)
         ->conStock()
         ->latest('updated_at')
         ->latest('id')
-        ->get();
+        ->get()
+        ->each(fn ($producto) => $producto->setAttribute('tiene_variantes', $producto->variantes_activas_count > 0));
 
     $categorias = \App\Models\Categoria::all();
 

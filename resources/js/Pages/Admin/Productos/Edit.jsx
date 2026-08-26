@@ -3,7 +3,7 @@ import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar }
 import VariantesColorRepeater, { validarVariantes, limpiarVariantesParaEnviar } from '@/Components/VariantesColorRepeater';
 import AddonsProductoSelector, { validarAddonsProducto } from '@/Components/AddonsProductoSelector';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
@@ -30,9 +30,11 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
             id: v.id,
             nombre: v.nombre,
             color_hex: v.color_hex,
+            es_color_personalizado: v.es_color_personalizado ?? false,
             precio_adicional: v.precio_adicional,
             stock: v.stock,
             is_active: v.is_active,
+            clave: String(v.id),
         })),
         addons: (producto.addons || []).map(a => ({
             addon_id: a.id,
@@ -43,7 +45,20 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
 
     const [imagenesPreview, setImagenesPreview] = useState([]);
     const [videosPreview, setVideosPreview] = useState([]);
-    const [mediaExistente, setMediaExistente] = useState(producto.media || []);
+    const [mediaExistente, setMediaExistente] = useState(
+        (producto.media || []).map(m => ({
+            ...m,
+            varianteKey: m.producto_variante_id ? String(m.producto_variante_id) : '',
+        }))
+    );
+
+    const variantesVisibles = data.variantes.filter((v) => !v._eliminar);
+    const clavesConImagenPropia = useMemo(() => {
+        const claves = new Set();
+        imagenesPreview.forEach((p) => { if (p.varianteKey) claves.add(p.varianteKey); });
+        mediaExistente.forEach((m) => { if (m.tipo === 'imagen' && m.varianteKey) claves.add(m.varianteKey); });
+        return claves;
+    }, [imagenesPreview, mediaExistente]);
 
     const quillRef = useRef(null);
     const quillInstanceRef = useRef(null);
@@ -92,6 +107,12 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
             _method: 'put',
             escalas_precio: limpiarEscalasParaEnviar(data.escalas_precio),
             variantes: limpiarVariantesParaEnviar(data.variantes),
+            imagenes_variante_clave: imagenesPreview.map((p) => p.varianteKey || ''),
+            videos_variante_clave: videosPreview.map((p) => p.varianteKey || ''),
+            media_variante_asignaciones: mediaExistente.map((m) => ({
+                id: m.id,
+                variante_clave: m.varianteKey || '',
+            })),
         }));
 
         post(route('productos.update', producto.id), {
@@ -104,11 +125,12 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
     const handleImagenesChange = (e) => {
         const files = Array.from(e.target.files);
         setData('imagenes', [...data.imagenes, ...files]);
-        
+
         const previews = files.map(file => ({
             file,
             url: URL.createObjectURL(file),
-            name: file.name
+            name: file.name,
+            varianteKey: '',
         }));
         setImagenesPreview([...imagenesPreview, ...previews]);
     };
@@ -116,13 +138,26 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
     const handleVideosChange = (e) => {
         const files = Array.from(e.target.files);
         setData('videos', [...data.videos, ...files]);
-        
+
         const previews = files.map(file => ({
             file,
             url: URL.createObjectURL(file),
-            name: file.name
+            name: file.name,
+            varianteKey: '',
         }));
         setVideosPreview([...videosPreview, ...previews]);
+    };
+
+    const actualizarColorImagenNueva = (index, varianteKey) => {
+        setImagenesPreview((prev) => prev.map((p, i) => (i === index ? { ...p, varianteKey } : p)));
+    };
+
+    const actualizarColorVideoNuevo = (index, varianteKey) => {
+        setVideosPreview((prev) => prev.map((p, i) => (i === index ? { ...p, varianteKey } : p)));
+    };
+
+    const actualizarColorMediaExistente = (mediaId, varianteKey) => {
+        setMediaExistente((prev) => prev.map((m) => (m.id === mediaId ? { ...m, varianteKey } : m)));
     };
 
     const removeImagenNueva = (index) => {
@@ -260,6 +295,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                     variantes={data.variantes}
                                     onChange={(nuevas) => setData('variantes', nuevas)}
                                     errors={errors}
+                                    clavesConImagenPropia={clavesConImagenPropia}
                                 />
 
                                 <AddonsProductoSelector
@@ -307,27 +343,43 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Imágenes Actuales</p>
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
                                                     {mediaExistente.filter(m => m.tipo === 'imagen').map((media) => (
-                                                        <div key={media.id} className="relative group">
-                                                            <div className="aspect-square rounded-xl overflow-hidden border-3 border-gray-200 shadow-md hover:shadow-xl transition-all">
-                                                                <img
-                                                                    src={`/${media.ruta}`}
-                                                                    alt="Producto"
-                                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                                                                />
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => eliminarMediaExistente(media.id)}
-                                                                className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
-                                                            >
-                                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                </svg>
-                                                            </button>
-                                                            {media.is_principal && (
-                                                                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full shadow-lg bg-gradient-to-r from-yellow-400 to-yellow-600 text-white scale-105">
-                                                                    ⭐ Principal
+                                                        <div key={media.id} className="group">
+                                                            <div className="relative">
+                                                                <div className="aspect-square rounded-xl overflow-hidden border-3 border-gray-200 shadow-md hover:shadow-xl transition-all">
+                                                                    <img
+                                                                        src={`/${media.ruta}`}
+                                                                        alt="Producto"
+                                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                                                    />
                                                                 </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => eliminarMediaExistente(media.id)}
+                                                                    className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
+                                                                >
+                                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                                {media.is_principal && (
+                                                                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full shadow-lg bg-gradient-to-r from-yellow-400 to-yellow-600 text-white scale-105">
+                                                                        ⭐ Principal
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {variantesVisibles.length > 0 && (
+                                                                <select
+                                                                    value={media.varianteKey || ''}
+                                                                    onChange={(e) => actualizarColorMediaExistente(media.id, e.target.value)}
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                >
+                                                                    <option value="">General (todos los colores)</option>
+                                                                    {variantesVisibles.map((v) => (
+                                                                        <option key={v.clave} value={v.clave}>
+                                                                            {v.nombre || 'Variante sin nombre'}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
                                                             )}
                                                         </div>
                                                     ))}
@@ -368,23 +420,39 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Nuevas Imágenes</p>
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                                     {imagenesPreview.map((preview, index) => (
-                                                        <div key={index} className="relative group">
-                                                            <div className="aspect-square rounded-xl overflow-hidden border-3 border-gray-200 shadow-md hover:shadow-xl transition-all">
-                                                                <img
-                                                                    src={preview.url}
-                                                                    alt={preview.name}
-                                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                                                                />
+                                                        <div key={index} className="group">
+                                                            <div className="relative">
+                                                                <div className="aspect-square rounded-xl overflow-hidden border-3 border-gray-200 shadow-md hover:shadow-xl transition-all">
+                                                                    <img
+                                                                        src={preview.url}
+                                                                        alt={preview.name}
+                                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeImagenNueva(index)}
+                                                                    className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
+                                                                >
+                                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeImagenNueva(index)}
-                                                                className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
-                                                            >
-                                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                </svg>
-                                                            </button>
+                                                            {variantesVisibles.length > 0 && (
+                                                                <select
+                                                                    value={preview.varianteKey || ''}
+                                                                    onChange={(e) => actualizarColorImagenNueva(index, e.target.value)}
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                >
+                                                                    <option value="">General (todos los colores)</option>
+                                                                    {variantesVisibles.map((v) => (
+                                                                        <option key={v.clave} value={v.clave}>
+                                                                            {v.nombre || 'Variante sin nombre'}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -404,25 +472,41 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Videos Actuales</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                                                     {mediaExistente.filter(m => m.tipo === 'video').map((media) => (
-                                                        <div key={media.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
-                                                            <div className="flex items-center flex-1">
-                                                                <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
-                                                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                    </svg>
+                                                        <div key={media.id} className="p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center flex-1 min-w-0">
+                                                                    <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
+                                                                        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <span className="ml-3 text-sm font-medium text-gray-700 truncate">{media.ruta.split('/').pop()}</span>
                                                                 </div>
-                                                                <span className="ml-3 text-sm font-medium text-gray-700 truncate">{media.ruta.split('/').pop()}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => eliminarMediaExistente(media.id)}
+                                                                    className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                                                >
+                                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => eliminarMediaExistente(media.id)}
-                                                                className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
-                                                            >
-                                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                            </button>
+                                                            {variantesVisibles.length > 0 && (
+                                                                <select
+                                                                    value={media.varianteKey || ''}
+                                                                    onChange={(e) => actualizarColorMediaExistente(media.id, e.target.value)}
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                >
+                                                                    <option value="">General (todos los colores)</option>
+                                                                    {variantesVisibles.map((v) => (
+                                                                        <option key={v.clave} value={v.clave}>
+                                                                            {v.nombre || 'Variante sin nombre'}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -462,25 +546,41 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Nuevos Videos</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     {videosPreview.map((preview, index) => (
-                                                        <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
-                                                            <div className="flex items-center flex-1">
-                                                                <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
-                                                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                    </svg>
+                                                        <div key={index} className="p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center flex-1 min-w-0">
+                                                                    <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
+                                                                        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <span className="ml-3 text-sm font-medium text-gray-700 truncate">{preview.name}</span>
                                                                 </div>
-                                                                <span className="ml-3 text-sm font-medium text-gray-700 truncate">{preview.name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeVideoNuevo(index)}
+                                                                    className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                                                >
+                                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeVideoNuevo(index)}
-                                                                className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
-                                                            >
-                                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                            </button>
+                                                            {variantesVisibles.length > 0 && (
+                                                                <select
+                                                                    value={preview.varianteKey || ''}
+                                                                    onChange={(e) => actualizarColorVideoNuevo(index, e.target.value)}
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                >
+                                                                    <option value="">General (todos los colores)</option>
+                                                                    {variantesVisibles.map((v) => (
+                                                                        <option key={v.clave} value={v.clave}>
+                                                                            {v.nombre || 'Variante sin nombre'}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

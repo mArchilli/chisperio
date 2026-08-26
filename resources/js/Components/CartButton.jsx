@@ -6,6 +6,7 @@ import { useCart } from '@/Context/CartContext';
 import { useNotificacionEnvioGratis } from '@/hooks/useNotificacionEnvioGratis';
 import { useScrolledPast } from '@/hooks/useScrolledPast';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
+import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 
 const EXCLUDED_PREFIXES = [
     '/carrito', '/checkout', '/login',
@@ -47,10 +48,14 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
                     <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-[#4b4356]">
                         <span
                             className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-black/10"
-                            style={{ backgroundColor: item.variante.color_hex || '#e5e5e5' }}
+                            style={
+                                item.colorPersonalizadoTexto
+                                    ? { background: GRADIENTE_PERSONALIZADO }
+                                    : { backgroundColor: item.variante.color_hex || '#e5e5e5' }
+                            }
                             aria-hidden="true"
                         />
-                        {item.variante.nombre}
+                        {item.colorPersonalizadoTexto || item.variante.nombre}
                     </span>
                 )}
 

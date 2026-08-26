@@ -9,6 +9,7 @@ import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
 import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
+import { resolverMediaParaVariante } from '@/lib/media';
 import { cantidadMaxima, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
 
 /**
@@ -94,6 +95,13 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
 function ProductGallery({ imagenes, videos, titulo }) {
     const [activeIdx, setActiveIdx] = useState(0);
     const [lightboxOpen, setLightboxOpen] = useState(false);
+
+    // Al cambiar de color el set de imágenes/video puede ser otro (ver
+    // resolverMediaParaVariante en ShowProduct); sin este reset, activeIdx podía
+    // quedar apuntando a un índice de la selección anterior que ya no corresponde.
+    useEffect(() => {
+        setActiveIdx(0);
+    }, [imagenes, videos]);
 
     const items = useMemo(
         () => [
@@ -278,11 +286,45 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const tieneVariantes = variantes.length > 0;
     const tieneAddons = addons.length > 0;
 
-    const [varianteId, setVarianteId] = useState(null);
+    // Con variantes, arranca con la primera activa ya seleccionada (mismo orden que
+    // pintan los swatches — ver VarianteColorSwatches) en vez de forzar un click
+    // antes de mostrar precio, stock y galería reales: así la ficha abre mostrando
+    // de entrada la foto/precio de esa variante en vez de la mezcla general. Si esa
+    // primera variante es "a elección del cliente", el bloque de color/texto libre
+    // de VarianteColorSwatches se despliega igual, sin importar si la selección fue
+    // por este default o por un click explícito — ese componente solo mira
+    // `value === variante.id`, no cómo se llegó ahí.
+    const [varianteId, setVarianteId] = useState(() => variantes[0]?.id ?? null);
     const [addonIds, setAddonIds] = useState([]);
     const [addonTextos, setAddonTextos] = useState({});
+    const [colorPersonalizado, setColorPersonalizado] = useState('');
+    const [textoPersonalizado, setTextoPersonalizado] = useState('');
 
     const varianteSeleccionada = variantes.find((v) => v.id === varianteId) ?? null;
+    const esColorPersonalizado = varianteSeleccionada?.es_color_personalizado ?? false;
+
+    // Se limpian apenas se deja la variante "a elección" (cambio de color o
+    // deselección) para no arrastrar una descripción vieja a otro color elegido.
+    useEffect(() => {
+        if (!esColorPersonalizado) {
+            setColorPersonalizado('');
+            setTextoPersonalizado('');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [varianteId]);
+
+    // En un producto sin variantes (varianteSeleccionada siempre null acá) se
+    // muestran todas las imágenes/videos, igual que siempre. Con variantes, ya hay
+    // una seleccionada desde el mount (ver el useState de varianteId más arriba),
+    // así que esto se resuelve contra su media propia desde el primer render y cae
+    // a la general si no tiene — nunca se mezcla con la de otro color (ver
+    // resolverMediaParaVariante).
+    const mediaVariante = useMemo(
+        () => (varianteSeleccionada ? resolverMediaParaVariante(producto.imagenes, producto.videos, varianteSeleccionada.id) : null),
+        [producto.imagenes, producto.videos, varianteSeleccionada]
+    );
+    const galeriaImagenes = mediaVariante ? mediaVariante.imagenes : producto.imagenes;
+    const galeriaVideos = mediaVariante ? (mediaVariante.video ? [mediaVariante.video] : []) : producto.videos;
 
     // Producto totalmente agotado: sin variantes, mira el stock propio (como siempre);
     // con variantes, solo si TODAS las activas están sin stock — mientras quede al
@@ -331,10 +373,18 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
         return (addonTextos[id] ?? '').trim().length > 0;
     });
 
+    // Con el default de arriba (primera variante preseleccionada), esto en la práctica
+    // ya no se dispara para variantes normales — queda como resguardo por si en el
+    // futuro se agrega una forma de deseleccionar.
     const faltaElegirVariante = tieneVariantes && varianteSeleccionada === null;
+    // La variante "a elección del cliente" necesita al menos el color libre o la
+    // descripción cargados (ver VarianteColorSwatches, que muestra el mensaje).
+    const faltaCompletarColorPersonalizado = esColorPersonalizado
+        && colorPersonalizado.trim() === ''
+        && textoPersonalizado.trim() === '';
     // maxQty === 0 cubre el caso borde de que la variante elegida se haya quedado sin
     // stock justo después de seleccionarla (normalmente ya viene bloqueada en el swatch).
-    const puedeAgregar = !agotado && !faltaElegirVariante && maxQty !== 0 && addonsValidos;
+    const puedeAgregar = !agotado && !faltaElegirVariante && !faltaCompletarColorPersonalizado && maxQty !== 0 && addonsValidos;
 
     const cambiarQty = (valor) => setQty(() => {
         const clamped = Math.max(1, valor);
@@ -362,6 +412,16 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
             };
         });
 
+        // Combina lo que el cliente cargó para el color "a elección" en un solo texto
+        // (ver migración pedido_items.color_personalizado_texto, que guarda un único
+        // campo): si escribió una descripción y también eligió un color de referencia,
+        // se guardan los dos juntos; si solo cargó uno de los dos, se usa ese.
+        const descripcionColor = textoPersonalizado.trim();
+        const hexColor = colorPersonalizado.trim();
+        const colorPersonalizadoTexto = esColorPersonalizado
+            ? (descripcionColor && hexColor ? `${descripcionColor} (${hexColor})` : descripcionColor || hexColor || null)
+            : null;
+
         addToCartContext(producto, qty, {
             varianteId: varianteSeleccionada?.id ?? null,
             variante: varianteSeleccionada && {
@@ -371,6 +431,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                 precio_adicional: Number(varianteSeleccionada.precio_adicional),
             },
             addons: addonsSeleccionados,
+            colorPersonalizadoTexto,
         });
 
         if (toast) clearTimeout(window._toastTimer);
@@ -421,7 +482,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
 
                 <section className="relative w-full px-3 pt-3 sm:px-4 md:pt-0">
                     <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
-                        <ProductGallery imagenes={producto.imagenes} videos={producto.videos} titulo={producto.titulo} />
+                        <ProductGallery imagenes={galeriaImagenes} videos={galeriaVideos} titulo={producto.titulo} />
 
                         <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
                             <div className="mb-4 flex items-start justify-between gap-4">
@@ -574,6 +635,10 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                                 variantes={variantes}
                                                 value={varianteId}
                                                 onChange={setVarianteId}
+                                                colorPersonalizado={colorPersonalizado}
+                                                textoPersonalizado={textoPersonalizado}
+                                                onColorPersonalizadoChange={setColorPersonalizado}
+                                                onTextoPersonalizadoChange={setTextoPersonalizado}
                                             />
                                             <ProductoAddonsChecklist
                                                 addons={addons}
@@ -618,12 +683,8 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                             <button
                                                 type="button"
                                                 onClick={addToCart}
-<<<<<<< HEAD
                                                 disabled={!puedeAgregar}
-                                                className="flex h-14 w-full flex-1 items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-[#81788a] disabled:shadow-none motion-reduce:transform-none"
-=======
-                                                className="flex h-16 w-full items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none sm:h-14 sm:flex-1"
->>>>>>> 2bb0df7e8caa4781712124dd327da58a1bf69e27
+                                                className="flex h-16 w-full items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-[#81788a] disabled:shadow-none motion-reduce:transform-none sm:h-14 sm:flex-1"
                                             >
                                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25h10.5l.75 12H6l.75-12z" />

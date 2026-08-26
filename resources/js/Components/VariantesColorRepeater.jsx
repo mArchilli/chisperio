@@ -9,10 +9,23 @@ function parseNumero(valor) {
 const HEX_VALIDO = /^#[0-9a-fA-F]{6}$/;
 
 /**
+ * Clave estable para vincular una fila de variante con sus imágenes/videos en el
+ * gestor de multimedia, incluso antes de que la fila tenga un id real en base
+ * (ver VariantesColorRepeater.agregar y Admin/Productos/Create|Edit.jsx).
+ */
+function generarClave() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
  * Replica en cliente las reglas del backend (ProductoController::variantesReglas):
  * nombre requerido y único (case-insensitive) dentro del producto, precio_adicional
- * numérico >= 0 (o vacío), stock entero >= 0 o vacío (= ilimitado).
- * Devuelve { esValido, errores } donde errores es un array paralelo a `variantes`.
+ * numérico >= 0 (o vacío), stock entero >= 0 o vacío (= ilimitado), y como máximo
+ * una variante con es_color_personalizado activo. Devuelve { esValido, errores }
+ * donde errores es un array paralelo a `variantes`.
  */
 export function validarVariantes(variantes) {
     const conteoPorNombre = new Map();
@@ -22,6 +35,8 @@ export function validarVariantes(variantes) {
             conteoPorNombre.set(nombre, (conteoPorNombre.get(nombre) || 0) + 1);
         }
     });
+
+    const totalPersonalizadas = variantes.filter((v) => !v._eliminar && v.es_color_personalizado).length;
 
     let esValido = true;
 
@@ -49,7 +64,11 @@ export function validarVariantes(variantes) {
             }
         }
 
-        if (fila.nombre || fila.precio_adicional || fila.stock) {
+        if (!variante._eliminar && variante.es_color_personalizado && totalPersonalizadas > 1) {
+            fila.es_color_personalizado = 'Solo puede haber una variante marcada como "color a elección del cliente".';
+        }
+
+        if (fila.nombre || fila.precio_adicional || fila.stock || fila.es_color_personalizado) {
             esValido = false;
         }
 
@@ -79,16 +98,30 @@ export function limpiarVariantesParaEnviar(variantes) {
  * El "reordenar" mueve la fila entera dentro del array (swap con la vecina visible
  * más cercana); el backend asigna `orden` según la posición final del array al sincronizar.
  */
-export default function VariantesColorRepeater({ variantes, onChange, errors = {} }) {
+export default function VariantesColorRepeater({ variantes, onChange, errors = {}, clavesConImagenPropia = new Set() }) {
     const variantesVisibles = variantes.filter((v) => !v._eliminar);
     const { errores: erroresCliente } = useMemo(() => validarVariantes(variantesVisibles), [variantesVisibles]);
 
     const actualizar = (index, campo, valor) => {
+        // Como máximo una variante puede ser "color a elección del cliente": al tildar
+        // una fila se destilda automáticamente cualquier otra que lo tuviera activo.
+        if (campo === 'es_color_personalizado' && valor === true) {
+            onChange(variantes.map((v, i) => ({ ...v, es_color_personalizado: i === index })));
+            return;
+        }
         onChange(variantes.map((v, i) => (i === index ? { ...v, [campo]: valor } : v)));
     };
 
     const agregar = () => {
-        onChange([...variantes, { nombre: '', color_hex: '#40B0C2', precio_adicional: '', stock: '', is_active: true }]);
+        onChange([...variantes, {
+            nombre: '',
+            color_hex: '#40B0C2',
+            es_color_personalizado: false,
+            precio_adicional: '',
+            stock: '',
+            is_active: true,
+            clave: generarClave(),
+        }]);
     };
 
     const quitar = (index) => {
@@ -169,7 +202,9 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                             const errorNombre = errors[`variantes.${posicionActual}.nombre`] || errorCliente.nombre;
                             const errorPrecio = errors[`variantes.${posicionActual}.precio_adicional`] || errorCliente.precio_adicional;
                             const errorStock = errors[`variantes.${posicionActual}.stock`] || errorCliente.stock;
+                            const errorPersonalizado = errors[`variantes.${posicionActual}.es_color_personalizado`] || errorCliente.es_color_personalizado;
                             const colorPreview = HEX_VALIDO.test(variante.color_hex || '') ? variante.color_hex : '#ffffff';
+                            const sinImagenPropia = variante.clave && !clavesConImagenPropia.has(variante.clave);
 
                             return (
                                 <div key={variante.id ?? index} className="p-4 bg-white border-2 border-gray-200 rounded-xl">
@@ -291,6 +326,34 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 </svg>
                                             </button>
                                         </div>
+                                    </div>
+
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <label className="flex items-center gap-2 cursor-pointer w-fit">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!variante.es_color_personalizado}
+                                                onChange={(e) => actualizar(index, 'es_color_personalizado', e.target.checked)}
+                                                className="h-4 w-4 rounded border-gray-300 text-[#A72DAB] focus:ring-[#A72DAB]"
+                                            />
+                                            <span className="text-sm font-semibold text-gray-700">
+                                                Es un color a elección del cliente
+                                            </span>
+                                        </label>
+                                        {errorPersonalizado && <p className="mt-1 text-xs text-red-600">{errorPersonalizado}</p>}
+
+                                        {variante.es_color_personalizado && (
+                                            <div className="mt-2 rounded-lg bg-purple-50 border border-purple-200 p-3 text-xs text-purple-800 space-y-1">
+                                                <p>El color de arriba es solo un ícono de referencia — no es el color real que va a pedir el cliente.</p>
+                                                <p>El precio adicional de esta fila es el costo de pedir un color a medida.</p>
+                                            </div>
+                                        )}
+
+                                        {sinImagenPropia && (
+                                            <div className="mt-2 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-xs text-yellow-800">
+                                                Este color no tiene imagen propia — se va a mostrar la general si existe, o sin foto específica si no hay ninguna.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
