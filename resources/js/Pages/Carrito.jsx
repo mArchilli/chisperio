@@ -82,6 +82,30 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                             <h2 className="line-clamp-2 text-sm font-extrabold leading-snug text-[#1c1b1b] sm:text-lg md:text-xl">
                                 {item.titulo}
                             </h2>
+
+                            {item.variante && (
+                                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-[#f7f6f9] px-2.5 py-1 text-[10px] font-bold text-[#4b4356]">
+                                    <span
+                                        className="h-3 w-3 flex-shrink-0 rounded-full border border-black/10"
+                                        style={{ backgroundColor: item.variante.color_hex || '#e5e5e5' }}
+                                        aria-hidden="true"
+                                    />
+                                    {item.variante.nombre}
+                                </span>
+                            )}
+
+                            {item.addons.length > 0 && (
+                                <ul className="mt-1.5 space-y-0.5">
+                                    {item.addons.map((addon) => (
+                                        <li key={addon.addon_id} className="text-[11px] font-medium leading-snug text-[#81788a]">
+                                            {addon.nombre}
+                                            {addon.texto_personalizado ? `: "${addon.texto_personalizado}"` : ''}
+                                            {' — +'}{formatPrice(addon.precio)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+
                             {item.sinStock ? (
                                 <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#ba1a1a] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white">
                                     Sin stock — no disponible
@@ -100,7 +124,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
 
                         <button
                             type="button"
-                            onClick={() => onRemove(item.id)}
+                            onClick={() => onRemove(item.lineKey)}
                             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-black/[0.06] bg-white text-[#81788a] transition-all hover:border-red-200 hover:bg-red-50 hover:text-[#ba1a1a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-90"
                             aria-label={`Eliminar ${item.titulo} del carrito`}
                         >
@@ -118,7 +142,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                             <div className="flex h-11 items-center rounded-full border border-black/[0.08] bg-[#f7f6f9] px-1">
                                 <button
                                     type="button"
-                                    onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
+                                    onClick={() => onUpdateQty(item.lineKey, item.cantidad - 1)}
                                     disabled={item.sinStock}
                                     className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                                     aria-label="Reducir cantidad"
@@ -130,7 +154,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                                 </span>
                                 <button
                                     type="button"
-                                    onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
+                                    onClick={() => onUpdateQty(item.lineKey, item.cantidad + 1)}
                                     disabled={item.sinStock || enElTope}
                                     title={enElTope ? `Solo quedan ${item.stockDisponible} disponibles` : undefined}
                                     className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
@@ -157,7 +181,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                 <div className="flex h-11 items-center rounded-full border border-black/[0.08] bg-[#f7f6f9] px-1">
                     <button
                         type="button"
-                        onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
+                        onClick={() => onUpdateQty(item.lineKey, item.cantidad - 1)}
                         disabled={item.sinStock}
                         className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Reducir cantidad"
@@ -169,7 +193,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                     </span>
                     <button
                         type="button"
-                        onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
+                        onClick={() => onUpdateQty(item.lineKey, item.cantidad + 1)}
                         disabled={item.sinStock || enElTope}
                         className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold leading-none text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Aumentar cantidad"
@@ -443,7 +467,7 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
                             <section aria-label="Productos en el carrito" className="space-y-4 lg:col-span-8 md:space-y-5">
                                 {items.map((item) => (
                                     <CartItem
-                                        key={item.id}
+                                        key={item.lineKey}
                                         item={item}
                                         onUpdateQty={updateQty}
                                         onRemove={removeFromCart}

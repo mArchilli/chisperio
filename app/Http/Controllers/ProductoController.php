@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AlcanceOferta;
+use App\Models\Addon;
 use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\EscalaPrecio;
@@ -35,10 +36,11 @@ class ProductoController extends Controller
     {
         $categorias = Categoria::all();
         $subcategorias = Subcategoria::with('categoria')->get();
-        
+
         return Inertia::render('Admin/Productos/Create', [
             'categorias' => $categorias,
-            'subcategorias' => $subcategorias
+            'subcategorias' => $subcategorias,
+            'addonsDisponibles' => Addon::activos()->get(),
         ]);
     }
 
@@ -59,7 +61,11 @@ class ProductoController extends Controller
             'imagenes.*' => 'nullable|image|max:5120', // max 5MB
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200', // max 50MB
             'imagen_principal' => 'nullable|integer',
-        ], $this->escalasPrecioReglas()), $this->escalasPrecioMensajes());
+        ], $this->escalasPrecioReglas(), $this->variantesReglas(), $this->addonsReglas()), array_merge(
+            $this->escalasPrecioMensajes(),
+            $this->variantesMensajes(),
+            $this->addonsMensajes()
+        ));
 
         $producto = DB::transaction(function () use ($validated) {
             $producto = Producto::create([
@@ -81,6 +87,8 @@ class ProductoController extends Controller
             }
 
             $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
+            $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
+            $this->sincronizarAddons($producto, $validated['addons'] ?? []);
 
             return $producto;
         });
@@ -154,14 +162,15 @@ class ProductoController extends Controller
      */
     public function edit(Producto $producto)
     {
-        $producto->load(['categorias', 'subcategorias', 'media', 'escalasPrecio']);
+        $producto->load(['categorias', 'subcategorias', 'media', 'escalasPrecio', 'variantes', 'addons']);
         $categorias = Categoria::all();
         $subcategorias = Subcategoria::with('categoria')->get();
-        
+
         return Inertia::render('Admin/Productos/Edit', [
             'producto' => $producto,
             'categorias' => $categorias,
-            'subcategorias' => $subcategorias
+            'subcategorias' => $subcategorias,
+            'addonsDisponibles' => Addon::activos()->get(),
         ]);
     }
 
@@ -182,7 +191,11 @@ class ProductoController extends Controller
             'imagenes.*' => 'nullable|image|max:5120',
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200',
             'media_eliminar' => 'array',
-        ], $this->escalasPrecioReglas($producto)), $this->escalasPrecioMensajes());
+        ], $this->escalasPrecioReglas($producto), $this->variantesReglas($producto), $this->addonsReglas()), array_merge(
+            $this->escalasPrecioMensajes(),
+            $this->variantesMensajes(),
+            $this->addonsMensajes()
+        ));
 
         DB::transaction(function () use ($validated, $producto) {
             $producto->update([
@@ -204,6 +217,8 @@ class ProductoController extends Controller
             }
 
             $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
+            $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
+            $this->sincronizarAddons($producto, $validated['addons'] ?? []);
         });
 
         // Eliminar media marcados para eliminar
@@ -398,6 +413,127 @@ class ProductoController extends Controller
                 $producto->escalasPrecio()->create($atributos);
             }
         }
+    }
+
+    /**
+     * Reglas de validación para el array variantes. En edición ($producto presente),
+     * valida además que cualquier id enviado pertenezca al producto que se está editando.
+     * `distinct` sobre nombre alcanza para "único dentro del mismo producto" porque el
+     * sync reemplaza el set completo de variantes con lo que venga en el payload.
+     */
+    private function variantesReglas(?Producto $producto = null): array
+    {
+        $reglas = [
+            'variantes' => ['array'],
+            'variantes.*.nombre' => ['required', 'string', 'max:100', 'distinct'],
+            'variantes.*.color_hex' => ['nullable', 'string', 'max:7'],
+            'variantes.*.precio_adicional' => ['nullable', 'numeric', 'min:0'],
+            'variantes.*.stock' => ['nullable', 'integer', 'min:0'],
+            'variantes.*.is_active' => ['boolean'],
+        ];
+
+        if ($producto !== null) {
+            $reglas['variantes.*.id'] = [
+                'nullable',
+                'integer',
+                Rule::exists('producto_variantes', 'id')->where(
+                    fn ($query) => $query->where('producto_id', $producto->id)
+                ),
+            ];
+        }
+
+        return $reglas;
+    }
+
+    /**
+     * Mensajes de validación indexados por fila (variantes.{index}.campo), para que
+     * el front pueda mostrar el error junto a la fila correspondiente.
+     */
+    private function variantesMensajes(): array
+    {
+        return [
+            'variantes.*.nombre.required' => 'El nombre de la variante es obligatorio.',
+            'variantes.*.nombre.distinct' => 'Hay una variante repetida con el mismo nombre.',
+            'variantes.*.precio_adicional.numeric' => 'El precio adicional debe ser un número.',
+            'variantes.*.precio_adicional.min' => 'El precio adicional no puede ser negativo.',
+            'variantes.*.stock.integer' => 'El stock debe ser un número entero.',
+            'variantes.*.stock.min' => 'El stock no puede ser negativo.',
+            'variantes.*.id.exists' => 'La variante indicada no pertenece a este producto.',
+        ];
+    }
+
+    /**
+     * Sincroniza las variantes del producto contra el payload recibido: borra las que
+     * ya no vengan (por id) y hace upsert del resto, mismo patrón que sincronizarEscalasPrecio.
+     * `orden` se asigna según la posición dentro del array recibido (el front reordena
+     * moviendo la fila entera, ver VariantesColorRepeater).
+     */
+    private function sincronizarVariantes(Producto $producto, array $variantes): void
+    {
+        $idsConservar = collect($variantes)->pluck('id')->filter()->all();
+
+        $producto->variantes()->whereNotIn('id', $idsConservar)->delete();
+
+        foreach ($variantes as $index => $variante) {
+            $atributos = [
+                'nombre' => $variante['nombre'],
+                'color_hex' => $variante['color_hex'] ?? null,
+                'precio_adicional' => $variante['precio_adicional'] ?? 0,
+                'stock' => $variante['stock'] ?? null,
+                'is_active' => $variante['is_active'] ?? true,
+                'orden' => $index,
+            ];
+
+            if (!empty($variante['id'])) {
+                $producto->variantes()->whereKey($variante['id'])->update($atributos);
+            } else {
+                $producto->variantes()->create($atributos);
+            }
+        }
+    }
+
+    /**
+     * Reglas de validación para el array addons (el checklist de AddonsProductoSelector).
+     * `precio_override` nulo/vacío significa "usar el precio por defecto del addon"
+     * (ver columna producto_addon.precio_override).
+     */
+    private function addonsReglas(): array
+    {
+        return [
+            'addons' => ['array'],
+            'addons.*.addon_id' => ['required', 'integer', 'distinct', Rule::exists('addons', 'id')],
+            'addons.*.precio_override' => ['nullable', 'numeric', 'min:0'],
+            'addons.*.orden' => ['nullable', 'integer', 'min:0'],
+        ];
+    }
+
+    private function addonsMensajes(): array
+    {
+        return [
+            'addons.*.addon_id.required' => 'El add-on es obligatorio.',
+            'addons.*.addon_id.distinct' => 'Hay un add-on repetido.',
+            'addons.*.addon_id.exists' => 'El add-on indicado no existe.',
+            'addons.*.precio_override.numeric' => 'El precio override debe ser un número.',
+            'addons.*.precio_override.min' => 'El precio override no puede ser negativo.',
+        ];
+    }
+
+    /**
+     * Sincroniza la tabla pivot producto_addon vía sync(): reemplaza el set completo
+     * de addons asociados por el payload recibido, con sus pivots precio_override y orden.
+     */
+    private function sincronizarAddons(Producto $producto, array $addons): void
+    {
+        $sync = [];
+
+        foreach ($addons as $index => $addon) {
+            $sync[$addon['addon_id']] = [
+                'precio_override' => $addon['precio_override'] ?? null,
+                'orden' => $addon['orden'] ?? $index,
+            ];
+        }
+
+        $producto->addons()->sync($sync);
     }
 
     /**

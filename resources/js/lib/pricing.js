@@ -55,14 +55,48 @@ function ofertaAplicaAEscala(oferta, escalaAplicada) {
 }
 
 /**
+ * Busca la variante de color elegida dentro de `producto.variantes` (ya vienen
+ * cargadas por Inertia). Espeja PricingService::resolverVariante, con una
+ * diferencia deliberada: acá NO se lanza excepción si el id no matchea (no
+ * pertenece al producto o no está activa) — simplemente no se aplica recargo.
+ * Esta función es solo el espejo para que la UI no salte a cada click; la
+ * validación estricta (rechazo real) la hace el endpoint /api/productos/{id}/precio.
+ */
+export function resolverVariante(variantes, varianteId) {
+    if (varianteId === null || varianteId === undefined) return null;
+
+    return (variantes || []).find((v) => v.id === varianteId && v.is_active) || null;
+}
+
+/**
+ * Busca los add-ons elegidos dentro de `producto.addons` (ya vienen cargados por
+ * Inertia con `pivot.precio_override`, ver Producto::addons()). Espeja
+ * PricingService::resolverAddons con la misma salvedad que resolverVariante: un
+ * addonId que no está asociado o no está activo se ignora en vez de rechazar todo
+ * el cálculo — la validación estricta vive en el endpoint de verificación.
+ */
+export function resolverAddons(addons, addonIds) {
+    const idsUnicos = [...new Set((addonIds || []).filter((id) => id !== null && id !== undefined))];
+
+    return idsUnicos
+        .map((id) => (addons || []).find((a) => a.id === id && a.is_active))
+        .filter(Boolean);
+}
+
+/**
  * Calcula el precio unitario de `producto` para `cantidad` unidades, resolviendo
  * escala + oferta vigente igual que PricingService::calcularPrecio. Además de los
  * campos que espejan al backend (precioLista/precioFinal/ofertaAplicada/ahorroPorcentaje,
  * este último = ahorro de la oferta sobre el precio de lista de ESE nivel), devuelve
  * ahorroTotalPorcentaje: el ahorro combinado (escala + oferta) contra el precio base
  * del producto, útil para el precio destacado de la ficha.
+ *
+ * `varianteId` y `addonIds` son opcionales: si se pasan, se les suma el recargo de
+ * variante y el total de add-ons DESPUÉS del descuento de la oferta (nunca se
+ * recalcula el descuento sobre ellos, porque no tienen descuento propio) —
+ * mismo criterio que PricingService::calcularPrecio.
  */
-export function resolverPrecio(producto, cantidad) {
+export function resolverPrecio(producto, cantidad, varianteId = null, addonIds = []) {
     const escalas = producto.escalas_precio || [];
     const escalaAplicada = resolverEscalaAplicable(escalas, cantidad);
     const precioBase = redondear2(Number(producto.precio));
@@ -84,6 +118,16 @@ export function resolverPrecio(producto, cantidad) {
     const ahorroTotalUnitario = redondear2(Math.max(0, precioBase - precioFinal));
     const ahorroTotalPorcentaje = precioBase > 0 ? redondear2((ahorroTotalUnitario / precioBase) * 100) : 0;
 
+    const varianteAplicada = resolverVariante(producto.variantes, varianteId);
+    const recargoVariante = redondear2(Number(varianteAplicada?.precio_adicional ?? 0));
+
+    const addonsAplicados = resolverAddons(producto.addons, addonIds);
+    const addonsTotal = redondear2(
+        addonsAplicados.reduce((suma, addon) => suma + Number(addon.pivot?.precio_override ?? addon.precio), 0)
+    );
+
+    const precioFinalConOpciones = redondear2(precioFinal + recargoVariante + addonsTotal);
+
     return {
         escalaAplicada,
         precioBase,
@@ -92,5 +136,10 @@ export function resolverPrecio(producto, cantidad) {
         ofertaAplicada,
         ahorroPorcentaje,
         ahorroTotalPorcentaje,
+        varianteAplicada,
+        recargoVariante,
+        addonsAplicados,
+        addonsTotal,
+        precioFinalConOpciones,
     };
 }

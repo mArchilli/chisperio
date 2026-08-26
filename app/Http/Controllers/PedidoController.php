@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EstadoPedido;
 use App\Enums\MotivoMovimientoStock;
 use App\Exceptions\StockInsuficienteException;
+use App\Models\Addon;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Producto;
@@ -156,6 +157,10 @@ class PedidoController extends Controller
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|integer|exists:productos,id',
             'items.*.cantidad' => 'required|integer|min:1',
+            'items.*.variante_id' => 'nullable|integer',
+            'items.*.addons' => 'nullable|array',
+            'items.*.addons.*.addon_id' => 'required|integer',
+            'items.*.addons.*.texto_personalizado' => 'nullable|string|max:1000',
         ]);
 
         // Chequeo optimista (sin lock) para dar feedback rápido antes de intentar escribir.
@@ -178,18 +183,58 @@ class PedidoController extends Controller
 
                 foreach ($validated['items'] as $item) {
                     $producto = $productos->get($item['producto_id']);
+                    $varianteId = $item['variante_id'] ?? null;
+                    $addonsInput = collect($item['addons'] ?? []);
 
-                    $precioUnitario = $pricingService->calcularPrecio($producto, $item['cantidad'])->precio_unitario_final;
+                    // calcularPrecio() valida acá mismo (con 422 si corresponde) que la
+                    // variante y cada addon pertenezcan a este producto y estén activos —
+                    // ver PricingService::resolverVariante/resolverAddons. Nunca se confía
+                    // en nombre/precio que pudo mandar el frontend.
+                    $priceResult = $pricingService->calcularPrecio(
+                        $producto,
+                        $item['cantidad'],
+                        $varianteId,
+                        $addonsInput->pluck('addon_id')->all()
+                    );
 
-                    $itemSubtotal = round($precioUnitario * $item['cantidad'], 2);
+                    $addonsSeleccionados = collect($priceResult->addons_aplicados)
+                        ->map(function (Addon $addon) use ($addonsInput) {
+                            $texto = $addon->requiere_texto
+                                ? trim((string) ($addonsInput->firstWhere('addon_id', $addon->id)['texto_personalizado'] ?? ''))
+                                : null;
+
+                            if ($addon->requiere_texto && $texto === '') {
+                                throw ValidationException::withMessages([
+                                    'addons' => "El add-on \"{$addon->nombre}\" requiere un texto de personalización.",
+                                ]);
+                            }
+
+                            return [
+                                'addon_id' => $addon->id,
+                                'nombre' => $addon->nombre,
+                                'precio' => round((float) ($addon->pivot->precio_override ?? $addon->precio), 2),
+                                'texto_personalizado' => $texto,
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
+                    $itemSubtotal = round($priceResult->precio_final_con_opciones * $item['cantidad'], 2);
                     $subtotal += $itemSubtotal;
 
                     $itemsData[] = [
                         'producto_id' => $producto->id,
+                        'producto_variante_id' => $priceResult->variante_aplicada?->id,
                         'titulo' => $producto->titulo,
-                        'precio_unitario' => $precioUnitario,
+                        'precio_unitario' => $priceResult->precio_final_con_opciones,
                         'cantidad' => $item['cantidad'],
                         'subtotal' => $itemSubtotal,
+                        'variante_nombre' => $priceResult->variante_aplicada?->nombre,
+                        'variante_color_hex' => $priceResult->variante_aplicada?->color_hex,
+                        'recargo_variante_unitario' => $priceResult->recargo_variante,
+                        'addons_seleccionados' => $addonsSeleccionados !== [] ? $addonsSeleccionados : null,
+                        'addons_total_unitario' => $priceResult->addons_total,
+                        'precio_base_unitario' => $priceResult->precio_unitario_final,
                     ];
                 }
 

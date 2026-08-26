@@ -42,12 +42,36 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
 
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[#1c1b1b] leading-snug line-clamp-1">{item.titulo}</p>
+
+                {item.variante && (
+                    <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-[#4b4356]">
+                        <span
+                            className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-black/10"
+                            style={{ backgroundColor: item.variante.color_hex || '#e5e5e5' }}
+                            aria-hidden="true"
+                        />
+                        {item.variante.nombre}
+                    </span>
+                )}
+
+                {item.addons.length > 0 && (
+                    <ul className="mt-1 space-y-0.5">
+                        {item.addons.map((addon) => (
+                            <li key={addon.addon_id} className="text-[10px] font-medium leading-snug text-[#7c7388]">
+                                {addon.nombre}
+                                {addon.texto_personalizado ? `: "${addon.texto_personalizado}"` : ''}
+                                {' — +'}{formatPrice(addon.precio)}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
                 <p className="text-xs text-[#7c7388] mt-0.5">{formatPrice(item.precioUnitario)} c/u</p>
 
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center bg-gray-100 rounded-full border border-gray-200 p-0.5">
                         <button
-                            onClick={() => onUpdateQty(item.id, item.cantidad - 1)}
+                            onClick={() => onUpdateQty(item.lineKey, item.cantidad - 1)}
                             className="w-6 h-6 flex items-center justify-center rounded-full text-[#6000ca] hover:bg-white transition-colors font-bold text-base leading-none active:scale-90"
                             aria-label="Reducir cantidad"
                         >
@@ -57,7 +81,7 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
                             {item.cantidad}
                         </span>
                         <button
-                            onClick={() => onUpdateQty(item.id, item.cantidad + 1)}
+                            onClick={() => onUpdateQty(item.lineKey, item.cantidad + 1)}
                             className="w-6 h-6 flex items-center justify-center rounded-full text-[#6000ca] hover:bg-white transition-colors font-bold text-base leading-none active:scale-90"
                             aria-label="Aumentar cantidad"
                         >
@@ -70,7 +94,7 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
                             {formatPrice(item.subtotalItem)}
                         </span>
                         <button
-                            onClick={() => onRemove(item.id)}
+                            onClick={() => onRemove(item.lineKey)}
                             className="text-gray-300 hover:text-red-400 transition-colors active:scale-90 p-0.5"
                             aria-label="Eliminar del carrito"
                         >
@@ -190,7 +214,7 @@ export default function CartButton() {
                     <div className="flex-1 overflow-y-auto px-2 py-1 divide-y divide-gray-50">
                         {items.map((item) => (
                             <MiniCartItem
-                                key={item.id}
+                                key={item.lineKey}
                                 item={item}
                                 onUpdateQty={updateQty}
                                 onRemove={removeFromCart}

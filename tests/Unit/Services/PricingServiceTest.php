@@ -4,11 +4,14 @@ namespace Tests\Unit\Services;
 
 use App\Enums\AlcanceOferta;
 use App\Enums\TipoDescuento;
+use App\Models\Addon;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
 use App\Models\Producto;
+use App\Models\ProductoVariante;
 use App\Services\PricingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class PricingServiceTest extends TestCase
@@ -315,5 +318,117 @@ class PricingServiceTest extends TestCase
         $this->assertSame(0.0, $result->precio_unitario_final);
         $this->assertSame(100.0, $result->ahorro_unitario);
         $this->assertSame(100.0, $result->ahorro_porcentaje);
+    }
+
+    public function test_sin_variante_ni_addons_precio_final_con_opciones_igual_al_precio_final(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+
+        $result = $this->service->calcularPrecio($producto, 1);
+
+        $this->assertNull($result->variante_aplicada);
+        $this->assertSame(0.0, $result->recargo_variante);
+        $this->assertSame([], $result->addons_aplicados);
+        $this->assertSame(0.0, $result->addons_total);
+        $this->assertSame(1000.0, $result->precio_final_con_opciones);
+    }
+
+    public function test_recargo_de_variante_se_suma_despues_del_descuento_de_la_oferta(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Todos,
+            'tipo_descuento' => TipoDescuento::Porcentaje,
+            'valor_descuento' => 20,
+        ]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Rojo',
+            'precio_adicional' => 150,
+            'is_active' => true,
+        ]);
+
+        $result = $this->service->calcularPrecio($producto, 1, $variante->id);
+
+        $this->assertSame(800.0, $result->precio_unitario_final);
+        $this->assertSame(150.0, $result->recargo_variante);
+        // El descuento de la oferta (20% de 1000) no se recalcula sobre 800+150.
+        $this->assertSame(950.0, $result->precio_final_con_opciones);
+        $this->assertSame(200.0, $result->ahorro_unitario);
+    }
+
+    public function test_variante_que_no_pertenece_al_producto_lanza_validation_exception(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $otroProducto = Producto::factory()->create(['precio' => 500]);
+        $varianteAjena = ProductoVariante::create([
+            'producto_id' => $otroProducto->id,
+            'nombre' => 'Azul',
+            'precio_adicional' => 50,
+            'is_active' => true,
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        $this->service->calcularPrecio($producto, 1, $varianteAjena->id);
+    }
+
+    public function test_variante_inactiva_lanza_validation_exception(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $varianteInactiva = ProductoVariante::create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Verde',
+            'precio_adicional' => 50,
+            'is_active' => false,
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        $this->service->calcularPrecio($producto, 1, $varianteInactiva->id);
+    }
+
+    public function test_addons_total_usa_precio_override_cuando_esta_seteado_y_precio_por_defecto_si_no(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        Oferta::factory()->create([
+            'producto_id' => $producto->id,
+            'alcance' => AlcanceOferta::Todos,
+            'tipo_descuento' => TipoDescuento::Porcentaje,
+            'valor_descuento' => 10,
+        ]);
+        $addonConOverride = Addon::create(['nombre' => 'Grabado', 'precio' => 300, 'is_active' => true]);
+        $addonSinOverride = Addon::create(['nombre' => 'Envoltorio', 'precio' => 100, 'is_active' => true]);
+        $producto->addons()->attach($addonConOverride->id, ['precio_override' => 250, 'orden' => 0]);
+        $producto->addons()->attach($addonSinOverride->id, ['precio_override' => null, 'orden' => 1]);
+
+        $result = $this->service->calcularPrecio($producto, 1, null, [$addonConOverride->id, $addonSinOverride->id]);
+
+        $this->assertSame(900.0, $result->precio_unitario_final);
+        $this->assertSame(350.0, $result->addons_total);
+        $this->assertSame(1250.0, $result->precio_final_con_opciones);
+        $this->assertCount(2, $result->addons_aplicados);
+    }
+
+    public function test_addon_no_asociado_al_producto_lanza_validation_exception(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $addonNoAsociado = Addon::create(['nombre' => 'Grabado', 'precio' => 300, 'is_active' => true]);
+
+        $this->expectException(ValidationException::class);
+
+        $this->service->calcularPrecio($producto, 1, null, [$addonNoAsociado->id]);
+    }
+
+    public function test_addon_inactivo_lanza_validation_exception(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $addonInactivo = Addon::create(['nombre' => 'Grabado', 'precio' => 300, 'is_active' => false]);
+        $producto->addons()->attach($addonInactivo->id, ['orden' => 0]);
+
+        $this->expectException(ValidationException::class);
+
+        $this->service->calcularPrecio($producto, 1, null, [$addonInactivo->id]);
     }
 }

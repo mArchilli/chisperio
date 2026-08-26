@@ -1,11 +1,13 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar } from '@/Components/EscalasPrecioRepeater';
+import VariantesColorRepeater, { validarVariantes, limpiarVariantesParaEnviar } from '@/Components/VariantesColorRepeater';
+import AddonsProductoSelector, { validarAddonsProducto } from '@/Components/AddonsProductoSelector';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
-export default function Create({ categorias, subcategorias }) {
+export default function Create({ categorias, subcategorias, addonsDisponibles }) {
     const { data, setData, post, transform, processing, errors } = useForm({
         titulo: '',
         descripcion: '',
@@ -19,6 +21,8 @@ export default function Create({ categorias, subcategorias }) {
         videos: [],
         imagen_principal: null,
         escalas_precio: [],
+        variantes: [],
+        addons: [],
     });
 
     const [imagenesPreview, setImagenesPreview] = useState([]);
@@ -52,12 +56,18 @@ export default function Create({ categorias, subcategorias }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const { esValido } = validarEscalasPrecio(data.escalas_precio);
-        if (!esValido) {
+        const { esValido: escalasValidas } = validarEscalasPrecio(data.escalas_precio);
+        const { esValido: variantesValidas } = validarVariantes(data.variantes);
+        const { esValido: addonsValidos } = validarAddonsProducto(data.addons);
+        if (!escalasValidas || !variantesValidas || !addonsValidos) {
             return;
         }
 
-        transform((data) => ({ ...data, escalas_precio: limpiarEscalasParaEnviar(data.escalas_precio) }));
+        transform((data) => ({
+            ...data,
+            escalas_precio: limpiarEscalasParaEnviar(data.escalas_precio),
+            variantes: limpiarVariantesParaEnviar(data.variantes),
+        }));
 
         post(route('productos.store'), {
             forceFormData: true,
@@ -219,6 +229,19 @@ export default function Create({ categorias, subcategorias }) {
                                     escalas={data.escalas_precio}
                                     onChange={(nuevas) => setData('escalas_precio', nuevas)}
                                     precioBase={data.precio}
+                                    errors={errors}
+                                />
+
+                                <VariantesColorRepeater
+                                    variantes={data.variantes}
+                                    onChange={(nuevas) => setData('variantes', nuevas)}
+                                    errors={errors}
+                                />
+
+                                <AddonsProductoSelector
+                                    addonsDisponibles={addonsDisponibles}
+                                    seleccionados={data.addons}
+                                    onChange={(nuevos) => setData('addons', nuevos)}
                                     errors={errors}
                                 />
 

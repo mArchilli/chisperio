@@ -1,119 +1,160 @@
 # Chisperío — Contexto del Proyecto
 
-> Documento generado para dar contexto rápido a un asistente (Claude) sobre el estado actual del sistema. Última actualización: 2026-07-13.
+> Documento generado para dar contexto rápido a un asistente (Claude) sobre el estado actual del sistema. Última actualización: 2026-08-25.
 
 ## 1. Qué es
 
 **Chisperío** es un e-commerce (Laravel + Inertia.js + React) para venta de **artículos de pirotecnia y efectos especiales para eventos**: chispas frías, fuegos artificiales, máquinas de humo, lanzallamas, velas, etc. (Nada de golosinas pese al nombre "chispas").
 
-El "checkout" **no es un checkout real**: no persiste pedidos en base de datos. Junta los datos del carrito + formulario del cliente y arma un mensaje de WhatsApp que se envía al número del negocio. El negocio gestiona el pedido manualmente por chat.
+El checkout **sí persiste el pedido en base de datos** (tabla `pedidos` + `pedido_items`, con descuento real de stock y resolución server-side del código de descuento). Una vez creado el pedido, el frontend arma un mensaje de WhatsApp con el resumen y lo abre vía `wa.me`/`whatsapp://` — el negocio coordina el pago/envío por chat, pero el pedido en sí ya quedó registrado antes de eso, no depende de que el mensaje se envíe.
 
 ## 2. Stack técnico
 
 **Backend**
 - PHP `^8.2`, Laravel `^12.0`
 - `inertiajs/inertia-laravel` `^2.0`
-- `laravel/sanctum` `^4.0`, `laravel/breeze` `^2.3` (origen del scaffolding de auth)
-- `tightenco/ziggy` `^2.0` (helper `route()` en JS)
-- Base de datos: **SQLite** (`DB_CONNECTION=sqlite`), sesiones/cache/queue en driver `database`
+- `laravel/sanctum` `^4.0`, `laravel/tinker`, `tightenco/ziggy` `^2.0` (helper `route()` en JS)
+- Base de datos: **MySQL** (`DB_CONNECTION=mysql`, DB `chisperio`) — el `.env.example` del repo quedó desactualizado diciendo `sqlite`, ver sección 15.
+- Sesiones/cache/queue en driver `database`
+- `APP_TIMEZONE=America/Argentina/Buenos_Aires`, `APP_LOCALE=es` (antes `en`/UTC)
 
 **Frontend**
 - React `^18.2.0`, `@inertiajs/react` `^2.0.0`
-- Tailwind CSS `^3.2.1` (+ `@tailwindcss/forms`, `@tailwindcss/vite`)
-- Vite `^7.0.7`
-- `@headlessui/react` `^2.0.0` (Dropdown)
-- `quill` `^2.0.3` — editor de texto rico para descripción de productos (admin)
-- `dompurify` `^3.4.1` — sanitiza el HTML de Quill
+- Tailwind CSS (`@tailwindcss/vite` v4 + `@tailwindcss/forms`)
+- Vite `^7`
+- `@headlessui/react` — Dropdown
+- `quill` + `dompurify` — editor de texto rico para descripción de productos (admin) y sanitizado del HTML resultante
+- `lucide-react` — íconos
+- `recharts` — gráfico de facturación en `Admin/Metricas`
+- `react-hot-toast` — notificaciones (envío gratis desbloqueado, etc.)
+- `react-zoom-pan-pinch` — zoom/pan del lightbox de imágenes de producto
 
 ## 3. Base de datos
 
-No existen tablas de `orders`/`pedidos` ni carrito en backend — todo el carrito vive en `localStorage` del navegador.
+No hay carrito en backend — vive en `localStorage` del navegador (ver `CartContext`). Todo lo demás (catálogo, pedidos, stock, descuentos) sí está persistido.
 
 | Tabla | Columnas clave |
 |---|---|
-| `users` | id, name, email(unique), password, email_verified_at |
+| `users` | id, name, email(unique), password, **role** (`admin`\|`vendedor`) |
 | `categorias` | id, nombre, descripcion |
 | `subcategorias` | id, nombre, descripcion, categoria_id (FK) |
-| `productos` | id, titulo, descripcion(text), precio(decimal 10,2), is_active(bool), is_featured(bool) |
-| `categoria_producto` (pivot) | categoria_id, producto_id — N:M |
-| `producto_subcategoria` (pivot) | producto_id, subcategoria_id — N:M |
-| `producto_media` | producto_id, tipo('imagen'\|'video'), ruta, orden, is_principal(bool) |
-| `ofertas` | producto_id, precio_oferta, porcentaje_descuento, fecha_inicio, fecha_fin, is_active |
+| `productos` | id, titulo, descripcion(text), precio(decimal 10,2), is_active, is_featured, **stock** (nullable int — `null` = ilimitado) |
+| `categoria_producto` / `producto_subcategoria` (pivots) | N:M |
+| `producto_media` | producto_id, tipo('imagen'\|'video'), ruta, orden, is_principal |
+| `producto_escalas_precio` | producto_id, cantidad_minima, precio_unitario — precio por volumen, unique(producto_id, cantidad_minima) |
+| `ofertas` | producto_id, `tipo_descuento`('porcentaje'\|'fijo'), `valor_descuento`, `alcance`('todos'\|'especifico'), `producto_escala_precio_id` (si es específica a una escala), fecha_inicio/fin, is_active. (Columnas `precio_oferta`/`porcentaje_descuento` originales quedaron legacy, reemplazadas por el par tipo/valor) |
+| `pedidos` | cliente_nombre, cliente_dni, cliente_telefono, cliente_email, cliente_provincia, **cliente_ciudad** (antes `cliente_direccion` — el checkout es a sucursal, no a domicilio), cliente_codigo_postal, observaciones, subtotal, total, estado, despachado_at, codigo_descuento_id + snapshot (texto/tipo/valor), descuento_monto |
+| `pedido_items` | pedido_id, producto_id, titulo, precio_unitario, cantidad, subtotal |
+| `movimientos_stock` | producto_id, pedido_id, cantidad (con signo), motivo(`pedido_creado`\|`pedido_cancelado`\|`ajuste_manual`), stock_resultante |
+| `configuracion_envio` | monto_minimo (decimal, `0` = feature de envío gratis desactivada) — fila única |
+| `codigos_descuento` | codigo(unique), tipo_descuento, valor_descuento, activo, vigente_desde/hasta, limite_usos, usos_actuales |
 
-**Seeders** (`database/seeders/`): `UserSeeder` (admin), `CategoriaSeeder` (6 categorías), `SubcategoriaSeeder`, `ProductoSeeder` (20 productos demo).
+**Seeders** (`database/seeders/`): `UserSeeder` (1 admin), `CategoriaSeeder` (6 categorías), `SubcategoriaSeeder`, `ProductoSeeder` (**3 "Producto de Prueba" con escalas de precio, explícitamente temporales** — el catálogo real se carga a mano desde el panel admin; el seeder viejo que importaba el catálogo real desde un CSV de WordPress fue eliminado).
 
-**Credenciales admin seedeadas**: `admin@admin` / `1234`.
+**Credenciales admin seedeadas**: `admin@admin` / `1234` (rol `admin`).
 
 ## 4. Modelos (`app/Models/`)
 
-- **User**: fillable `name, email, password`. Sin campo de rol — cualquier usuario autenticado tiene acceso admin.
-- **Categoria**: `hasMany(Subcategoria)`, `belongsToMany(Producto)`.
-- **Subcategoria**: `belongsTo(Categoria)`, `belongsToMany(Producto)`.
-- **Producto**: `belongsToMany(Categoria/Subcategoria)`, `hasMany(ProductoMedia)`, `imagenPrincipal()`, `hasMany(Oferta)`, `ofertaVigente()` (oferta activa dentro del rango de fechas).
-- **ProductoMedia**: `belongsTo(Producto)`, helpers `esImagen()`/`esVideo()`.
-- **Oferta**: `belongsTo(Producto)`, `estaVigente()`.
+- **User** — cast `role` a `RolUsuario`, `esAdmin(): bool`.
+- **Categoria** / **Subcategoria** — relaciones N:M con Producto vía los pivots.
+- **Producto** — `imagenes()`/`videos()` (subsets de `media()` por `tipo`), `imagenPrincipal()`, `ofertaVigente()`, `escalasPrecio()`, `movimientosStock()`. Métodos de negocio: `tieneStockIlimitado()`, `tieneStockDisponible(int)`, `escalaAplicable(int $cantidad): ?EscalaPrecio`, `scopeConStock()`.
+- **ProductoMedia** — `esImagen()`/`esVideo()`.
+- **EscalaPrecio** (tabla `producto_escalas_precio`) — `belongsTo(Producto)`.
+- **Oferta** — `tipo_descuento`/`alcance` cast a enum, `escalaPrecio()` (si `alcance = especifico`), `estaVigente()`.
+- **Pedido** — `items()`, `movimientosStock()`, `codigoDescuento()`, cast `estado` a `EstadoPedido`, `scopeFacturables()` (excluye cancelados).
+- **PedidoItem**, **MovimientoStock**, **CodigoDescuento** (`estaVigente()`, `yaComenzo()`, `yaTermino()`, `tieneUsosDisponibles()`), **ConfiguracionEnvio** (`static obtener()`, firstOrCreate).
 
-## 5. Rutas principales (`routes/web.php`, `routes/auth.php`)
+## 5. Enums (`app/Enums/`)
 
-**Públicas / tienda**
-- `GET /` — landing (Welcome)
-- `GET /tienda` — catálogo con filtros (`categoria`, `subcategoria`, `filter=destacados|ofertas`)
-- `GET /tienda/{producto}` — detalle de producto
-- `GET /carrito`, `GET /checkout`, `GET /confirmacion-pedido` — flujo de compra (closures triviales, no tocan BD)
+- **RolUsuario**: `Admin` | `Vendedor`.
+- **EstadoPedido**: `Pendiente` | `Despachado` | `Cancelado`, con `puedeTransicionarA()` (cancelado es terminal; no se puede cancelar un pedido ya despachado sin volverlo antes a pendiente).
+- **TipoDescuento**: `Porcentaje` | `Fijo`.
+- **AlcanceOferta**: `Todos` | `Especifico` (a una escala de precio puntual).
+- **MotivoMovimientoStock**: `PedidoCreado` | `PedidoCancelado` | `AjusteManual`.
 
-**Auth (Breeze, sin registro)**
-- Login, forgot/reset password, verify email, confirm password, logout
-- **No hay rutas de registro** (`RegisteredUserController.php`, `Register.jsx` y su test fueron eliminados) — no hay alta de usuarios self-service, solo vía seeder/tinker.
+## 6. Servicios (`app/Services/`)
 
-**Admin** (protegidas solo por middleware `auth`, sin rol/permiso específico)
-- `admin/categorias`, `admin/subcategorias`, `admin/productos` (+ `toggle-featured`), `admin/ofertas` (+ `toggle-active`) — CRUD resource completo
-- `/dashboard`, `/profile`
+- **PricingService** — `calcularPrecio(Producto, cantidad): PriceResult`. Resuelve la escala de precio aplicable + la oferta vigente (respetando su alcance), devuelve precio de lista/final y ahorro. Espejado 1:1 en el frontend por `resources/js/lib/pricing.js` (mismo comportamiento sin ida y vuelta al server).
+- **StockService** — `validarDisponibilidad()` (chequeo optimista), `descontar(Pedido)` (transacción con `lockForUpdate`, lanza `StockInsuficienteException` ante condición de carrera), `reponer(Pedido)` (al cancelar, idempotente).
+- **CodigoDescuentoService** — `validar()` (previsualización para el carrito, sin lock), `resolverParaCheckout()` (con lock, dentro de la transacción del checkout — nunca confía en lo que mandó el frontend), `liberarUso(Pedido)` (al cancelar).
 
-## 6. Controladores (`app/Http/Controllers/`)
+## 7. Rutas
 
-- **TiendaController**: `index` (catálogo filtrado/paginado 12 por página), `show` (detalle + relacionados)
-- **ProductoController**: CRUD admin, maneja upload manual de imágenes (max 5MB) y videos (max 50MB) a `public/productos/img|videos/`, gestiona media principal y `toggleFeatured`
-- **CategoriaController** / **SubcategoriaController**: CRUD simple
-- **OfertaController**: CRUD de ofertas, calcula `porcentaje_descuento` server-side, valida que el precio de oferta sea menor al original
-- **ProfileController**, **AuthenticatedSessionController**: gestión de perfil y sesión (Breeze)
+**`routes/web.php`** — públicas: `/`, `/tienda` (index con filtros `categoria`/`subcategoria`/`q`/`filter=destacados|ofertas`, show), `/contacto`, `/mayoristas`, `/carrito`, `/checkout` (GET vista + `POST checkout.store`), `/confirmacion-pedido`. Auth genérico: `/profile`, `/dashboard`. Admin (`middleware('auth')`, algunas rutas de `destroy` además con `role:admin`): `admin/categorias|subcategorias|productos|ofertas|codigos-descuento` (CRUD resource), `admin/pedidos` (index/show/cambiar-estado), y **solo admin**: `admin/metricas`, `admin/usuarios`, `admin/configuracion/envio`.
 
-## 7. Frontend — Páginas (`resources/js/Pages/`)
+**`routes/api.php`** — `GET /api/productos/{producto}/precio`, `POST /api/codigos-descuento/validar` (público, usado por el carrito/checkout para previsualizar un código).
 
-- `Welcome.jsx` — landing con hero, categorías, destacados, reviews
-- `Tienda.jsx` — catálogo con filtros y grilla de productos
-- `ShowProduct.jsx` — detalle de producto (galería, precio con oferta, descripción Quill, relacionados)
-- `Carrito.jsx` — carrito con resumen de orden
-- `Checkout.jsx` — formulario de datos del cliente (nombre, DNI, provincia, dirección, etc.), arma mensaje de WhatsApp y limpia el carrito
-- `ConfirmacionPedido.jsx` — pantalla de agradecimiento, permite reenviar el mensaje de WhatsApp
-- `Auth/*` — Login, ForgotPassword, ResetPassword, ConfirmPassword, VerifyEmail (sin Register)
-- `Profile/Edit.jsx` — gestión de perfil
-- `Dashboard.jsx` — landing admin
-- `Admin/Categorias|Subcategorias|Productos|Ofertas/*` — CRUD completo con Index/Create/Edit
+**`routes/legacy_redirects.php`** — incluido al principio de `web.php`. Redirects 301 desde las URLs indexadas del WordPress anterior (relevadas de su `wp-sitemap.xml` en producción) hacia sus equivalentes acá: páginas fijas y el mapa dinámico `/product-category/{slug}` que resuelve categoría/subcategoría **por nombre** contra la base (no por id hardcodeado, porque en producción se administran a mano). Pendiente a propósito: los 57 redirects de producto individual (`/product/{slug}/`), hasta que el catálogo real esté cargado. Nota: no se puede registrar un redirect en `/productos` porque colisiona con la carpeta física `public/productos/`.
 
-## 8. Frontend — Componentes y layouts clave
+**`routes/auth.php`** — Breeze estándar (login, forgot/reset password, verify-email, confirm-password, logout). **No hay registro self-service** (fue removido intencionalmente).
 
-- **CartContext** (`resources/js/Context/CartContext.jsx`): estado global del carrito persistido en `localStorage['chisperio_cart']`. API: `addToCart`, `removeFromCart`, `updateQty`, `clearCart`, derivados `cartCount`/`subtotal`. Sin sincronización con backend.
-- **CartButton.jsx** — botón flotante con mini-carrito (popover)
-- **WhatsAppButton.jsx** — botón flotante de contacto directo
-- **Landing/** — HeroSection, TrustBanner, CategoriesSection, FeaturedProductsSection, ReviewsSection, LandingHeader, LandingFooter
-- **GuestLayout.jsx** — layout oscuro para páginas de auth
-- **AuthenticatedLayout.jsx** — shell de dashboard admin con sidebar colapsable
+## 8. Controladores (`app/Http/Controllers/`)
 
-## 9. Integración WhatsApp
+- **TiendaController** — `index` (catálogo público paginado, sin-stock al final del listado en vez de ocultos), `show` (ficha + relacionados), `precio` (API).
+- **ProductoController** — CRUD admin, upload de imágenes (max 5MB)/videos (max 50MB) a `public/productos/`, gestión de imagen principal, sync de escalas de precio, `toggleFeatured`.
+- **CategoriaController** / **SubcategoriaController** — CRUD simple.
+- **OfertaController** — CRUD con tipo/valor/alcance de descuento, valida solapamiento de fechas entre ofertas activas del mismo producto, `toggleActive`.
+- **CodigoDescuentoController** — CRUD admin (bloquea borrar códigos ya usados), `toggleActive`. **CodigoDescuentoValidacionController** — endpoint público de previsualización.
+- **PedidoController** — `index`/`show`, `cambiarEstado` (valida transición, repone stock y libera cupo de código al cancelar), `store` (checkout: valida stock, calcula precio real server-side, resuelve código con lock, crea pedido+items en transacción, descuenta stock).
+- **UsuarioController** — CRUD de usuarios/roles, protege contra eliminar o degradar al único admin.
+- **ConfiguracionEnvioController** — edit/update del monto mínimo de envío gratis.
+- **MetricasController** — facturación (totales, comparación de período, series, top 5 productos).
+- **DashboardController** — stats generales para `/dashboard`.
+- **ProfileController**, **Auth/\*** — Breeze estándar.
 
-- Número **hardcodeado en 7 archivos distintos** (`WhatsAppButton.jsx`, `Checkout.jsx`, `ConfirmacionPedido.jsx`, `WholesalerSection.jsx`, `RentalMachine.jsx`, `LandingFooter.jsx`, `FAQSection.jsx`): `5491127930349`. No hay una constante/config compartida — sería una buena mejora a futuro centralizarlo (env var o config JS único).
-- El pedido nunca se persiste en backend: se arma el texto en el cliente, se abre `wa.me`/`whatsapp://` y se guarda una copia en `sessionStorage['chisperio_last_order']` para poder reenviarlo desde la pantalla de confirmación.
+## 9. Frontend — Páginas (`resources/js/Pages/`)
 
-## 10. Puntos importantes / deuda técnica a tener en cuenta
+**Públicas**: `Welcome.jsx`, `Tienda.jsx` (con barra de búsqueda), `ShowProduct.jsx` (galería con lightbox zoom + video, tabla de precios por cantidad), `Carrito.jsx`, `Checkout.jsx` (envío a sucursal: provincia + ciudad, no domicilio; incluye bloque de código de descuento y barra de envío gratis), `ConfirmacionPedido.jsx`, `Contacto.jsx`, `Mayoristas.jsx`, `Dashboard.jsx`.
 
-- **No hay sistema de roles**: cualquier usuario logueado accede a todo `/admin/*`. Solo existe un middleware custom (`HandleInertiaRequests`), no hay chequeo de admin.
-- **No hay registro de usuarios**: fue removido intencionalmente (controller, página y test eliminados). Alta de usuarios solo por seeder.
-- **No hay persistencia de pedidos**: todo el flujo de compra vive en el navegador (localStorage/sessionStorage) y termina en un mensaje de WhatsApp manual.
-- **Rutas de carrito/checkout/confirmación son closures triviales** en `web.php`, no controladores — no tocan la base de datos.
-- `PRODUCTOS_IMG_PATH` / `PRODUCTOS_VIDEO_PATH` son configurables por env pero **no están declaradas en `.env.example`**, se usan los defaults del código (`/productos/img/`, `/productos/videos/`).
-- Las imágenes/videos de productos se sirven directo desde `public/productos/` (no vía disco de Storage de Laravel).
+**Auth/Profile**: Breeze estándar (sin Register).
 
-## 11. Assets públicos
+**Admin**: `Admin/Categorias|Subcategorias|Productos|Ofertas|CodigosDescuento/*` (CRUD), `Admin/Pedidos/{Index,Show}` (gestión de estado, historial de stock), `Admin/Metricas/Index` (gráfico de facturación), `Admin/Usuarios/*` (gestión de roles), `Admin/ConfiguracionEnvio/Edit`.
 
-- `public/productos/img/` y `public/productos/videos/` — media de productos, nombrados `{timestamp}_{index}_{nombre-original}`.
-- `public/images/` — assets estáticos de marca (logo, imagen hero).
+## 10. Frontend — Componentes, Context, Hooks, Lib
+
+- **CartContext** (`Context/CartContext.jsx`) — carrito en `localStorage['chisperio_cart']`, snapshot de precio/escalas/oferta/stock por item (recalcula en cada render), estado del **drawer de carrito** compartido (`cartDrawerOpen`/`openCartDrawer`/`closeCartDrawer`), y manejo completo de código de descuento (aplicar/quitar/revalidación automática contra el endpoint público).
+- **CartButton.jsx** — drawer de carrito de alto completo con overlay blureado; el botón flotante (FAB) solo aparece en **desktop** y recién tras hacer scroll; en **mobile** el ícono del carrito del navbar (`LandingHeader`) dispara el mismo drawer en vez de navegar a `/carrito`.
+- **WhatsAppButton.jsx** — flotante, oculto hasta hacer scroll; muestra una leyenda dismisible ("¿Necesitás asesoramiento?") 1.5s después de aparecer, con memoria de cierre por sesión (`sessionStorage`).
+- **ProductImageLightbox.jsx** — lightbox de galería con zoom/pan/pinch (`react-zoom-pan-pinch`), navegación entre imágenes. **ImageLightbox.jsx** — versión simple de una sola imagen (usada en `Admin/Pedidos/Show`).
+- **PillsCantidad.jsx**, **TablaPreciosPorCantidad.jsx**, **TablaPreciosPreview.jsx**, **EscalasPrecioRepeater.jsx** — UI de precio por cantidad (pública y admin).
+- **OfertaDescuentoFields.jsx** — campos tipo/valor/alcance de descuento (espeja validación del backend).
+- **BarraEnvioGratis.jsx** — progreso hacia el envío gratis (lee `configuracionEnvio` compartido por Inertia).
+- **CodigoDescuentoBlock.jsx** — input + estado de código de descuento aplicado, compartido entre `Carrito.jsx` y `Checkout.jsx`.
+- **Landing/** — `LandingHeader`, `HeroSection`, `TrustBanner`, `CategoriesSection`, `OutstandingProducts`, `RentalMachine`, `ReviewsSection`, `FAQSection`, `ContactSection`, `WholesalerSection`, `LandingFooter` (incluye un link discreto **"Acceso equipo"** hacia `/login`, mismo estilo que el resto de los links del footer).
+- **hooks/** — `useNotificacionEnvioGratis` (toast una vez por sesión al cruzar el umbral), `useScrolledPast` (bool tras cruzar un umbral de scroll, usado por los botones flotantes).
+- **lib/** — `pricing.js` (espejo JS de `PricingService`), `stock.js` (`sinStock`, `tieneStockBajo`, `cantidadMaxima`, etc.).
+- **Layouts**: `GuestLayout`, `AuthenticatedLayout` (Breeze).
+
+## 11. Sistema de roles
+
+Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`admin`/`vendedor`) y el middleware `EnsureUserHasRole` (alias `role`, ver `bootstrap/app.php`). Un vendedor puede operar productos/pedidos pero no accede a `admin/metricas`, `admin/usuarios` ni `admin/configuracion/envio`, y las acciones de `destroy` (borrar categoría/producto/oferta/código) están reservadas a `role:admin`. El admin no se puede eliminar ni degradar a sí mismo si es el único admin del sistema.
+
+## 12. Integración WhatsApp
+
+- Número **hardcodeado en 7 archivos** (`WhatsAppButton.jsx`, `Checkout.jsx`, `ConfirmacionPedido.jsx`, `WholesalerSection.jsx`, `RentalMachine.jsx`, `LandingFooter.jsx`, `FAQSection.jsx`): `5491127930349`. Sigue siendo deuda técnica centralizarlo.
+- El pedido **ya está persistido en backend** antes de armar el mensaje (a diferencia de como funcionaba originalmente) — el mensaje de WhatsApp es la vía de aviso/coordinación, no el único registro del pedido. Igual se guarda una copia en `sessionStorage['chisperio_last_order']` para poder reenviarlo desde la confirmación.
+
+## 13. SEO y deploy a producción
+
+- **Estructura de producción**: en el hosting (Hostinger), el contenido de `public/` se sube a `public_html/` y el resto del proyecto a una carpeta hermana `laravel/`. `public/index.php` y `bootstrap/app.php` detectan automáticamente esa estructura (sin tocar nada a mano en cada deploy) y ajustan el `public_path()` interno de Laravel para que Vite, `storage:link` (no usado, ver más abajo) y las subidas de producto apunten al lugar correcto.
+- **`public/.user.ini`** — sube los límites de PHP (`upload_max_filesize`/`post_max_size` a 64M, etc.) para que entren los videos de hasta 50MB; solo aplica bajo PHP-FPM (no afecta al server embebido de `php artisan serve`).
+- Las imágenes/videos de productos se guardan **directo en `public/productos/`** vía `public_path()`, no por el disco `Storage` de Laravel — por eso `storage:link` no hace falta ni se usa.
+- **Favicons** completos en `public/images/favicons/` + referencias en `resources/views/app.blade.php`.
+- **`routes/legacy_redirects.php`** — ver sección 7.
+
+## 14. Puntos importantes / deuda técnica a tener en cuenta
+
+- **`.env.example` desactualizado**: sigue diciendo `DB_CONNECTION=sqlite` con placeholders comentados, cuando el proyecto real corre en MySQL. Convendría corregirlo para que un setup nuevo no arranque mal.
+- `PRODUCTOS_IMG_PATH`/`PRODUCTOS_VIDEO_PATH` están seteadas en `.env` real y consumidas por `config/productos.php`, pero **no están en `.env.example`**.
+- `VITE_PRODUCT_IMAGES_PATH`/`VITE_PRODUCT_VIDEOS_PATH` (env vars con prefijo `VITE_`) existen en `.env` pero **no se usan en ningún lado del frontend** — config muerta, candidata a limpieza.
+- Número de WhatsApp sigue hardcodeado en 7 archivos (ver sección 12).
+- No hay registro de usuarios self-service (removido a propósito) — alta solo por seeder/admin.
+- El carrito sigue viviendo enteramente en el navegador (`localStorage`/`sessionStorage`), no hay sesión de carrito en backend.
+
+## 15. Assets públicos (`public/`)
+
+- `productos/img/` y `productos/videos/` — media de productos subida desde el admin, nombrada `{timestamp}_{index}_{nombre-original}`.
+- `images/` — assets estáticos de marca y landing (logo, heroes, imágenes de filtro por categoría).
+- `images/favicons/` — set completo de favicons + `site.webmanifest`.
+- `.user.ini` — overrides de límites de PHP (ver sección 13).
+- `build/` — output de `vite build` (no commitear manualmente, se regenera).

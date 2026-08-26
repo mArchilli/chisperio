@@ -6,6 +6,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
+import { buildOrderMessage } from '@/lib/whatsapp';
 
 // Reemplazar con el número de WhatsApp del negocio (formato internacional sin +)
 const WHATSAPP_NUMBER = '5491127930349';
@@ -123,7 +124,7 @@ function CheckoutSummary({
 
             <div className="relative mb-6 space-y-3">
                 {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 rounded-[1.25rem] border border-black/[0.05] bg-[#fcfbfd] p-2.5">
+                    <div key={item.lineKey} className="flex items-center gap-3 rounded-[1.25rem] border border-black/[0.05] bg-[#fcfbfd] p-2.5">
                         <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl border border-black/[0.05] bg-[#f6f3f8]">
                             {item.imagen ? (
                                 <img
@@ -259,39 +260,37 @@ export default function Checkout({ canLogin }) {
         return e;
     };
 
-    const buildMessage = () =>
-        [
-            '*Nuevo Pedido Web - Chisperío*',
-            '',
-            `Nombre: ${form.nombre} ${form.apellido}`,
-            '',
-            '📦 *Productos:*',
-            ...items.map(
-                (item) =>
-                    `• ${item.titulo} x${item.cantidad} — ${formatPrice(item.subtotalItem)}`
-            ),
-            envioGratisAlcanzado ? '' : null,
-            envioGratisAlcanzado
-                ? `🚚 Envío gratis por superar el monto de ${formatPrice(montoMinimoEnvioGratis)}`
-                : null,
-            '',
-            `Subtotal: ${formatPrice(subtotal)}`,
-            codigoAplicado ? `Descuento (${codigoAplicado}): -${formatPrice(montoDescuento)}` : null,
-            `*Total: ${formatPrice(totalConDescuento)} ARS*`,
-            '',
-            '📋 *Datos del cliente:*',
-            `Nombre: ${form.nombre} ${form.apellido}`,
-            `DNI: ${form.dni}`,
-            `Provincia: ${form.provincia}`,
-            `Ciudad: ${form.ciudad}`,
-            `Código Postal: ${form.codigoPostal}`,
-            `Teléfono: ${form.telefono}`,
-            `Email: ${form.email}`,
-            form.observaciones ? '' : null,
-            form.observaciones ? `📝 *Observaciones:* ${form.observaciones}` : null,
-        ]
-            .filter((linea) => linea !== null)
-            .join('\n');
+    // Shape compartido con ConfirmacionPedido.jsx (ver resources/js/lib/whatsapp.js):
+    // se persiste tal cual en sessionStorage para poder reconstruir el mismo mensaje
+    // desde la pantalla de confirmación sin duplicar el formato en dos lugares.
+    const pedidoParaMensaje = () => ({
+        cliente: {
+            nombre: form.nombre,
+            apellido: form.apellido,
+            dni: form.dni,
+            provincia: form.provincia,
+            ciudad: form.ciudad,
+            codigoPostal: form.codigoPostal,
+            telefono: form.telefono,
+            email: form.email,
+        },
+        observaciones: form.observaciones || null,
+        items: items.map((item) => ({
+            titulo: item.titulo,
+            cantidad: item.cantidad,
+            subtotalItem: item.subtotalItem,
+            variante: item.variante ? { nombre: item.variante.nombre } : null,
+            addons: item.addons.map((addon) => ({
+                nombre: addon.nombre,
+                texto_personalizado: addon.texto_personalizado,
+            })),
+        })),
+        subtotal,
+        codigoDescuento: codigoAplicado,
+        montoDescuento,
+        total: totalConDescuento,
+        envioGratis: { alcanzado: envioGratisAlcanzado, montoMinimo: montoMinimoEnvioGratis },
+    });
 
     const openWhatsApp = (message) => {
         const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -319,7 +318,8 @@ export default function Checkout({ canLogin }) {
         setApiError(null);
         setCodigoDescuentoError(null);
 
-        const message = buildMessage();
+        const pedido = pedidoParaMensaje();
+        const message = buildOrderMessage(pedido);
 
         setIsSubmitting(true);
         try {
@@ -334,8 +334,13 @@ export default function Checkout({ canLogin }) {
                 observaciones: form.observaciones,
                 codigo_descuento: codigoAplicado,
                 items: items.map((item) => ({
-                    producto_id: item.id,
+                    producto_id: item.producto_id,
                     cantidad: item.cantidad,
+                    variante_id: item.varianteId,
+                    addons: item.addons.map((addon) => ({
+                        addon_id: addon.addon_id,
+                        texto_personalizado: addon.texto_personalizado,
+                    })),
                 })),
             });
         } catch (error) {
@@ -370,7 +375,7 @@ export default function Checkout({ canLogin }) {
             return;
         }
 
-        sessionStorage.setItem('chisperio_last_order', message);
+        sessionStorage.setItem('chisperio_last_order', JSON.stringify(pedido));
         openWhatsApp(message);
         clearCart();
         quitarCodigoDescuento();

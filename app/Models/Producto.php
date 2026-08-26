@@ -103,6 +103,39 @@ class Producto extends Model
     }
 
     /**
+     * Relación uno a muchos con ProductoVariante, ordenada por orden ascendente
+     */
+    public function variantes(): HasMany
+    {
+        return $this->hasMany(ProductoVariante::class)->orderBy('orden');
+    }
+
+    public function variantesActivas(): HasMany
+    {
+        return $this->variantes()->where('is_active', true);
+    }
+
+    public function tieneVariantes(): bool
+    {
+        return $this->variantes()->exists();
+    }
+
+    /**
+     * Relación muchos a muchos con Addon a través de producto_addon
+     */
+    public function addons(): BelongsToMany
+    {
+        return $this->belongsToMany(Addon::class, 'producto_addon')
+            ->withPivot('precio_override', 'orden')
+            ->withTimestamps();
+    }
+
+    public function addonsActivos(): BelongsToMany
+    {
+        return $this->addons()->where('addons.is_active', true);
+    }
+
+    /**
      * `stock === null` significa stock ilimitado (comportamiento por defecto de todo
      * el catálogo hasta que se cargue un número real).
      */
@@ -114,23 +147,49 @@ class Producto extends Model
     /**
      * true si el producto tiene stock ilimitado o si el stock alcanza la cantidad pedida.
      * Solo lectura: el descuento/reposición real lo hace el StockService (Fase 2).
+     *
+     * Si el producto tiene variantes, productos.stock queda obsoleto (el stock real vive
+     * en cada ProductoVariante): la disponibilidad pasa a ser "alguna variante activa
+     * alcanza la cantidad pedida", sin mirar la columna propia. Esto es una disponibilidad
+     * agregada (para catálogo/validación cuando no se sabe todavía qué variante eligió el
+     * cliente) — el descuento real de stock por variante lo hace StockService, que sí sabe
+     * cuál variante puntual está en juego.
      */
     public function tieneStockDisponible(int $cantidad): bool
     {
+        if ($this->tieneVariantes()) {
+            return $this->variantesActivas()
+                ->get()
+                ->contains(fn (ProductoVariante $variante) => $variante->tieneStockDisponible($cantidad));
+        }
+
         return $this->tieneStockIlimitado() || $this->stock >= $cantidad;
     }
 
     /**
-     * Filtra productos con stock agotado (`stock = 0`) para los listados públicos.
-     * `stock IS NULL` (ilimitado) y `stock > 0` pasan el filtro; ojo que un simple
-     * `where('stock', '!=', 0)` NO alcanza para esto — en SQL, `NULL <> 0` no es
-     * verdadero, así que esa forma excluiría también los productos con stock
-     * ilimitado. La ficha individual (TiendaController::show) NO usa este scope
-     * a propósito: sigue siendo accesible por URL directa con stock=0.
+     * Filtra productos con stock agotado para los listados públicos. `stock IS NULL`
+     * (ilimitado) y `stock > 0` pasan el filtro; ojo que un simple `where('stock', '!=', 0)`
+     * NO alcanza para esto — en SQL, `NULL <> 0` no es verdadero, así que esa forma
+     * excluiría también los productos con stock ilimitado. La ficha individual
+     * (TiendaController::show) NO usa este scope a propósito: sigue siendo accesible por
+     * URL directa con stock=0.
+     *
+     * Productos con variantes: mismo criterio que tieneStockDisponible() — se ignora
+     * productos.stock y se exige al menos una variante activa con stock (propio o
+     * ilimitado). Un producto con variantes pero con TODAS agotadas/inactivas queda
+     * fuera del listado aunque productos.stock diga otra cosa.
      */
     public function scopeConStock(Builder $query): Builder
     {
-        return $query->where(fn (Builder $q) => $q->whereNull('stock')->orWhere('stock', '>', 0));
+        return $query->where(function (Builder $q) {
+            $q->where(function (Builder $sinVariantes) {
+                $sinVariantes->whereDoesntHave('variantes')
+                    ->where(fn (Builder $q2) => $q2->whereNull('stock')->orWhere('stock', '>', 0));
+            })->orWhereHas('variantes', function (Builder $variantes) {
+                $variantes->where('is_active', true)
+                    ->where(fn (Builder $q2) => $q2->whereNull('stock')->orWhere('stock', '>', 0));
+            });
+        });
     }
 
     /**

@@ -1,10 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
 import PillsCantidad from '@/Components/PillsCantidad';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
+import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
+import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
 import { cantidadMaxima, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
@@ -271,13 +273,68 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const [toast, setToast] = useState(null);
     const { addToCart: addToCartContext } = useCart();
 
-    const agotado = sinStock(producto);
-    const stockBajo = tieneStockBajo(producto);
-    const maxQty = cantidadMaxima(producto);
+    const variantes = producto.variantes ?? [];
+    const addons = producto.addons ?? [];
+    const tieneVariantes = variantes.length > 0;
+    const tieneAddons = addons.length > 0;
 
-    const precioInfo = useMemo(() => resolverPrecio(producto, qty), [producto, qty]);
+    const [varianteId, setVarianteId] = useState(null);
+    const [addonIds, setAddonIds] = useState([]);
+    const [addonTextos, setAddonTextos] = useState({});
+
+    const varianteSeleccionada = variantes.find((v) => v.id === varianteId) ?? null;
+
+    // Producto totalmente agotado: sin variantes, mira el stock propio (como siempre);
+    // con variantes, solo si TODAS las activas están sin stock — mientras quede al
+    // menos una disponible, el panel de compra sigue mostrándose para poder elegirla.
+    const agotado = tieneVariantes
+        ? variantes.every((v) => v.stock !== null && v.stock !== undefined && v.stock <= 0)
+        : sinStock(producto);
+    const stockBajo = varianteSeleccionada
+        ? tieneStockBajo(producto, varianteSeleccionada.id)
+        : (!tieneVariantes && tieneStockBajo(producto));
+    const maxQty = varianteSeleccionada
+        ? cantidadMaxima(producto, varianteSeleccionada.id)
+        : (tieneVariantes ? null : cantidadMaxima(producto));
+
+    const precioInfo = useMemo(
+        () => resolverPrecio(producto, qty, varianteId, addonIds),
+        [producto, qty, varianteId, addonIds]
+    );
     const tieneDescuento = precioInfo.precioFinal < precioInfo.precioBase;
     const ahorroPorcentaje = Math.round(precioInfo.ahorroTotalPorcentaje);
+    const tieneOpciones = precioInfo.recargoVariante > 0 || precioInfo.addonsTotal > 0;
+
+    // Reclampea qty si la variante elegida tiene menos stock que la cantidad ya tildada.
+    useEffect(() => {
+        if (maxQty !== null && qty > maxQty) {
+            setQty(Math.max(1, maxQty));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [maxQty]);
+
+    const toggleAddon = (addonId) => {
+        setAddonIds((prev) =>
+            prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
+        );
+    };
+
+    const cambiarTextoAddon = (addonId, valor) => {
+        setAddonTextos((prev) => ({ ...prev, [addonId]: valor }));
+    };
+
+    // Todo addon tildado que requiere texto necesita ese texto cargado; si no,
+    // "Agregar al carrito" queda deshabilitado (ver ProductoAddonsChecklist).
+    const addonsValidos = addonIds.every((id) => {
+        const addon = addons.find((a) => a.id === id);
+        if (!addon || !addon.requiere_texto) return true;
+        return (addonTextos[id] ?? '').trim().length > 0;
+    });
+
+    const faltaElegirVariante = tieneVariantes && varianteSeleccionada === null;
+    // maxQty === 0 cubre el caso borde de que la variante elegida se haya quedado sin
+    // stock justo después de seleccionarla (normalmente ya viene bloqueada en el swatch).
+    const puedeAgregar = !agotado && !faltaElegirVariante && maxQty !== 0 && addonsValidos;
 
     const cambiarQty = (valor) => setQty(() => {
         const clamped = Math.max(1, valor);
@@ -285,7 +342,37 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     });
 
     const addToCart = () => {
-        addToCartContext(producto, qty);
+        if (!puedeAgregar) return;
+
+        // Shape acordado para la Fase siguiente (CartContext todavía no lo persiste,
+        // pero ya viaja armado): varianteId + snapshot de nombre/color_hex/precio_adicional,
+        // y cada addon elegido con id/nombre/precio/texto_personalizado.
+        const addonsSeleccionados = addonIds.map((id) => {
+            const addon = addons.find((a) => a.id === id);
+            const overridePrecio = addon.pivot?.precio_override;
+            const precio = overridePrecio !== null && overridePrecio !== undefined
+                ? Number(overridePrecio)
+                : Number(addon.precio);
+
+            return {
+                addon_id: addon.id,
+                nombre: addon.nombre,
+                precio,
+                texto_personalizado: addon.requiere_texto ? (addonTextos[id] ?? '').trim() : null,
+            };
+        });
+
+        addToCartContext(producto, qty, {
+            varianteId: varianteSeleccionada?.id ?? null,
+            variante: varianteSeleccionada && {
+                id: varianteSeleccionada.id,
+                nombre: varianteSeleccionada.nombre,
+                color_hex: varianteSeleccionada.color_hex,
+                precio_adicional: Number(varianteSeleccionada.precio_adicional),
+            },
+            addons: addonsSeleccionados,
+        });
+
         if (toast) clearTimeout(window._toastTimer);
         setToast(`${producto.titulo} agregado al carrito`);
         window._toastTimer = setTimeout(() => setToast(null), 2500);
@@ -351,7 +438,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                         )}
                                         {stockBajo && (
                                             <span className="rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
-                                                {producto.stock === 1 ? '¡Última unidad!' : `Quedan pocas: ${producto.stock}`}
+                                                {maxQty === 1 ? '¡Última unidad!' : `Quedan pocas: ${maxQty}`}
                                             </span>
                                         )}
                                         {tieneDescuento && (
@@ -419,6 +506,31 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                         Precio unitario para {qty} {qty === 1 ? 'unidad' : 'unidades'}
                                     </p>
                                 )}
+
+                                {tieneOpciones && (
+                                    <div className="mt-4 space-y-1.5 border-t border-[#6000ca]/10 pt-4 text-xs font-semibold text-[#4b4356]">
+                                        <div className="flex items-center justify-between">
+                                            <span>Precio base</span>
+                                            <span>{formatPrice(precioInfo.precioFinal)}</span>
+                                        </div>
+                                        {precioInfo.recargoVariante > 0 && (
+                                            <div className="flex items-center justify-between">
+                                                <span>Color {varianteSeleccionada?.nombre}</span>
+                                                <span>+ {formatPrice(precioInfo.recargoVariante)}</span>
+                                            </div>
+                                        )}
+                                        {precioInfo.addonsTotal > 0 && (
+                                            <div className="flex items-center justify-between">
+                                                <span>Personalizaciones</span>
+                                                <span>+ {formatPrice(precioInfo.addonsTotal)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center justify-between border-t border-[#6000ca]/10 pt-1.5 text-sm font-black text-[#1c1b1b]">
+                                            <span>Total por unidad</span>
+                                            <span>{formatPrice(precioInfo.precioFinalConOpciones)}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {producto.descripcion && (
@@ -456,6 +568,23 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                 </div>
                             ) : (
                                 <>
+                                    {(tieneVariantes || tieneAddons) && (
+                                        <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-white p-4 sm:p-5">
+                                            <VarianteColorSwatches
+                                                variantes={variantes}
+                                                value={varianteId}
+                                                onChange={setVarianteId}
+                                            />
+                                            <ProductoAddonsChecklist
+                                                addons={addons}
+                                                seleccionados={addonIds}
+                                                textos={addonTextos}
+                                                onToggle={toggleAddon}
+                                                onTextoChange={cambiarTextoAddon}
+                                            />
+                                        </div>
+                                    )}
+
                                     <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-[#f7f6f9] p-4 sm:p-5">
                                         <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
                                             Elegí la cantidad
@@ -489,7 +618,8 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                             <button
                                                 type="button"
                                                 onClick={addToCart}
-                                                className="flex h-14 w-full flex-1 items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none"
+                                                disabled={!puedeAgregar}
+                                                className="flex h-14 w-full flex-1 items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-[#81788a] disabled:shadow-none motion-reduce:transform-none"
                                             >
                                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25h10.5l.75 12H6l.75-12z" />
@@ -498,7 +628,12 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                                 Añadir al carrito
                                             </button>
                                         </div>
-                                        {maxQty !== null && (
+                                        {faltaElegirVariante && (
+                                            <p className="mt-3 text-center text-[11px] font-bold text-[#ba1a1a] sm:text-left">
+                                                Elegí un color para poder agregarlo al carrito.
+                                            </p>
+                                        )}
+                                        {!faltaElegirVariante && maxQty !== null && (
                                             <p className="mt-3 text-center text-[11px] font-semibold text-[#81788a] sm:text-left">
                                                 Quedan {maxQty} {maxQty === 1 ? 'unidad' : 'unidades'} disponibles.
                                             </p>

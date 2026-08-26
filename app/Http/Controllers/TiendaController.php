@@ -25,6 +25,11 @@ class TiendaController extends Controller
             'categorias',
             'subcategorias',
             'escalasPrecio',
+            // Solo variantes/add-ons activos: son las únicas opciones que el cliente puede
+            // elegir en la ficha (ver VarianteColorSwatches/ProductoAddonsChecklist). Una
+            // variante/addon desactivado no se ofrece, no solo se deshabilita.
+            'variantes' => fn ($query) => $query->where('is_active', true),
+            'addons' => fn ($query) => $query->where('addons.is_active', true)->orderBy('producto_addon.orden'),
         ]);
 
         $escalasPrecio = $producto->escalasPrecio->map(fn (EscalaPrecio $escala) => [
@@ -137,24 +142,39 @@ class TiendaController extends Controller
     }
 
     /**
-     * Recalcula el precio de un producto para una cantidad dada. Pensado para
-     * que el front (ficha de producto, carrito) lo consulte al cambiar cantidad
-     * sin duplicar la lógica de PricingService en JS.
+     * Recalcula el precio de un producto para una cantidad (y opcionalmente variante
+     * de color + add-ons) dados. Pensado para que el front (ficha de producto,
+     * carrito) lo use como verificación real del cálculo que ya adelantó en cliente
+     * con resources/js/lib/pricing.js, sin duplicar la lógica de PricingService en JS.
+     *
+     * variante_id/addon_ids son opcionales y, si vienen, se validan en el service
+     * (PricingService::resolverVariante/resolverAddons): una variante o addon que no
+     * pertenezca/esté activo para este producto devuelve 422, nunca se ignora en silencio.
      */
     public function precio(Request $request, Producto $producto, PricingService $pricingService)
     {
         $validated = $request->validate([
             'cantidad' => 'required|integer|min:1',
+            'variante_id' => 'nullable|integer',
+            'addon_ids' => 'nullable|array',
+            'addon_ids.*' => 'integer',
         ]);
 
-        $resultado = $pricingService->calcularPrecio($producto, (int) $validated['cantidad']);
+        $resultado = $pricingService->calcularPrecio(
+            $producto,
+            (int) $validated['cantidad'],
+            isset($validated['variante_id']) ? (int) $validated['variante_id'] : null,
+            $validated['addon_ids'] ?? []
+        );
 
-        return response()->json($this->serializarPrecio($resultado));
+        return response()->json($this->serializarDesglosePrecio($resultado));
     }
 
     /**
      * Reduce un PriceResult al subconjunto de campos que necesita el front
      * para pintar precio y badge de descuento, sin exponer el objeto Oferta.
+     * Usado por show() para `producto.precio_actual` (siempre cantidad=1, sin
+     * variante/add-ons) — se mantiene con este shape para no romper ese contrato.
      */
     private function serializarPrecio(PriceResult $resultado): array
     {
@@ -163,6 +183,24 @@ class TiendaController extends Controller
             'precio_unitario_final' => $resultado->precio_unitario_final,
             'ahorro_porcentaje' => $resultado->ahorro_porcentaje,
             'oferta_aplicada' => $resultado->oferta_aplicada !== null,
+        ];
+    }
+
+    /**
+     * Desglose completo del PriceResult para el endpoint GET .../precio: además del
+     * precio base y el descuento de oferta, incluye el recargo de variante y el total
+     * de add-ons (sumados DESPUÉS del descuento, ver PricingService::calcularPrecio).
+     */
+    private function serializarDesglosePrecio(PriceResult $resultado): array
+    {
+        return [
+            'precio_base' => $resultado->precio_lista,
+            'descuento_aplicado' => $resultado->oferta_aplicada !== null,
+            'ahorro' => $resultado->ahorro_unitario,
+            'ahorro_porcentaje' => $resultado->ahorro_porcentaje,
+            'recargo_variante' => $resultado->recargo_variante,
+            'addons_total' => $resultado->addons_total,
+            'precio_final_unitario' => $resultado->precio_final_con_opciones,
         ];
     }
 }

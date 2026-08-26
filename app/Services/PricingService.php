@@ -5,9 +5,13 @@ namespace App\Services;
 use App\DataTransferObjects\PriceResult;
 use App\Enums\AlcanceOferta;
 use App\Enums\TipoDescuento;
+use App\Models\Addon;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
 use App\Models\Producto;
+use App\Models\ProductoVariante;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class PricingService
 {
@@ -15,9 +19,18 @@ class PricingService
      * Calcula el precio unitario final de un producto para una cantidad dada,
      * resolviendo la escala de precio aplicable y, si corresponde, el descuento
      * de la oferta vigente sobre ese nivel de precio.
+     *
+     * Si se pasan $varianteId y/o $addonIds, además suma el recargo de variante y
+     * el total de add-ons por encima del precio ya descontado: la oferta se calcula
+     * SIEMPRE solo sobre precio_lista (base o escala), nunca sobre variante/add-ons,
+     * porque esas opciones no tienen descuento propio.
      */
-    public function calcularPrecio(Producto $producto, int $cantidad): PriceResult
-    {
+    public function calcularPrecio(
+        Producto $producto,
+        int $cantidad,
+        ?int $varianteId = null,
+        array $addonIds = []
+    ): PriceResult {
         $escalaAplicada = $producto->escalaAplicable($cantidad);
         $precioLista = round((float) ($escalaAplicada?->precio_unitario ?? $producto->precio), 2);
 
@@ -40,6 +53,17 @@ class PricingService
             ? round(($ahorroUnitario / $precioLista) * 100, 2)
             : 0.0;
 
+        $varianteAplicada = $this->resolverVariante($producto, $varianteId);
+        $recargoVariante = round((float) ($varianteAplicada?->precio_adicional ?? 0), 2);
+
+        $addonsAplicados = $this->resolverAddons($producto, $addonIds);
+        $addonsTotal = round(
+            $addonsAplicados->sum(fn (Addon $addon) => (float) ($addon->pivot->precio_override ?? $addon->precio)),
+            2
+        );
+
+        $precioFinalConOpciones = round($precioFinal + $recargoVariante + $addonsTotal, 2);
+
         return new PriceResult(
             precio_lista: $precioLista,
             precio_unitario_final: $precioFinal,
@@ -47,7 +71,61 @@ class PricingService
             escala_aplicada: $escalaAplicada,
             ahorro_unitario: $ahorroUnitario,
             ahorro_porcentaje: $ahorroPorcentaje,
+            variante_aplicada: $varianteAplicada,
+            recargo_variante: $recargoVariante,
+            addons_aplicados: $addonsAplicados->all(),
+            addons_total: $addonsTotal,
+            precio_final_con_opciones: $precioFinalConOpciones,
         );
+    }
+
+    /**
+     * No confía en que el front mande una variante válida: tiene que pertenecer al
+     * producto (la relación ya lo garantiza) y estar activa. Si el id no resuelve
+     * ninguna fila, es un dato corrupto/manipulado del cliente — se rechaza con 422
+     * en vez de ignorarlo en silencio.
+     */
+    private function resolverVariante(Producto $producto, ?int $varianteId): ?ProductoVariante
+    {
+        if ($varianteId === null) {
+            return null;
+        }
+
+        $variante = $producto->variantesActivas()->whereKey($varianteId)->first();
+
+        if ($variante === null) {
+            throw ValidationException::withMessages([
+                'variante_id' => 'La variante indicada no existe, no está activa o no pertenece a este producto.',
+            ]);
+        }
+
+        return $variante;
+    }
+
+    /**
+     * Mismo criterio que resolverVariante: cada addon_id debe estar asociado a ESTE
+     * producto (vía producto_addon) y activo. Un id que no resuelve ninguna fila
+     * rechaza toda la request (nunca se suma un addon no asociado en silencio).
+     */
+    private function resolverAddons(Producto $producto, array $addonIds): Collection
+    {
+        $idsUnicos = collect($addonIds)->filter()->unique()->values();
+
+        if ($idsUnicos->isEmpty()) {
+            return collect();
+        }
+
+        $addons = $producto->addonsActivos()->whereIn('addons.id', $idsUnicos)->get();
+
+        if ($addons->count() !== $idsUnicos->count()) {
+            $idsFaltantes = $idsUnicos->diff($addons->pluck('id'))->values();
+
+            throw ValidationException::withMessages([
+                'addon_ids' => "Los add-ons [{$idsFaltantes->implode(', ')}] no están asociados o activos para este producto.",
+            ]);
+        }
+
+        return $addons;
     }
 
     /**

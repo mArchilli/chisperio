@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AddonController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\CodigoDescuentoController;
 use App\Http\Controllers\ConfiguracionEnvioController;
@@ -153,6 +154,21 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:admin')
         ->name('codigos-descuento.destroy');
     Route::patch('admin/codigos-descuento/{codigo_descuento}/toggle-active', [CodigoDescuentoController::class, 'toggleActive'])->name('codigos-descuento.toggle-active');
+
+    // Rutas de Add-ons — catálogo global de personalizaciones con costo. destroy
+    // queda afuera del resource(): solo admin puede eliminar.
+    Route::resource('admin/addons', AddonController::class)->except('destroy')->names([
+        'index' => 'addons.index',
+        'create' => 'addons.create',
+        'store' => 'addons.store',
+        'show' => 'addons.show',
+        'edit' => 'addons.edit',
+        'update' => 'addons.update',
+    ]);
+    Route::delete('admin/addons/{addon}', [AddonController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('addons.destroy');
+    Route::patch('admin/addons/{addon}/toggle-active', [AddonController::class, 'toggleActive'])->name('addons.toggle-active');
 
     // Ruta de Métricas — datos de facturación, solo admin.
     Route::get('admin/metricas', [MetricasController::class, 'index'])

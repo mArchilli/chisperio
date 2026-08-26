@@ -8,6 +8,7 @@ use App\Exceptions\StockInsuficienteException;
 use App\Models\MovimientoStock;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\ProductoVariante;
 use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -36,6 +37,29 @@ class StockServiceTest extends TestCase
 
         $pedido->items()->create([
             'producto_id' => $producto->id,
+            'titulo' => $producto->titulo,
+            'precio_unitario' => $producto->precio,
+            'cantidad' => $cantidad,
+            'subtotal' => $producto->precio * $cantidad,
+        ]);
+
+        return $pedido;
+    }
+
+    private function crearPedidoConVariante(ProductoVariante $variante, int $cantidad): Pedido
+    {
+        $producto = $variante->producto;
+
+        $pedido = Pedido::create([
+            'cliente_nombre' => 'Cliente de prueba',
+            'subtotal' => 0,
+            'total' => 0,
+            'estado' => EstadoPedido::Pendiente,
+        ]);
+
+        $pedido->items()->create([
+            'producto_id' => $producto->id,
+            'producto_variante_id' => $variante->id,
             'titulo' => $producto->titulo,
             'precio_unitario' => $producto->precio,
             'cantidad' => $cantidad,
@@ -221,5 +245,144 @@ class StockServiceTest extends TestCase
 
         $this->assertSame(7, $producto->fresh()->stock);
         $this->assertSame(1, MovimientoStock::where('producto_id', $producto->id)->count());
+    }
+
+    // --- validarDisponibilidad con variante ---
+
+    public function test_validar_disponibilidad_con_variante_chequea_stock_de_la_variante_no_del_producto(): void
+    {
+        // productos.stock queda en 0 a propósito: si el chequeo mirara el producto en vez
+        // de la variante, esto reportaría falta de stock cuando en realidad hay de sobra.
+        $producto = Producto::factory()->create(['stock' => 0]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => 10, 'is_active' => true,
+        ]);
+
+        $faltantes = $this->service->validarDisponibilidad([
+            ['producto_id' => $producto->id, 'variante_id' => $variante->id, 'cantidad' => 5],
+        ]);
+
+        $this->assertSame([], $faltantes);
+    }
+
+    public function test_validar_disponibilidad_con_variante_reporta_faltante_con_variante_id(): void
+    {
+        $producto = Producto::factory()->create(['stock' => 999]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => 2, 'is_active' => true,
+        ]);
+
+        $faltantes = $this->service->validarDisponibilidad([
+            ['producto_id' => $producto->id, 'variante_id' => $variante->id, 'cantidad' => 5],
+        ]);
+
+        $this->assertSame([[
+            'producto_id' => $producto->id,
+            'variante_id' => $variante->id,
+            'cantidad' => 5,
+            'stock_disponible' => 2,
+        ]], $faltantes);
+    }
+
+    // --- descontar con variante ---
+
+    public function test_descontar_con_variante_resta_stock_de_la_variante_y_deja_el_producto_intacto(): void
+    {
+        $producto = Producto::factory()->create(['stock' => 999]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => 10, 'is_active' => true,
+        ]);
+        $pedido = $this->crearPedidoConVariante($variante, 3);
+
+        $this->service->descontar($pedido);
+
+        $this->assertSame(7, $variante->fresh()->stock);
+        $this->assertSame(999, $producto->fresh()->stock);
+
+        $movimiento = MovimientoStock::where('producto_variante_id', $variante->id)->firstOrFail();
+        $this->assertSame($producto->id, $movimiento->producto_id);
+        $this->assertSame(-3, $movimiento->cantidad);
+        $this->assertSame(MotivoMovimientoStock::PedidoCreado, $movimiento->motivo);
+        $this->assertSame(7, $movimiento->stock_resultante);
+    }
+
+    public function test_descontar_con_variante_ilimitada_no_genera_movimiento(): void
+    {
+        $producto = Producto::factory()->create(['stock' => 999]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => null, 'is_active' => true,
+        ]);
+        $pedido = $this->crearPedidoConVariante($variante, 5);
+
+        $this->service->descontar($pedido);
+
+        $this->assertNull($variante->fresh()->stock);
+        $this->assertSame(0, MovimientoStock::where('producto_variante_id', $variante->id)->count());
+    }
+
+    public function test_descontar_con_variante_sin_stock_suficiente_lanza_excepcion_con_variante_id(): void
+    {
+        $producto = Producto::factory()->create(['stock' => 999]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => 1, 'is_active' => true,
+        ]);
+        $pedido = $this->crearPedidoConVariante($variante, 5);
+
+        try {
+            $this->service->descontar($pedido);
+            $this->fail('Se esperaba StockInsuficienteException.');
+        } catch (StockInsuficienteException $e) {
+            $this->assertSame($producto->id, $e->productoId);
+            $this->assertSame($variante->id, $e->varianteId);
+            $this->assertSame(5, $e->cantidadSolicitada);
+            $this->assertSame(1, $e->stockDisponible);
+        }
+
+        // Todo o nada, también para variantes: no queda descontada a medias.
+        $this->assertSame(1, $variante->fresh()->stock);
+        $this->assertSame(0, MovimientoStock::query()->count());
+    }
+
+    // --- reponer con variante ---
+
+    public function test_reponer_con_variante_suma_stock_de_la_variante(): void
+    {
+        $producto = Producto::factory()->create(['stock' => 999]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => 4, 'is_active' => true,
+        ]);
+        $pedido = $this->crearPedidoConVariante($variante, 3);
+
+        $this->service->reponer($pedido);
+
+        $this->assertSame(7, $variante->fresh()->stock);
+        $this->assertSame(999, $producto->fresh()->stock);
+
+        $movimiento = MovimientoStock::where('producto_variante_id', $variante->id)->firstOrFail();
+        $this->assertSame(3, $movimiento->cantidad);
+        $this->assertSame(MotivoMovimientoStock::PedidoCancelado, $movimiento->motivo);
+        $this->assertSame(7, $movimiento->stock_resultante);
+    }
+
+    public function test_reponer_con_variante_dos_veces_no_duplica_la_suma(): void
+    {
+        $producto = Producto::factory()->create(['stock' => 999]);
+        $variante = ProductoVariante::create([
+            'producto_id' => $producto->id, 'nombre' => 'Rojo', 'precio_adicional' => 0,
+            'stock' => 4, 'is_active' => true,
+        ]);
+        $pedido = $this->crearPedidoConVariante($variante, 3);
+
+        $this->service->reponer($pedido);
+        $this->service->reponer($pedido);
+
+        $this->assertSame(7, $variante->fresh()->stock);
+        $this->assertSame(1, MovimientoStock::where('producto_variante_id', $variante->id)->count());
     }
 }

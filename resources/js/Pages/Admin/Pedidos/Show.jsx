@@ -156,6 +156,26 @@ export default function Show({ pedido }) {
                                                                 {!item.producto && (
                                                                     <div className="text-xs text-gray-400 italic">Producto eliminado del catálogo</div>
                                                                 )}
+                                                                {item.variante_nombre && (
+                                                                    <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                        <span
+                                                                            className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-black/10"
+                                                                            style={{ backgroundColor: item.variante_color_hex || '#e5e5e5' }}
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                        Color: {item.variante_nombre}
+                                                                    </span>
+                                                                )}
+                                                                {item.addons_seleccionados?.length > 0 && (
+                                                                    <ul className="mt-1.5 space-y-0.5">
+                                                                        {item.addons_seleccionados.map((addon, i) => (
+                                                                            <li key={i} className="text-xs text-gray-500">
+                                                                                <span className="font-semibold text-gray-700">{addon.nombre}</span>
+                                                                                {addon.texto_personalizado ? `: "${addon.texto_personalizado}"` : ''}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </td>

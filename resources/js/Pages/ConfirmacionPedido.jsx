@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import { buildOrderMessage } from '@/lib/whatsapp';
 
 const WHATSAPP_NUMBER = '5491127930349';
 
@@ -40,7 +41,15 @@ export default function ConfirmacionPedido({ canLogin }) {
 
     useEffect(() => {
         const stored = sessionStorage.getItem('chisperio_last_order');
-        if (stored) setMessage(stored);
+        if (!stored) return;
+
+        try {
+            setMessage(buildOrderMessage(JSON.parse(stored)));
+        } catch {
+            // Formato viejo (texto plano guardado por una versión anterior de Checkout.jsx)
+            // o JSON corrupto: no hay pedido estructurado para reconstruir el mensaje, se
+            // omite el botón de reenvío en vez de mostrar algo roto.
+        }
     }, []);
 
     return (
