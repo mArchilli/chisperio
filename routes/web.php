@@ -5,6 +5,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\CodigoDescuentoController;
 use App\Http\Controllers\ConfiguracionEnvioController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\PedidoController;
@@ -93,6 +94,11 @@ Route::middleware('auth')->group(function () {
     // tiene acceso a los CRUDs reales de productos/categorías/ofertas/etc., ver más abajo).
     Route::get('admin/precios', [PrecioController::class, 'index'])->name('precios.index');
 
+    // Documentación para vendedores — el listado lo ven admin y vendedor (el
+    // controller filtra a solo activos para quien no sea admin); crear/editar/
+    // eliminar/activar quedan en el grupo role:admin de más abajo.
+    Route::get('admin/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
+
     // Rutas de Pedidos (sin cambios)
     Route::get('admin/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
     Route::get('admin/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
@@ -166,6 +172,14 @@ Route::middleware('auth')->group(function () {
             'destroy' => 'addons.destroy',
         ]);
         Route::patch('admin/addons/{addon}/toggle-active', [AddonController::class, 'toggleActive'])->name('addons.toggle-active');
+
+        // Documentación — alta/edición/borrado reservados a admin (ver admin/documentos GET arriba).
+        Route::get('admin/documentos/create', [DocumentoController::class, 'create'])->name('documentos.create');
+        Route::post('admin/documentos', [DocumentoController::class, 'store'])->name('documentos.store');
+        Route::get('admin/documentos/{documento}/edit', [DocumentoController::class, 'edit'])->name('documentos.edit');
+        Route::put('admin/documentos/{documento}', [DocumentoController::class, 'update'])->name('documentos.update');
+        Route::delete('admin/documentos/{documento}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');
+        Route::patch('admin/documentos/{documento}/toggle-active', [DocumentoController::class, 'toggleActive'])->name('documentos.toggle-active');
     });
 
     // Ruta de Métricas — datos de facturación, solo admin.
