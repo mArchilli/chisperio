@@ -6,6 +6,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
+import FormaPagoBlock from '@/Components/FormaPagoBlock';
 import { buildOrderMessage } from '@/lib/whatsapp';
 
 // Reemplazar con el número de WhatsApp del negocio (formato internacional sin +)
@@ -94,6 +95,11 @@ function CheckoutSummary({
     onAplicarCodigo,
     onQuitarCodigo,
     codigoDescuentoError,
+    planesPagoTarjeta,
+    formaPagoSeleccionada,
+    onSeleccionarFormaPago,
+    recargoFormaPago,
+    totalFinal,
 }) {
     return (
         <aside className="relative overflow-hidden rounded-[2rem] border border-black/[0.06] bg-white p-5 shadow-[0_24px_55px_-38px_rgba(28,27,27,0.55)] sm:p-6 lg:p-7">
@@ -119,6 +125,14 @@ function CheckoutSummary({
                     validando={validandoCodigo}
                     onAplicar={onAplicarCodigo}
                     onQuitar={onQuitarCodigo}
+                />
+            </div>
+
+            <div className="relative">
+                <FormaPagoBlock
+                    planes={planesPagoTarjeta}
+                    seleccionado={formaPagoSeleccionada}
+                    onSeleccionar={onSeleccionarFormaPago}
                 />
             </div>
 
@@ -168,6 +182,14 @@ function CheckoutSummary({
                         <span className="font-extrabold text-[#1c8a4c]">-{formatPrice(montoDescuento)}</span>
                     </div>
                 )}
+                {formaPagoSeleccionada && recargoFormaPago && (
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="font-medium text-[#81788a]">
+                            Recargo <span className="text-[#4b4356]">({formaPagoSeleccionada.nombre})</span>
+                        </span>
+                        <span className="font-extrabold text-[#1c1b1b]">+{formatPrice(recargoFormaPago.recargo_monto)}</span>
+                    </div>
+                )}
             </div>
 
             {codigoDescuentoError && (
@@ -182,9 +204,16 @@ function CheckoutSummary({
                         <p className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">Total del pedido</p>
                     </div>
                     <span className="text-[clamp(1.8rem,7vw,2.35rem)] font-black leading-none tracking-[-0.04em] text-[#6000ca]">
-                        {formatPrice(totalConDescuento)}
+                        {formatPrice(totalFinal)}
                     </span>
                 </div>
+                {formaPagoSeleccionada && recargoFormaPago && (
+                    <p className="mt-2 text-right text-xs font-semibold text-[#4b4356]">
+                        {formaPagoSeleccionada.cuotas === 1
+                            ? `1 cuota de ${formatPrice(recargoFormaPago.monto_por_cuota)}`
+                            : `${formaPagoSeleccionada.cuotas} cuotas de ${formatPrice(recargoFormaPago.monto_por_cuota)} c/u`}
+                    </p>
+                )}
             </div>
 
             <Link
@@ -214,12 +243,16 @@ export default function Checkout({ canLogin }) {
         validandoCodigo,
         aplicarCodigoDescuento,
         quitarCodigoDescuento,
+        formaPagoSeleccionada,
+        setFormaPago,
+        recargoFormaPago,
+        totalFinal,
     } = useCart();
 
     // Igual criterio que BarraEnvioGratis: montoMinimo <= 0 significa que la feature
     // está desactivada desde el admin, y el envío gratis se evalúa sobre el subtotal
     // bruto (nunca sobre el total con descuento).
-    const { configuracionEnvio } = usePage().props;
+    const { configuracionEnvio, planesPagoTarjeta } = usePage().props;
     const montoMinimoEnvioGratis = configuracionEnvio?.montoMinimo ?? 0;
     const envioGratisAlcanzado = montoMinimoEnvioGratis > 0 && subtotal >= montoMinimoEnvioGratis;
 
@@ -289,7 +322,17 @@ export default function Checkout({ canLogin }) {
         subtotal,
         codigoDescuento: codigoAplicado,
         montoDescuento,
-        total: totalConDescuento,
+        formaPago: formaPagoSeleccionada
+            ? {
+                  nombre: formaPagoSeleccionada.nombre,
+                  cuotas: formaPagoSeleccionada.cuotas,
+                  recargoPorcentaje: formaPagoSeleccionada.recargoPorcentaje,
+                  recargoMonto: recargoFormaPago.recargo_monto,
+                  montoPorCuota: recargoFormaPago.monto_por_cuota,
+                  totalConRecargo: recargoFormaPago.total_con_recargo,
+              }
+            : null,
+        total: totalFinal,
         envioGratis: { alcanzado: envioGratisAlcanzado, montoMinimo: montoMinimoEnvioGratis },
     });
 
@@ -334,6 +377,7 @@ export default function Checkout({ canLogin }) {
                 cliente_codigo_postal: form.codigoPostal,
                 observaciones: form.observaciones,
                 codigo_descuento: codigoAplicado,
+                plan_pago_tarjeta_id: formaPagoSeleccionada?.planId ?? null,
                 items: items.map((item) => ({
                     producto_id: item.producto_id,
                     cantidad: item.cantidad,
@@ -381,6 +425,7 @@ export default function Checkout({ canLogin }) {
         openWhatsApp(message);
         clearCart();
         quitarCodigoDescuento();
+        setFormaPago(null);
         router.visit(route('confirmacion.index'));
     };
 
@@ -647,6 +692,11 @@ export default function Checkout({ canLogin }) {
                                 onAplicarCodigo={aplicarCodigoDescuento}
                                 onQuitarCodigo={quitarCodigoDescuento}
                                 codigoDescuentoError={codigoDescuentoError}
+                                planesPagoTarjeta={planesPagoTarjeta}
+                                formaPagoSeleccionada={formaPagoSeleccionada}
+                                onSeleccionarFormaPago={setFormaPago}
+                                recargoFormaPago={recargoFormaPago}
+                                totalFinal={totalFinal}
                             />
                         </div>
                     </div>

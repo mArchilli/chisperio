@@ -1,9 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useCart } from '@/Context/CartContext';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
+import FormaPagoBlock from '@/Components/FormaPagoBlock';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 
 const formatPrice = (price) =>
@@ -266,6 +267,11 @@ function OrderSummary({
     validandoCodigo,
     onAplicarCodigo,
     onQuitarCodigo,
+    planesPagoTarjeta,
+    formaPagoSeleccionada,
+    onSeleccionarFormaPago,
+    recargoFormaPago,
+    totalFinal,
 }) {
     return (
         <aside
@@ -299,6 +305,12 @@ function OrderSummary({
                     />
                 </div>
 
+                <FormaPagoBlock
+                    planes={planesPagoTarjeta}
+                    seleccionado={formaPagoSeleccionada}
+                    onSeleccionar={onSeleccionarFormaPago}
+                />
+
                 <div className="mt-2 space-y-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                         <span className="font-medium text-[#81788a]">
@@ -312,6 +324,14 @@ function OrderSummary({
                                 Descuento <span className="text-[#4b4356]">({codigoAplicado})</span>
                             </span>
                             <span className="font-extrabold text-[#1c8a4c]">-{formatPrice(montoDescuento)}</span>
+                        </div>
+                    )}
+                    {formaPagoSeleccionada && recargoFormaPago && (
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="font-medium text-[#81788a]">
+                                Recargo <span className="text-[#4b4356]">({formaPagoSeleccionada.nombre})</span>
+                            </span>
+                            <span className="font-extrabold text-[#1c1b1b]">+{formatPrice(recargoFormaPago.recargo_monto)}</span>
                         </div>
                     )}
                     <div className="flex items-start justify-between gap-4">
@@ -340,9 +360,16 @@ function OrderSummary({
                             </p>
                         </div>
                         <p className="text-[clamp(1.8rem,7vw,2.4rem)] font-black leading-none tracking-[-0.04em] text-[#6000ca]">
-                            {formatPrice(totalConDescuento)}
+                            {formatPrice(totalFinal)}
                         </p>
                     </div>
+                    {formaPagoSeleccionada && recargoFormaPago && (
+                        <p className="mt-2 text-right text-xs font-semibold text-[#4b4356]">
+                            {formaPagoSeleccionada.cuotas === 1
+                                ? `1 cuota de ${formatPrice(recargoFormaPago.monto_por_cuota)}`
+                                : `${formaPagoSeleccionada.cuotas} cuotas de ${formatPrice(recargoFormaPago.monto_por_cuota)} c/u`}
+                        </p>
+                    )}
                 </div>
 
                 {hayItemsSinStock ? (
@@ -403,6 +430,7 @@ function OrderSummary({
 }
 
 export default function Carrito({ canLogin, configuracionEnvio }) {
+    const { planesPagoTarjeta } = usePage().props;
     const {
         items,
         removeFromCart,
@@ -417,6 +445,10 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
         validandoCodigo,
         aplicarCodigoDescuento,
         quitarCodigoDescuento,
+        formaPagoSeleccionada,
+        setFormaPago,
+        recargoFormaPago,
+        totalFinal,
     } = useCart();
     const montoMinimoEnvio = configuracionEnvio?.montoMinimo ?? 0;
     // OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre el total
@@ -494,6 +526,11 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
                                         validandoCodigo={validandoCodigo}
                                         onAplicarCodigo={aplicarCodigoDescuento}
                                         onQuitarCodigo={quitarCodigoDescuento}
+                                        planesPagoTarjeta={planesPagoTarjeta}
+                                        formaPagoSeleccionada={formaPagoSeleccionada}
+                                        onSeleccionarFormaPago={setFormaPago}
+                                        recargoFormaPago={recargoFormaPago}
+                                        totalFinal={totalFinal}
                                     />
                                 </div>
                             </div>

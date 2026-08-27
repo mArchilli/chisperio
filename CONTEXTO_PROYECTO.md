@@ -51,6 +51,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 | `movimientos_stock` | producto_id, **producto_variante_id** (nullable FK, `nullOnDelete` — si está seteado, el movimiento es del stock de la variante y no del producto), pedido_id, cantidad (con signo), motivo(`pedido_creado`\|`pedido_cancelado`\|`ajuste_manual`), stock_resultante |
 | `configuracion_envio` | monto_minimo (decimal, `0` = feature de envío gratis desactivada) — fila única |
 | `codigos_descuento` | codigo(unique), tipo_descuento, valor_descuento, activo, vigente_desde/hasta, limite_usos, usos_actuales |
+| `documentos` | titulo(150), descripcion(text, nullable), **tipo**(`link`\|`pdf`), url(nullable — solo si `tipo=link`), ruta(nullable — solo si `tipo=pdf`, path dentro de `public/`), orden, is_active — sección de documentación para vendedores (manuales, instructivos) |
 
 **Seeders** (`database/seeders/`): `UserSeeder` (1 admin), `CategoriaSeeder` (6 categorías), `SubcategoriaSeeder`, `ProductoSeeder` (**3 "Producto de Prueba" con escalas de precio, explícitamente temporales** — el catálogo real se carga a mano desde el panel admin; el seeder viejo que importaba el catálogo real desde un CSV de WordPress fue eliminado).
 
@@ -69,6 +70,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 - **Pedido** — `items()`, `movimientosStock()`, `codigoDescuento()`, cast `estado` a `EstadoPedido`, `scopeFacturables()` (excluye cancelados).
 - **PedidoItem** — `pedido()`, `producto()`, `productoVariante()`. Guarda un snapshot completo de la variante/addons/color elegidos al momento de la compra (ver tabla en §3), independiente de que esas filas sigan existiendo o cambien después.
 - **MovimientoStock**, **CodigoDescuento** (`estaVigente()`, `yaComenzo()`, `yaTermino()`, `tieneUsosDisponibles()`), **ConfiguracionEnvio** (`static obtener()`, firstOrCreate).
+- **Documento** — cast `tipo` a `TipoDocumento`, `scopeActivos()`.
 
 ## 5. Enums (`app/Enums/`)
 
@@ -77,6 +79,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 - **TipoDescuento**: `Porcentaje` | `Fijo`.
 - **AlcanceOferta**: `Todos` | `Especifico` (a una escala de precio puntual).
 - **MotivoMovimientoStock**: `PedidoCreado` | `PedidoCancelado` | `AjusteManual`.
+- **TipoDocumento**: `Link` | `Pdf`, con `label()`.
 
 ## 6. Servicios (`app/Services/`)
 
@@ -87,7 +90,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 ## 7. Rutas
 
-**`routes/web.php`** — públicas: `/`, `/tienda` (index con filtros `categoria`/`subcategoria`/`q`/`filter=destacados|ofertas`, show), `/contacto`, `/mayoristas`, `/carrito`, `/checkout` (GET vista + `POST checkout.store`), `/confirmacion-pedido`. Auth genérico: `/profile`, `/dashboard`. Admin (`middleware('auth')`, algunas rutas de `destroy` además con `role:admin`): `admin/categorias|subcategorias|productos|ofertas|codigos-descuento` (CRUD resource), `admin/pedidos` (index/show/cambiar-estado), y **solo admin**: `admin/metricas`, `admin/usuarios`, `admin/configuracion/envio`.
+**`routes/web.php`** — públicas: `/`, `/tienda` (index con filtros `categoria`/`subcategoria`/`q`/`filter=destacados|ofertas`, show), `/contacto`, `/mayoristas`, `/carrito`, `/checkout` (GET vista + `POST checkout.store`), `/confirmacion-pedido`. Auth genérico (`middleware('auth')`): `/profile`, `/dashboard`, `admin/pedidos` (index/show/cambiar-estado, vendedor y admin), `admin/precios` (solo lectura del catálogo completo — precios/escalas/variantes/addons — pensada para que el vendedor consulte sin poder tocar nada), `admin/documentos` (GET index — el vendedor ve solo los activos, el admin ve todos). **El CRUD real de catálogo quedó reservado a `role:admin`** (ya no es solo `destroy`, es create/store/edit/update/destroy completo): `admin/categorias|subcategorias|productos|ofertas|codigos-descuento|addons` (resource), más `admin/documentos/{create,store,edit,update,destroy,toggle-active}`. **Solo admin** además: `admin/metricas`, `admin/usuarios`, `admin/configuracion/envio`.
 
 **`routes/api.php`** — `GET /api/productos/{producto}/precio`, `POST /api/codigos-descuento/validar` (público, usado por el carrito/checkout para previsualizar un código).
 
@@ -108,6 +111,9 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 - **MetricasController** — facturación (totales, comparación de período, series, top 5 productos).
 - **DashboardController** — stats generales para `/dashboard`.
 - **ProfileController**, **Auth/\*** — Breeze estándar.
+- **AddonController** — CRUD admin de add-ons (`role:admin`). `index` calcula `usado` con un `EXISTS`/`JSON_CONTAINS` correlacionado contra `pedido_items.addons_seleccionados` en una sola query (no hay FK real, el addon queda snapshoteado ahí — mismo patrón que `usos_actuales` en `CodigoDescuentoController`); `destroy` rechaza con 422 si el addon ya fue usado en algún pedido (solo se puede desactivar).
+- **PrecioController** — `index()` de solo lectura para vendedor y admin: catálogo completo con categorías/subcategorías, escalas de precio, variantes activas y add-ons activos. Sin ningún CRUD, es la vista que reemplaza el acceso directo del vendedor a `admin/productos`.
+- **DocumentoController** — CRUD completo (alta/edición/borrado bajo `role:admin`; el `index` GET es accesible a cualquier autenticado, filtrado a `activos()` si no es admin). Guarda PDFs en `public/{config('documentos.pdf_path')}` (default `docs/pdfs/`, configurable vía `DOCUMENTOS_PDF_PATH` — no seteada ni en `.env` ni en `.env.example`, ver §14); si el tipo es `link` en vez de `pdf` no sube archivo, solo guarda la URL. Al editar un documento pdf con archivo nuevo, o al pasarlo a tipo link, borra el archivo físico viejo.
 
 ## 9. Frontend — Páginas (`resources/js/Pages/`)
 
@@ -115,7 +121,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 **Auth/Profile**: Breeze estándar (sin Register).
 
-**Admin**: `Admin/Categorias|Subcategorias|Productos|Ofertas|CodigosDescuento/*` (CRUD), `Admin/Pedidos/{Index,Show}` (gestión de estado, historial de stock), `Admin/Metricas/Index` (gráfico de facturación), `Admin/Usuarios/*` (gestión de roles), `Admin/ConfiguracionEnvio/Edit`.
+**Admin**: `Admin/Categorias|Subcategorias|Productos|Ofertas|CodigosDescuento|Addons/*` (CRUD, todos `role:admin`), `Admin/Pedidos/{Index,Show}` (gestión de estado, historial de stock — vendedor y admin), `Admin/Precios/Index` (catálogo de solo lectura para el vendedor), `Admin/Documentos/{Index,Create,Edit}` (documentación para vendedores — el listado lo ven ambos roles, alta/edición reservada a admin), `Admin/Metricas/Index` (gráfico de facturación), `Admin/Usuarios/*` (gestión de roles), `Admin/ConfiguracionEnvio/Edit`.
 
 ## 10. Frontend — Componentes, Context, Hooks, Lib
 
@@ -137,7 +143,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 ## 11. Sistema de roles
 
-Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`admin`/`vendedor`) y el middleware `EnsureUserHasRole` (alias `role`, ver `bootstrap/app.php`). Un vendedor puede operar productos/pedidos pero no accede a `admin/metricas`, `admin/usuarios` ni `admin/configuracion/envio`, y las acciones de `destroy` (borrar categoría/producto/oferta/código) están reservadas a `role:admin`. El admin no se puede eliminar ni degradar a sí mismo si es el único admin del sistema.
+Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`admin`/`vendedor`) y el middleware `EnsureUserHasRole` (alias `role`, ver `bootstrap/app.php`). El vendedor **ya no puede operar el CRUD de catálogo** (cambio posterior a la versión anterior de este documento): categorías/subcategorías/productos/ofertas/códigos-descuento/add-ons son `role:admin` completo (create/store/edit/update/destroy, no solo `destroy`). El vendedor conserva: `admin/pedidos` (gestión de estado), `admin/precios` (catálogo de solo lectura vía `PrecioController`, reemplaza el acceso directo a productos) y `admin/documentos` (solo ve los activos). No accede a `admin/metricas`, `admin/usuarios` ni `admin/configuracion/envio`. El admin no se puede eliminar ni degradar a sí mismo si es el único admin del sistema.
 
 ## 12. Integración WhatsApp
 
@@ -156,6 +162,7 @@ Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`
 
 - **`.env.example` desactualizado**: sigue diciendo `DB_CONNECTION=sqlite` con placeholders comentados, cuando el proyecto real corre en MySQL. Convendría corregirlo para que un setup nuevo no arranque mal.
 - `PRODUCTOS_IMG_PATH`/`PRODUCTOS_VIDEO_PATH` están seteadas en `.env` real y consumidas por `config/productos.php`, pero **no están en `.env.example`**.
+- `DOCUMENTOS_PDF_PATH` (consumida por `config/documentos.php`, default `docs/pdfs/`) tampoco está en `.env.example` — mismo patrón de deuda que las de arriba.
 - `VITE_PRODUCT_IMAGES_PATH`/`VITE_PRODUCT_VIDEOS_PATH` (env vars con prefijo `VITE_`) existen en `.env` pero **no se usan en ningún lado del frontend** — config muerta, candidata a limpieza.
 - Número de WhatsApp sigue hardcodeado en 7 archivos (ver sección 12).
 - No hay registro de usuarios self-service (removido a propósito) — alta solo por seeder/admin.

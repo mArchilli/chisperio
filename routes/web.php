@@ -9,6 +9,7 @@ use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\PlanPagoTarjetaController;
 use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
@@ -172,6 +173,19 @@ Route::middleware('auth')->group(function () {
             'destroy' => 'addons.destroy',
         ]);
         Route::patch('admin/addons/{addon}/toggle-active', [AddonController::class, 'toggleActive'])->name('addons.toggle-active');
+
+        // Planes de pago con tarjeta — catálogo de recargos por cuotas, usado para
+        // calcular el recargo informativo del checkout (no procesa pagos).
+        Route::resource('admin/planes-pago', PlanPagoTarjetaController::class)->names([
+            'index' => 'planes-pago.index',
+            'create' => 'planes-pago.create',
+            'store' => 'planes-pago.store',
+            'show' => 'planes-pago.show',
+            'edit' => 'planes-pago.edit',
+            'update' => 'planes-pago.update',
+            'destroy' => 'planes-pago.destroy',
+        ]);
+        Route::patch('admin/planes-pago/{planes_pago}/toggle-active', [PlanPagoTarjetaController::class, 'toggleActive'])->name('planes-pago.toggle-active');
 
         // Documentación — alta/edición/borrado reservados a admin (ver admin/documentos GET arriba).
         Route::get('admin/documentos/create', [DocumentoController::class, 'create'])->name('documentos.create');

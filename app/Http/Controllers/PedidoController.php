@@ -9,9 +9,11 @@ use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
+use App\Models\PlanPagoTarjeta;
 use App\Models\Producto;
 use App\Services\CodigoDescuentoService;
 use App\Services\PricingService;
+use App\Services\RecargoPagoService;
 use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -143,7 +145,7 @@ class PedidoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, PricingService $pricingService, StockService $stockService, CodigoDescuentoService $codigoDescuentoService)
+    public function store(Request $request, PricingService $pricingService, StockService $stockService, CodigoDescuentoService $codigoDescuentoService, RecargoPagoService $recargoPagoService)
     {
         $validated = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
@@ -155,6 +157,7 @@ class PedidoController extends Controller
             'cliente_codigo_postal' => 'nullable|string|max:20',
             'observaciones' => 'nullable|string',
             'codigo_descuento' => 'nullable|string',
+            'plan_pago_tarjeta_id' => 'nullable|integer',
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|integer|exists:productos,id',
             'items.*.cantidad' => 'required|integer|min:1',
@@ -174,7 +177,7 @@ class PedidoController extends Controller
         }
 
         try {
-            $pedido = DB::transaction(function () use ($validated, $pricingService, $stockService, $codigoDescuentoService) {
+            $pedido = DB::transaction(function () use ($validated, $pricingService, $stockService, $codigoDescuentoService, $recargoPagoService) {
                 $productos = Producto::with(['escalasPrecio', 'ofertaVigente'])
                     ->whereIn('id', collect($validated['items'])->pluck('producto_id'))
                     ->get()
@@ -284,6 +287,42 @@ class PedidoController extends Controller
                     $subtotal
                 );
 
+                $total = round($subtotal - $datosDescuento['descuento_monto'], 2);
+
+                // Igual criterio que el código de descuento: el plan que manda el frontend es
+                // solo una preselección de UX, nunca la fuente de verdad. Se resuelve y valida
+                // acá, dentro de la transacción, contra el total ya recalculado server-side —
+                // nunca se calcula el recargo sobre un total que mande el frontend.
+                $datosPlanPago = [
+                    'plan_pago_tarjeta_id' => null,
+                    'plan_pago_nombre' => null,
+                    'plan_pago_cuotas' => null,
+                    'recargo_porcentaje' => null,
+                    'recargo_monto' => null,
+                    'total_con_recargo' => null,
+                ];
+
+                if (! empty($validated['plan_pago_tarjeta_id'])) {
+                    $plan = PlanPagoTarjeta::find($validated['plan_pago_tarjeta_id']);
+
+                    if ($plan === null || ! $plan->is_active) {
+                        throw ValidationException::withMessages([
+                            'plan_pago_tarjeta_id' => 'Esta forma de pago ya no está disponible. Elegí otra o pagá en efectivo/transferencia.',
+                        ]);
+                    }
+
+                    $recargo = $recargoPagoService->calcular($total, $plan);
+
+                    $datosPlanPago = [
+                        'plan_pago_tarjeta_id' => $plan->id,
+                        'plan_pago_nombre' => $plan->nombre,
+                        'plan_pago_cuotas' => $plan->cuotas,
+                        'recargo_porcentaje' => $plan->recargo_porcentaje,
+                        'recargo_monto' => $recargo['recargo_monto'],
+                        'total_con_recargo' => $recargo['total_con_recargo'],
+                    ];
+                }
+
                 $pedido = Pedido::create([
                     'cliente_nombre' => $validated['cliente_nombre'],
                     'cliente_dni' => $validated['cliente_dni'] ?? null,
@@ -294,13 +333,14 @@ class PedidoController extends Controller
                     'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
                     'observaciones' => $validated['observaciones'] ?? null,
                     'subtotal' => $subtotal,
-                    'total' => round($subtotal - $datosDescuento['descuento_monto'], 2),
+                    'total' => $total,
                     'estado' => EstadoPedido::Pendiente,
                     'codigo_descuento_id' => $datosDescuento['codigo_descuento_id'],
                     'codigo_descuento_texto' => $datosDescuento['codigo_descuento_texto'],
                     'codigo_descuento_tipo' => $datosDescuento['codigo_descuento_tipo'],
                     'codigo_descuento_valor' => $datosDescuento['codigo_descuento_valor'],
                     'descuento_monto' => $datosDescuento['descuento_monto'],
+                    ...$datosPlanPago,
                 ]);
 
                 $pedido->items()->createMany($itemsData);

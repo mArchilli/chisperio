@@ -17,6 +17,10 @@
  *   subtotal: number,
  *   codigoDescuento: string | null,
  *   montoDescuento: number,
+ *   formaPago: {
+ *     nombre: string, cuotas: number, recargoPorcentaje: number,
+ *     recargoMonto: number, montoPorCuota: number, totalConRecargo: number,
+ *   } | null,
  *   total: number,
  *   envioGratis: { alcanzado: boolean, montoMinimo: number } | null,
  * }
@@ -29,6 +33,10 @@ const formatPrice = (price) =>
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(price);
+
+// Mismo criterio de formateo que FormaPagoBlock.jsx: sin ceros de más (ej. "20%" en
+// vez de "20.00%"), porque acá va dentro de una oración, no en una etiqueta suelta.
+const formatPercent = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
 
 /**
  * Líneas de detalle de un item: cantidad + título + subtotal (ya con recargo de
@@ -74,7 +82,15 @@ export function buildOrderMessage(pedido) {
         '',
         `Subtotal: ${formatPrice(pedido.subtotal)}`,
         pedido.codigoDescuento ? `Descuento (${pedido.codigoDescuento}): -${formatPrice(pedido.montoDescuento)}` : null,
+        pedido.formaPago ? `Recargo (${pedido.formaPago.nombre}): +${formatPrice(pedido.formaPago.recargoMonto)}` : null,
         `*Total: ${formatPrice(pedido.total)} ARS*`,
+        pedido.formaPago
+            ? `💳 Forma de pago: ${pedido.formaPago.nombre} — ${
+                  pedido.formaPago.cuotas === 1
+                      ? `1 cuota de ${formatPrice(pedido.formaPago.montoPorCuota)}`
+                      : `${pedido.formaPago.cuotas} cuotas de ${formatPrice(pedido.formaPago.montoPorCuota)} c/u`
+              }`
+            : null,
         '',
         '📋 *Datos del cliente:*',
         `Nombre: ${cliente.nombre} ${cliente.apellido}`,
@@ -86,6 +102,20 @@ export function buildOrderMessage(pedido) {
         `Email: ${cliente.email}`,
         pedido.observaciones ? '' : null,
         pedido.observaciones ? `📝 *Observaciones:* ${pedido.observaciones}` : null,
+        pedido.formaPago ? '' : null,
+        // Bloque dirigido al vendedor, no solo informativo: tiene que poder generar el
+        // link de pago sin calcular nada ni volver a preguntarle al cliente. El monto
+        // del link es siempre totalConRecargo (el total real a cobrar con tarjeta), la
+        // misma cifra que ya vio el cliente en el checkout — nunca se recalcula acá.
+        pedido.formaPago
+            ? [
+                  `💳 Forma de pago: Tarjeta de crédito — ${pedido.formaPago.cuotas} cuota${
+                        pedido.formaPago.cuotas === 1 ? '' : 's'
+                    } sin interés mensual, recargo ${formatPercent(pedido.formaPago.recargoPorcentaje)}`,
+                  `Total a cobrar: ${formatPrice(pedido.formaPago.totalConRecargo)} (${formatPrice(pedido.formaPago.montoPorCuota)} c/u)`,
+                  `👉 Generar link de pago en Mercado Pago por ${formatPrice(pedido.formaPago.totalConRecargo)}`,
+              ].join('\n')
+            : null,
     ]
         .filter((linea) => linea !== null)
         .join('\n');

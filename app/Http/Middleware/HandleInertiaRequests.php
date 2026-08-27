@@ -41,6 +41,17 @@ class HandleInertiaRequests extends Middleware
             'configuracionEnvio' => [
                 'montoMinimo' => fn () => (float) \App\Models\ConfiguracionEnvio::obtener()->monto_minimo,
             ],
+            // Compartido globalmente (mismo criterio que configuracionEnvio) porque el
+            // simulador de recargo se usa en la ficha de producto y, en el paso
+            // siguiente, también en Carrito/Checkout sobre el total completo del pedido.
+            'planesPagoTarjeta' => fn () => \App\Models\PlanPagoTarjeta::activos()
+                ->get(['id', 'nombre', 'cuotas', 'recargo_porcentaje'])
+                ->map(fn ($plan) => [
+                    'id' => $plan->id,
+                    'nombre' => $plan->nombre,
+                    'cuotas' => $plan->cuotas,
+                    'recargo_porcentaje' => (float) $plan->recargo_porcentaje,
+                ]),
         ];
     }
 }

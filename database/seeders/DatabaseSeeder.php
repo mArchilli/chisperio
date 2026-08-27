@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             CategoriaSeeder::class,
             SubcategoriaSeeder::class,
             ProductoSeeder::class,
+            PlanPagoTarjetaSeeder::class,
         ]);
     }
 }

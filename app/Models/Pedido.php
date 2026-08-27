@@ -29,6 +29,12 @@ class Pedido extends Model
         'codigo_descuento_tipo',
         'codigo_descuento_valor',
         'descuento_monto',
+        'plan_pago_tarjeta_id',
+        'plan_pago_nombre',
+        'plan_pago_cuotas',
+        'recargo_porcentaje',
+        'recargo_monto',
+        'total_con_recargo',
     ];
 
     protected $casts = [
@@ -43,6 +49,10 @@ class Pedido extends Model
         'codigo_descuento_tipo' => TipoDescuento::class,
         'codigo_descuento_valor' => 'decimal:2',
         'descuento_monto' => 'decimal:2',
+        'plan_pago_cuotas' => 'integer',
+        'recargo_porcentaje' => 'decimal:2',
+        'recargo_monto' => 'decimal:2',
+        'total_con_recargo' => 'decimal:2',
     ];
 
     public function items(): HasMany
@@ -58,6 +68,11 @@ class Pedido extends Model
     public function codigoDescuento(): BelongsTo
     {
         return $this->belongsTo(CodigoDescuento::class, 'codigo_descuento_id');
+    }
+
+    public function planPagoTarjeta(): BelongsTo
+    {
+        return $this->belongsTo(PlanPagoTarjeta::class, 'plan_pago_tarjeta_id');
     }
 
     public function scopeFacturables(Builder $query): Builder

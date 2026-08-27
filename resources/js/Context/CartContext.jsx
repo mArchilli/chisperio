@@ -2,10 +2,12 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import toast from 'react-hot-toast';
 import { resolverPrecio, redondear2 } from '@/lib/pricing';
 import { cantidadMaxima } from '@/lib/stock';
+import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'chisperio_cart';
 const STORAGE_KEY_CODIGO = 'chisperio_cart_codigo';
+const STORAGE_KEY_FORMA_PAGO = 'chisperio_forma_pago';
 
 /**
  * Subconjunto de `producto` que necesita resolverPrecio (precio base, escalas,
@@ -146,6 +148,33 @@ function loadFromStorage() {
 function loadCodigoFromStorage() {
     try {
         return localStorage.getItem(STORAGE_KEY_CODIGO) || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Snapshot de un plan de pago con tarjeta (ver planesPagoTarjeta en
+ * HandleInertiaRequests) tal cual lo necesita recargoPago.js, para no depender
+ * de que el objeto completo del plan siga vigente/activo en un render futuro.
+ */
+function snapshotPlanPago(plan) {
+    return {
+        planId: plan.planId ?? plan.id,
+        nombre: plan.nombre,
+        cuotas: plan.cuotas,
+        recargoPorcentaje: plan.recargoPorcentaje ?? plan.recargo_porcentaje,
+    };
+}
+
+function loadFormaPagoFromStorage() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY_FORMA_PAGO);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        if (typeof parsed.planId === 'undefined' || typeof parsed.cuotas === 'undefined') return null;
+        return snapshotPlanPago(parsed);
     } catch {
         return null;
     }
@@ -496,6 +525,56 @@ export function CartProvider({ children }) {
     // a checkout — `subtotal` sigue siendo la base del envío gratis, nunca este valor.
     const totalConDescuento = redondear2(subtotal - montoDescuento);
 
+    // --- Forma de pago sugerida ---
+    // Elegida en ShowProduct (paso 2 del simulador de un producto puntual) pero
+    // vive a nivel de todo el pedido, no de una línea del carrito: se persiste
+    // aparte (STORAGE_KEY_FORMA_PAGO) para que Carrito y Checkout la lean y el
+    // cliente la pueda cambiar/quitar después sin tocar las líneas de productos.
+    // Gana la última elección — seleccionar un plan desde cualquier producto
+    // reemplaza el que hubiera quedado guardado de una visita a otro producto.
+    const [formaPagoSeleccionada, setFormaPagoState] = useState(loadFormaPagoFromStorage);
+
+    useEffect(() => {
+        try {
+            if (formaPagoSeleccionada) {
+                localStorage.setItem(STORAGE_KEY_FORMA_PAGO, JSON.stringify(formaPagoSeleccionada));
+            } else {
+                localStorage.removeItem(STORAGE_KEY_FORMA_PAGO);
+            }
+        } catch {}
+    }, [formaPagoSeleccionada]);
+
+    const setFormaPago = useCallback((plan) => {
+        setFormaPagoState(plan ? snapshotPlanPago(plan) : null);
+    }, []);
+
+    // Recargo de la forma de pago sugerida sobre el total que el cliente realmente
+    // va a pagar (`totalConDescuento`, ya con el código de descuento aplicado si
+    // corresponde) — no sobre el subtotal bruto, para no cobrar recargo de tarjeta
+    // sobre un monto que el descuento ya bajó. Se recalcula en cada render en vez
+    // de guardarse fijo, igual que itemsConPrecio, para no arrastrar un monto viejo
+    // si cambia el carrito o el descuento. calcularRecargoPago espera
+    // `cuotas`/`recargo_porcentaje` (mismo shape que manda el backend); el
+    // snapshot guarda `recargoPorcentaje` en camelCase, así que se traduce acá en
+    // vez de duplicar ese shape en el storage.
+    const recargoFormaPago = useMemo(
+        () =>
+            formaPagoSeleccionada
+                ? calcularRecargoPago(totalConDescuento, {
+                      cuotas: formaPagoSeleccionada.cuotas,
+                      recargo_porcentaje: formaPagoSeleccionada.recargoPorcentaje,
+                  })
+                : null,
+        [formaPagoSeleccionada, totalConDescuento]
+    );
+
+    // Única fuente de verdad para "cuánto paga el cliente en definitiva": con
+    // efectivo/transferencia es totalConDescuento tal cual (nada cambia respecto
+    // a hoy), con un plan de tarjeta seleccionado ya incluye su recargo. Carrito,
+    // Checkout y el mensaje de WhatsApp arman su desglose final a partir de este
+    // mismo valor, para no recalcularlo cada uno por su lado.
+    const totalFinal = recargoFormaPago ? recargoFormaPago.total_con_recargo : totalConDescuento;
+
     return (
         <CartContext.Provider
             value={{
@@ -518,6 +597,10 @@ export function CartProvider({ children }) {
                 totalConDescuento,
                 aplicarCodigoDescuento,
                 quitarCodigoDescuento,
+                formaPagoSeleccionada,
+                setFormaPago,
+                recargoFormaPago,
+                totalFinal,
             }}
         >
             {children}

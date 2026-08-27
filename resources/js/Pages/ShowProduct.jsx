@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
@@ -8,7 +8,8 @@ import ProductImageLightbox from '@/Components/ProductImageLightbox';
 import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
 import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
 import { useCart } from '@/Context/CartContext';
-import { resolverPrecio } from '@/lib/pricing';
+import { redondear2, resolverPrecio } from '@/lib/pricing';
+import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
 import { resolverMediaParaVariante } from '@/lib/media';
 import { cantidadMaxima, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
 
@@ -32,6 +33,10 @@ const formatPrice = (price) =>
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(price);
+
+// Evita "20.00%" cuando el recargo cargado en el admin es un entero (caso más común)
+// y "12.50%" en vez de "12.5%" cuando tiene un solo decimal significativo.
+const formatPercent = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
 
 function ArrowIcon({ className = 'h-4 w-4' }) {
     return (
@@ -275,11 +280,13 @@ function RelatedCard({ producto }) {
 }
 
 export default function ShowProduct({ producto, relacionados, canLogin }) {
+    const { planesPagoTarjeta } = usePage().props;
     const [qty, setQty] = useState(() => qtyInicialDesdeUrl(producto));
     const [isFav, setIsFav] = useState(false);
     const [expandDesc, setExpandDesc] = useState(false);
     const [toast, setToast] = useState(null);
-    const { addToCart: addToCartContext } = useCart();
+    const [planPagoId, setPlanPagoId] = useState(null);
+    const { addToCart: addToCartContext, setFormaPago } = useCart();
 
     const variantes = producto.variantes ?? [];
     const addons = producto.addons ?? [];
@@ -346,6 +353,38 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const tieneDescuento = precioInfo.precioFinal < precioInfo.precioBase;
     const ahorroPorcentaje = Math.round(precioInfo.ahorroTotalPorcentaje);
     const tieneOpciones = precioInfo.recargoVariante > 0 || precioInfo.addonsTotal > 0;
+
+    // Simulador de recargo por tarjeta: toggle (clickear el plan ya elegido lo
+    // deselecciona). Corre sobre el total de ESTE producto (precio final por unidad,
+    // ya con variante/add-ons, multiplicado por la cantidad elegida) — no sobre el
+    // total del carrito, eso se simula recién en el paso de Carrito/Checkout.
+    const planesPagoActivos = planesPagoTarjeta ?? [];
+    const planPagoSeleccionado = planesPagoActivos.find((p) => p.id === planPagoId) ?? null;
+    const totalProductoActual = useMemo(
+        () => redondear2(precioInfo.precioFinalConOpciones * qty),
+        [precioInfo.precioFinalConOpciones, qty]
+    );
+    const recargoInfo = useMemo(
+        () => (planPagoSeleccionado ? calcularRecargoPago(totalProductoActual, planPagoSeleccionado) : null),
+        [planPagoSeleccionado, totalProductoActual]
+    );
+    // Además de la simulación local (recargoInfo, sobre el total de este producto),
+    // deja/quita la forma de pago sugerida para todo el pedido (CartContext) — la
+    // lee el carrito y el checkout para el total final (paso 4), y el cliente la
+    // puede cambiar después. Un click en otro producto con otro plan reemplaza la
+    // sugerencia anterior, no se acumulan planes de productos distintos.
+    const togglePlanPago = (id) => {
+        setPlanPagoId((prev) => {
+            const deseleccionando = prev === id;
+            if (deseleccionando) {
+                setFormaPago(null);
+                return null;
+            }
+            const plan = planesPagoActivos.find((p) => p.id === id) ?? null;
+            setFormaPago(plan);
+            return id;
+        });
+    };
 
     // Reclampea qty si la variante elegida tiene menos stock que la cantidad ya tildada.
     useEffect(() => {
@@ -547,6 +586,49 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                             </h1>
 
                             <div className="mt-6 rounded-[1.5rem] border border-[#6000ca]/[0.08] bg-[#f7f4fa] p-5 sm:p-6">
+                                {planesPagoActivos.length > 0 && (
+                                    <div className="mb-4 border-b border-[#6000ca]/10 pb-4">
+                                        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
+                                            Simulá el pago con tarjeta
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {planesPagoActivos.map((plan) => {
+                                                const activo = plan.id === planPagoId;
+                                                return (
+                                                    <button
+                                                        key={plan.id}
+                                                        type="button"
+                                                        onClick={() => togglePlanPago(plan.id)}
+                                                        aria-pressed={activo}
+                                                        className={`rounded-full border px-3.5 py-2 text-xs font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 ${
+                                                            activo
+                                                                ? 'border-[#6000ca] bg-[#6000ca] text-white'
+                                                                : 'border-[#6000ca]/20 bg-white text-[#6000ca] hover:border-[#6000ca]/40'
+                                                        }`}
+                                                    >
+                                                        {plan.cuotas === 1 ? '1 cuota' : `${plan.cuotas} cuotas`}
+                                                        {Number(plan.recargo_porcentaje) > 0 && ` +${formatPercent(plan.recargo_porcentaje)}`}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {recargoInfo && planPagoSeleccionado && (
+                                            <p className="mt-3 text-xs font-semibold text-[#4b4356]">
+                                                Total: {formatPrice(recargoInfo.total_con_recargo)} —{' '}
+                                                {planPagoSeleccionado.cuotas === 1
+                                                    ? `1 cuota de ${formatPrice(recargoInfo.monto_por_cuota)}`
+                                                    : `${planPagoSeleccionado.cuotas} cuotas de ${formatPrice(recargoInfo.monto_por_cuota)} c/u`}
+                                                {recargoInfo.recargo_monto > 0 && ` (recargo ${formatPrice(recargoInfo.recargo_monto)} incluido)`}
+                                            </p>
+                                        )}
+
+                                        <p className="mt-2 text-[11px] font-medium text-[#81788a]">
+                                            Esta simulación es sobre este producto puntual. El recargo real del pedido se calcula sobre el total completo de tu compra al momento de pagar.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
                                     <span className="text-[clamp(2.25rem,10vw,3.25rem)] font-black leading-none tracking-[-0.045em] text-[#6000ca]">
                                         {formatPrice(precioInfo.precioFinal)}

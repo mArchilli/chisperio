@@ -17,6 +17,8 @@ const formatearPrecio = (precio) =>
         maximumFractionDigits: 2,
     }).format(precio);
 
+const formatearPorcentaje = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
+
 const formatearFecha = (fecha) =>
     new Date(fecha).toLocaleString('es-AR', {
         day: '2-digit',
@@ -214,15 +216,59 @@ export default function Show({ pedido }) {
                                                 </td>
                                             </tr>
                                         )}
+                                        {pedido.plan_pago_tarjeta_id && (
+                                            <tr className="bg-gray-50">
+                                                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-gray-600 text-right">
+                                                    Recargo ({pedido.plan_pago_nombre}, {formatearPorcentaje(pedido.recargo_porcentaje)})
+                                                </td>
+                                                <td className="px-6 py-3 text-sm font-semibold text-gray-900 text-right whitespace-nowrap">
+                                                    +{formatearPrecio(pedido.recargo_monto)}
+                                                </td>
+                                            </tr>
+                                        )}
                                         <tr className="bg-gray-50">
                                             <td colSpan={3} className="px-6 py-4 text-base font-bold text-gray-900 text-right">Total</td>
                                             <td className="px-6 py-4 text-base font-bold text-right whitespace-nowrap bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                                                {formatearPrecio(pedido.total)}
+                                                {formatearPrecio(pedido.plan_pago_tarjeta_id ? pedido.total_con_recargo : pedido.total)}
                                             </td>
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Forma de pago */}
+                    <div className="px-4 sm:px-0">
+                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4">Forma de pago</h3>
+                            {pedido.plan_pago_tarjeta_id ? (
+                                <div className="rounded-xl border-2 border-[#40B0C2] bg-[#40B0C2]/[0.06] p-5">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                Tarjeta de crédito — {pedido.plan_pago_nombre} ({formatearPorcentaje(pedido.recargo_porcentaje)} de recargo)
+                                            </p>
+                                            <p className="mt-1 text-xs text-gray-600">
+                                                {pedido.plan_pago_cuotas === 1
+                                                    ? '1 cuota sin interés mensual'
+                                                    : `${pedido.plan_pago_cuotas} cuotas sin interés mensual`}
+                                                {' '}de {formatearPrecio(pedido.total_con_recargo / pedido.plan_pago_cuotas)} c/u
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/70 border border-[#40B0C2]/30 px-4 py-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-600">
+                                            👉 Generar link de pago en Mercado Pago por
+                                        </span>
+                                        <span className="text-lg font-black text-[#40B0C2]">
+                                            {formatearPrecio(pedido.total_con_recargo)}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-700">Efectivo / Transferencia — sin recargo.</p>
+                            )}
                         </div>
                     </div>
 
