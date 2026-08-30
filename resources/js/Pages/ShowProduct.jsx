@@ -480,7 +480,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
 
     return (
         <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
-            <Head title={`${producto.titulo} — Chisperío`} />
+            <Head title={producto.titulo} />
             <LandingHeader canLogin={canLogin} />
 
             <main className="relative pb-28 md:pb-20">

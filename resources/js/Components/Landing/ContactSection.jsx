@@ -1,4 +1,9 @@
+import { useState } from 'react';
 import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
+import { WHATSAPP_SUCURSALES } from '@/lib/whatsapp';
+import ElegirSucursalModal from '@/Components/ElegirSucursalModal';
+
+const TIKTOK_URL = 'https://www.tiktok.com/@chisperio.argenti';
 
 function WhatsAppIcon({ className = '' }) {
     return (
@@ -25,8 +30,8 @@ function TikTokIcon({ className = '' }) {
     );
 }
 
-// Completá cada `href` con la URL pública cuando las redes estén disponibles.
-// La tarjeta de WhatsApp no lleva `href`: abre el modal de selección de sucursal.
+// WhatsApp e Instagram no llevan `href`: abren un modal para elegir sucursal
+// (WhatsApp tiene un número por ciudad; Instagram, una cuenta por ciudad).
 const CONTACT_CHANNELS = [
     {
         id: 'whatsapp',
@@ -40,18 +45,26 @@ const CONTACT_CHANNELS = [
     {
         id: 'instagram',
         name: 'Instagram',
-        description: 'Chatea con nosotros y enterate de todos los productos con nuestros reels e historias.',
+        description: 'Enterate de todos los productos con nuestros reels e historias. Tenemos una cuenta por sucursal.',
         href: null,
+        instagram: true,
         icon: InstagramIcon,
     },
     {
         id: 'tiktok',
         name: 'TikTok',
         description: 'Mirá nuestros efectos en acción y encontrá inspiración para tu próxima celebración.',
-        href: null,
+        href: TIKTOK_URL,
         icon: TikTokIcon,
     },
 ];
+
+const SUCURSALES_INSTAGRAM = WHATSAPP_SUCURSALES.map((sucursal) => ({
+    id: sucursal.id,
+    nombre: sucursal.nombre,
+    detalle: sucursal.instagramHandle,
+    href: sucursal.instagram,
+}));
 
 function CardContent({ channel }) {
     const Icon = channel.icon;
@@ -74,16 +87,16 @@ function CardContent({ channel }) {
     );
 }
 
-function ContactCard({ channel, onWhatsApp }) {
+function ContactCard({ channel, onWhatsApp, onInstagram }) {
     const hasDestination = Boolean(channel.href);
     const baseClassName = 'relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-[#6000ca]/30 bg-white p-4 shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] sm:p-5 md:rounded-[2rem] md:p-6';
     const interactiveClassName = `group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca] hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 active:scale-[0.99] motion-reduce:transform-none ${baseClassName}`;
 
-    if (channel.whatsapp) {
+    if (channel.whatsapp || channel.instagram) {
         return (
             <button
                 type="button"
-                onClick={() => onWhatsApp(channel.message)}
+                onClick={channel.whatsapp ? () => onWhatsApp(channel.message) : onInstagram}
                 aria-label={`Contactar por ${channel.name}`}
                 className={`w-full text-left ${interactiveClassName}`}
             >
@@ -113,6 +126,7 @@ function ContactCard({ channel, onWhatsApp }) {
 
 export default function ContactSection() {
     const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
+    const [instagramAbierto, setInstagramAbierto] = useState(false);
 
     return (
         <section
@@ -135,10 +149,24 @@ export default function ContactSection() {
 
                 <div className="mt-10 grid grid-cols-1 gap-4 md:mt-12 md:grid-cols-3 md:gap-5 lg:gap-6">
                     {CONTACT_CHANNELS.map((channel) => (
-                        <ContactCard key={channel.id} channel={channel} onWhatsApp={abrirSelectorWhatsApp} />
+                        <ContactCard
+                            key={channel.id}
+                            channel={channel}
+                            onWhatsApp={abrirSelectorWhatsApp}
+                            onInstagram={() => setInstagramAbierto(true)}
+                        />
                     ))}
                 </div>
             </div>
+
+            <ElegirSucursalModal
+                abierto={instagramAbierto}
+                onClose={() => setInstagramAbierto(false)}
+                titulo="Elegí una sucursal"
+                subtitulo="Seguinos en la cuenta de Instagram de tu sucursal más cercana."
+                icono={InstagramIcon}
+                opciones={SUCURSALES_INSTAGRAM}
+            />
         </section>
     );
 }

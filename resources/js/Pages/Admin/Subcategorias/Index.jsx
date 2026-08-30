@@ -64,7 +64,7 @@ export default function Index({ subcategorias, categoria, categoriaId }) {
                 </div>
             }
         >
-            <Head title={categoria ? `Subcategorías - ${categoria.nombre}` : 'Subcategorías'} />
+            <Head title={categoria ? `Subcategorías de ${categoria.nombre}` : 'Subcategorías'} />
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">

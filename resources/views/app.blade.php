@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ config('app.name', 'Chisperío') }}</title>
 
         <!-- Favicons -->
         <link rel="icon" type="image/png" href="/images/favicons/favicon-96x96.png" sizes="96x96">

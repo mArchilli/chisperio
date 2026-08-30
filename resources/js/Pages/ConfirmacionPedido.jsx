@@ -56,7 +56,7 @@ export default function ConfirmacionPedido({ canLogin }) {
 
     return (
         <div className="min-h-screen flex flex-col bg-[#fcf9f8] text-[#1c1b1b] antialiased">
-            <Head title="Pedido confirmado — Chisperío" />
+            <Head title="Pedido confirmado" />
 
             <LandingHeader canLogin={canLogin} />
 

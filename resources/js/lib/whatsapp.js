@@ -42,12 +42,16 @@ export const WHATSAPP_SUCURSALES = [
         nombre: 'Buenos Aires',
         numero: '5491127930349',
         telefonoLegible: '+54 9 11 2793-0349',
+        instagram: 'https://www.instagram.com/chisperio.argentina/',
+        instagramHandle: '@chisperio.argentina',
     },
     {
         id: 'cordoba',
         nombre: 'Córdoba',
         numero: '5493516766208',
         telefonoLegible: '+54 9 3516 76-6208',
+        instagram: 'https://www.instagram.com/chisperio.cordoba/',
+        instagramHandle: '@chisperio.cordoba',
     },
 ];
 

@@ -10,10 +10,12 @@ import { WhatsAppSucursalProvider } from './Context/WhatsAppSucursalContext';
 import WhatsAppButton from './Components/WhatsAppButton';
 import CartButton from './Components/CartButton';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Chisperío';
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    // Cada página pasa solo su nombre en <Head title="…">; acá se le agrega la
+    // marca una sola vez. Sin título (caso raro), la pestaña muestra solo "Chisperío".
+    title: (title) => (title ? `${title} — ${appName}` : appName),
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,

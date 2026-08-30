@@ -452,7 +452,7 @@ export default function Checkout({ canLogin }) {
 
     return (
         <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
-            <Head title="Finalizar pedido — Chisperío" />
+            <Head title="Finalizar pedido" />
             <LandingHeader canLogin={canLogin} />
 
             <main className="relative pb-28 md:pb-24">

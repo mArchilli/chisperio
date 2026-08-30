@@ -6,7 +6,7 @@ import WholesalerSection from '@/Components/Landing/WholesalerSection';
 export default function Mayoristas({ canLogin }) {
     return (
         <div className="flex min-h-screen flex-col bg-[#fcf9f8] text-[#1c1b1b] antialiased">
-            <Head title="Compras mayoristas — Chisperío" />
+            <Head title="Compras mayoristas" />
             <LandingHeader canLogin={canLogin} />
 
             <main className="flex-1">

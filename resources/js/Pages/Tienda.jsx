@@ -452,7 +452,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
 
     return (
         <div className="min-h-screen bg-[#fcf9f8] text-[#1c1b1b] antialiased">
-            <Head title="Catálogo — Chisperío" />
+            <Head title="Catálogo" />
             <LandingHeader canLogin={canLogin} />
 
             <main className="w-full pb-6">
