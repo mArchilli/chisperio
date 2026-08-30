@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EstadoPedido;
+use App\Enums\Sucursal;
 use App\Enums\TipoDescuento;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ class Pedido extends Model
         'subtotal',
         'total',
         'estado',
+        'sucursal',
         'despachado_at',
         'codigo_descuento_id',
         'codigo_descuento_texto',
@@ -39,6 +41,7 @@ class Pedido extends Model
 
     protected $casts = [
         'estado' => EstadoPedido::class,
+        'sucursal' => Sucursal::class,
         'subtotal' => 'decimal:2',
         'total' => 'decimal:2',
         'despachado_at' => 'datetime',
@@ -78,5 +81,19 @@ class Pedido extends Model
     public function scopeFacturables(Builder $query): Builder
     {
         return $query->where('estado', '!=', EstadoPedido::Cancelado);
+    }
+
+    /**
+     * Restringe a los pedidos de una sucursal. `null` (admin sin filtro, o filtro
+     * "todas") no aplica ninguna restricción. Se usa desde PedidoController y
+     * DashboardController para separar lo que ve cada vendedor.
+     */
+    public function scopeDeSucursal(Builder $query, Sucursal|string|null $sucursal): Builder
+    {
+        if ($sucursal === null) {
+            return $query;
+        }
+
+        return $query->where('sucursal', $sucursal instanceof Sucursal ? $sucursal->value : $sucursal);
     }
 }

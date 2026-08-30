@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { WHATSAPP_SUCURSALES } from '@/lib/whatsapp';
 
 export default function Edit({ usuario }) {
     const { data, setData, put, processing, errors } = useForm({
@@ -9,6 +10,7 @@ export default function Edit({ usuario }) {
         password: '',
         password_confirmation: '',
         role: usuario.role || 'vendedor',
+        sucursal: usuario.sucursal || '',
     });
 
     const handleSubmit = (e) => {
@@ -106,6 +108,29 @@ export default function Edit({ usuario }) {
                                     </select>
                                     <InputError message={errors.role} className="mt-2" />
                                 </div>
+
+                                {data.role === 'vendedor' && (
+                                    <div className="mb-6">
+                                        <label htmlFor="sucursal" className="block text-sm font-bold text-gray-700 mb-2">
+                                            Sucursal <span className="text-[#A72DAB]">*</span>
+                                        </label>
+                                        <select
+                                            id="sucursal"
+                                            value={data.sucursal}
+                                            onChange={(e) => setData('sucursal', e.target.value)}
+                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                        >
+                                            <option value="" disabled>Elegí una sucursal</option>
+                                            {WHATSAPP_SUCURSALES.map((s) => (
+                                                <option key={s.id} value={s.id}>{s.nombre}</option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1.5 text-xs text-gray-500">
+                                            El vendedor solo verá y gestionará los pedidos de esta sucursal.
+                                        </p>
+                                        <InputError message={errors.sucursal} className="mt-2" />
+                                    </div>
+                                )}
 
                                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                                     <Link

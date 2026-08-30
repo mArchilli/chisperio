@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\RolUsuario;
+use App\Enums\Sucursal;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -37,6 +38,11 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'role' => RolUsuario::Vendedor,
+            // Todo vendedor tiene una sucursal (la exige UsuarioController). Por
+            // default Buenos Aires, que coincide con el default de la columna
+            // `pedidos.sucursal` — así los pedidos creados sin sucursal en los
+            // tests matchean un vendedor `->vendedor()` sin más setup.
+            'sucursal' => Sucursal::BuenosAires,
         ]);
     }
 }

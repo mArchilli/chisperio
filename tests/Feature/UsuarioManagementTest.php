@@ -45,10 +45,71 @@ class UsuarioManagementTest extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'role' => 'vendedor',
+            'sucursal' => 'cordoba',
         ]);
 
         $response->assertRedirect(route('usuarios.index'));
-        $this->assertDatabaseHas('users', ['email' => 'vendedor@chisperio.com', 'role' => RolUsuario::Vendedor->value]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'vendedor@chisperio.com',
+            'role' => RolUsuario::Vendedor->value,
+            'sucursal' => 'cordoba',
+        ]);
+    }
+
+    public function test_crear_vendedor_sin_sucursal_falla(): void
+    {
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->post(route('usuarios.store'), [
+            'name' => 'Vendedor Sin Sucursal',
+            'email' => 'sinsucursal@chisperio.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'vendedor',
+        ]);
+
+        $response->assertSessionHasErrors('sucursal');
+        $this->assertDatabaseMissing('users', ['email' => 'sinsucursal@chisperio.com']);
+    }
+
+    public function test_crear_admin_ignora_la_sucursal_enviada(): void
+    {
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->post(route('usuarios.store'), [
+            'name' => 'Otro Admin',
+            'email' => 'otroadmin@chisperio.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'admin',
+            'sucursal' => 'cordoba',
+        ]);
+
+        $response->assertRedirect(route('usuarios.index'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'otroadmin@chisperio.com',
+            'role' => RolUsuario::Admin->value,
+            'sucursal' => null,
+        ]);
+    }
+
+    public function test_crear_admin_acepta_sucursal_vacia_del_form(): void
+    {
+        // El form manda `sucursal: ''` para el campo oculto cuando el rol es admin.
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->post(route('usuarios.store'), [
+            'name' => 'Admin Form',
+            'email' => 'adminform@chisperio.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'admin',
+            'sucursal' => '',
+        ]);
+
+        $response->assertRedirect(route('usuarios.index'));
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['email' => 'adminform@chisperio.com', 'sucursal' => null]);
     }
 
     public function test_admin_puede_editar_nombre_y_rol_de_un_usuario(): void
@@ -74,6 +135,7 @@ class UsuarioManagementTest extends TestCase
             'name' => $admin->name,
             'email' => $admin->email,
             'role' => 'vendedor',
+            'sucursal' => 'buenos-aires',
         ]);
 
         $response->assertSessionHasErrors('role');
@@ -89,10 +151,15 @@ class UsuarioManagementTest extends TestCase
             'name' => $otroAdmin->name,
             'email' => $otroAdmin->email,
             'role' => 'vendedor',
+            'sucursal' => 'buenos-aires',
         ]);
 
         $response->assertRedirect(route('usuarios.index'));
-        $this->assertDatabaseHas('users', ['id' => $otroAdmin->id, 'role' => RolUsuario::Vendedor->value]);
+        $this->assertDatabaseHas('users', [
+            'id' => $otroAdmin->id,
+            'role' => RolUsuario::Vendedor->value,
+            'sucursal' => 'buenos-aires',
+        ]);
     }
 
     public function test_admin_puede_eliminar_un_vendedor(): void

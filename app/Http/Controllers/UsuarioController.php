@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RolUsuario;
+use App\Enums\Sucursal;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class UsuarioController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Usuarios/Index', [
-            'usuarios' => User::orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'usuarios' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'sucursal']),
         ]);
     }
 
@@ -34,6 +35,7 @@ class UsuarioController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:users,email',
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::enum(RolUsuario::class)],
+            'sucursal' => $this->reglaSucursal($request),
         ], $this->mensajes());
 
         User::create([
@@ -41,6 +43,7 @@ class UsuarioController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
+            'sucursal' => $this->sucursalSegunRol($validated),
             'email_verified_at' => now(), // alta manual por admin: se considera verificado
         ]);
 
@@ -50,7 +53,7 @@ class UsuarioController extends Controller
     public function edit(User $usuario): Response
     {
         return Inertia::render('Admin/Usuarios/Edit', [
-            'usuario' => $usuario->only('id', 'name', 'email', 'role'),
+            'usuario' => $usuario->only('id', 'name', 'email', 'role', 'sucursal'),
         ]);
     }
 
@@ -61,6 +64,7 @@ class UsuarioController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::enum(RolUsuario::class)],
+            'sucursal' => $this->reglaSucursal($request),
         ], $this->mensajes());
 
         $nuevoRol = RolUsuario::from($validated['role']);
@@ -75,6 +79,7 @@ class UsuarioController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $nuevoRol,
+            'sucursal' => $this->sucursalSegunRol($validated),
         ]);
 
         if (! empty($validated['password'])) {
@@ -106,6 +111,26 @@ class UsuarioController extends Controller
         return $usuario->esAdmin() && User::where('role', RolUsuario::Admin)->count() === 1;
     }
 
+    /**
+     * La sucursal es obligatoria y validada como enum solo cuando el rol es
+     * `vendedor` (define qué pedidos ve). Para admin queda libre — el form manda
+     * `sucursal: ''` para el campo oculto y `sucursalSegunRol()` la fuerza a null
+     * igual.
+     */
+    private function reglaSucursal(Request $request): array
+    {
+        return $request->input('role') === RolUsuario::Vendedor->value
+            ? ['required', Rule::enum(Sucursal::class)]
+            : ['nullable'];
+    }
+
+    private function sucursalSegunRol(array $validated): ?string
+    {
+        return RolUsuario::from($validated['role']) === RolUsuario::Vendedor
+            ? ($validated['sucursal'] ?? null)
+            : null;
+    }
+
     private function mensajes(): array
     {
         return [
@@ -116,6 +141,7 @@ class UsuarioController extends Controller
             'password.required' => 'La contraseña es obligatoria.',
             'password.confirmed' => 'La confirmación de contraseña no coincide.',
             'role.required' => 'Elegí un rol para el usuario.',
+            'sucursal.required' => 'Elegí una sucursal para el vendedor.',
         ];
     }
 }

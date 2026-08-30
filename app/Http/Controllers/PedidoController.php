@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EstadoPedido;
 use App\Enums\MotivoMovimientoStock;
+use App\Enums\Sucursal;
 use App\Exceptions\StockInsuficienteException;
 use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
@@ -29,13 +30,31 @@ class PedidoController extends Controller
      */
     public function index(Request $request)
     {
+        $esAdmin = $request->user()->esAdmin();
+
+        // Un vendedor sin sucursal está mal configurado: 403 explícito en vez de
+        // reventar más abajo o (peor) terminar sin filtro y viendo todo.
+        abort_if(! $esAdmin && $request->user()->sucursal === null, 403, 'Tu cuenta no tiene una sucursal asignada. Pedile a un administrador que la configure.');
+
         $request->validate([
             'estado' => ['nullable', 'string', Rule::in(['todos', ...array_column(EstadoPedido::cases(), 'value')])],
+            'sucursal' => ['nullable', 'string', Rule::in(['todas', ...array_column(Sucursal::cases(), 'value')])],
         ]);
 
         $filtroEstado = $request->filled('estado') ? $request->query('estado') : EstadoPedido::Pendiente->value;
 
+        // El vendedor queda fijado a su sucursal (no puede cambiarla); el admin
+        // elige, con "todas" (default) = sin filtro. La lista y TODAS las stats se
+        // scopean con el mismo criterio para que lo que se ve en las tarjetas
+        // coincida con la lista.
+        $filtroSucursal = $esAdmin
+            ? ($request->filled('sucursal') ? $request->query('sucursal') : 'todas')
+            : $request->user()->sucursal->value;
+
+        $sucursalScope = $filtroSucursal === 'todas' ? null : $filtroSucursal;
+
         $pedidos = Pedido::with('items')
+            ->deSucursal($sucursalScope)
             ->when($filtroEstado !== 'todos', fn ($query) => $query->where('estado', $filtroEstado))
             ->latest()
             ->paginate(15)
@@ -44,12 +63,17 @@ class PedidoController extends Controller
         return Inertia::render('Admin/Pedidos/Index', [
             'pedidos' => $pedidos,
             'filtroEstado' => $filtroEstado,
+            'filtroSucursal' => $filtroSucursal,
+            'puedeFiltrarSucursal' => $esAdmin,
             'stats' => [
-                'pendientes_count' => Pedido::where('estado', EstadoPedido::Pendiente)->count(),
-                'despachados_count' => Pedido::where('estado', EstadoPedido::Despachado)->count(),
-                'cancelados_count' => Pedido::where('estado', EstadoPedido::Cancelado)->count(),
-                'unidades_vendidas' => (int) PedidoItem::whereHas('pedido', fn ($query) => $query->facturables())->sum('cantidad'),
-                'facturacion' => (float) Pedido::facturables()->sum('total'),
+                'pendientes_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Pendiente)->count(),
+                'despachados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Despachado)->count(),
+                'cancelados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Cancelado)->count(),
+                'unidades_vendidas' => (int) PedidoItem::whereHas(
+                    'pedido',
+                    fn ($query) => $query->facturables()->deSucursal($sucursalScope)
+                )->sum('cantidad'),
+                'facturacion' => (float) Pedido::facturables()->deSucursal($sucursalScope)->sum('total'),
             ],
         ]);
     }
@@ -57,8 +81,10 @@ class PedidoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Pedido $pedido)
+    public function show(Request $request, Pedido $pedido)
     {
+        $this->autorizarSucursal($request, $pedido);
+
         $pedido->load([
             'items.producto.imagenPrincipal',
             'items.producto.categorias',
@@ -79,6 +105,8 @@ class PedidoController extends Controller
      */
     public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService, CodigoDescuentoService $codigoDescuentoService)
     {
+        $this->autorizarSucursal($request, $pedido);
+
         $validated = $request->validate([
             'estado' => ['required', new Enum(EstadoPedido::class)],
         ]);
@@ -121,6 +149,22 @@ class PedidoController extends Controller
     }
 
     /**
+     * Un vendedor solo puede ver/operar pedidos de su propia sucursal. El admin
+     * (sucursal null) pasa siempre. Cubre el acceso directo por URL a un pedido
+     * de otra sucursal, que el filtro del listado por sí solo no impediría.
+     */
+    private function autorizarSucursal(Request $request, Pedido $pedido): void
+    {
+        $usuario = $request->user();
+
+        abort_if(
+            ! $usuario->esAdmin() && $pedido->sucursal !== $usuario->sucursal,
+            403,
+            'Este pedido pertenece a otra sucursal.'
+        );
+    }
+
+    /**
      * Mensaje legible para una transición de estado no permitida. Cubre, en orden:
      * el pedido ya está cancelado (terminal), sigue en el mismo estado, o el caso
      * concreto que motiva esta regla (no se puede cancelar directo un despachado).
@@ -156,6 +200,9 @@ class PedidoController extends Controller
             'cliente_ciudad' => 'nullable|string|max:255',
             'cliente_codigo_postal' => 'nullable|string|max:20',
             'observaciones' => 'nullable|string',
+            // Sucursal con la que el cliente eligió coordinar (selector del checkout).
+            // Si no llega, cae en Buenos Aires (el número histórico) — ver abajo.
+            'sucursal' => ['nullable', Rule::enum(Sucursal::class)],
             'codigo_descuento' => 'nullable|string',
             'plan_pago_tarjeta_id' => 'nullable|integer',
             'items' => 'required|array|min:1',
@@ -335,6 +382,7 @@ class PedidoController extends Controller
                     'subtotal' => $subtotal,
                     'total' => $total,
                     'estado' => EstadoPedido::Pendiente,
+                    'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::BuenosAires,
                     'codigo_descuento_id' => $datosDescuento['codigo_descuento_id'],
                     'codigo_descuento_texto' => $datosDescuento['codigo_descuento_texto'],
                     'codigo_descuento_tipo' => $datosDescuento['codigo_descuento_tipo'],

@@ -2,11 +2,17 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ImageLightbox from '@/Components/ImageLightbox';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { SUCURSAL_LABELS } from '@/lib/whatsapp';
 
 const ESTADOS = {
     pendiente: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
     despachado: { label: 'Despachado', badge: 'bg-green-100 text-green-800 border border-green-300' },
     cancelado: { label: 'Cancelado', badge: 'bg-red-100 text-red-800 border border-red-300' },
+};
+
+const SUCURSAL_BADGE = {
+    'buenos-aires': 'bg-sky-100 text-sky-800 border border-sky-300',
+    'cordoba': 'bg-orange-100 text-orange-800 border border-orange-300',
 };
 
 const formatearPrecio = (precio) =>
@@ -65,13 +71,22 @@ export default function Show({ pedido }) {
                             </svg>
                             Volver a Pedidos
                         </Link>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
                                 Pedido #{pedido.id}
                             </h2>
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${estadoInfo.badge}`}>
                                 {estadoInfo.label}
                             </span>
+                            {SUCURSAL_LABELS[pedido.sucursal] && (
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${SUCURSAL_BADGE[pedido.sucursal] ?? 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
+                                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Sucursal {SUCURSAL_LABELS[pedido.sucursal]}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -94,6 +109,7 @@ export default function Show({ pedido }) {
                                 <DatoCliente label="Provincia" value={pedido.cliente_provincia} />
                                 <DatoCliente label="Ciudad" value={pedido.cliente_ciudad} />
                                 <DatoCliente label="Código Postal" value={pedido.cliente_codigo_postal} />
+                                <DatoCliente label="Sucursal de atención" value={SUCURSAL_LABELS[pedido.sucursal]} />
                                 <DatoCliente label="Fecha del pedido" value={formatearFecha(pedido.created_at)} />
                             </div>
 

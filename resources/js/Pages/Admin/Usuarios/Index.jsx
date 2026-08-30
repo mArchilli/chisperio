@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { SUCURSAL_LABELS } from '@/lib/whatsapp';
 
 export default function Index({ usuarios }) {
     const { auth, flash } = usePage().props;
@@ -79,6 +80,9 @@ export default function Index({ usuarios }) {
                                             <th className="px-6 py-4 text-left text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
                                                 Rol
                                             </th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                                Sucursal
+                                            </th>
                                             <th className="px-6 py-4 text-right text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
                                                 Acciones
                                             </th>
@@ -87,7 +91,7 @@ export default function Index({ usuarios }) {
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {usuarios.length === 0 ? (
                                             <tr>
-                                                <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
+                                                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                                                     No hay usuarios registrados
                                                 </td>
                                             </tr>
@@ -119,6 +123,9 @@ export default function Index({ usuarios }) {
                                                             }`}>
                                                                 {usuario.role === 'admin' ? 'Administrador' : 'Vendedor'}
                                                             </span>
+                                                        </td>
+                                                        <td className="px-6 py-5 text-sm text-gray-600">
+                                                            {SUCURSAL_LABELS[usuario.sucursal] || <span className="text-gray-300">—</span>}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                             <div className="flex justify-end gap-2">

@@ -2,10 +2,12 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import { SUCURSAL_LABELS } from '@/lib/whatsapp';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
     const isAdmin = user.role === 'admin';
+    const sucursalLabel = user.role === 'vendedor' ? SUCURSAL_LABELS[user.sucursal] : null;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         // Obtener el estado guardado del localStorage
@@ -134,6 +136,11 @@ export default function AuthenticatedLayout({ header, children }) {
                         <div className="mb-3 px-4 py-3 bg-gradient-to-br from-gray-50 to-white rounded-xl">
                             <div className="text-sm font-semibold text-gray-800">{user.name}</div>
                             <div className="text-xs text-gray-500 mt-1">{user.email}</div>
+                            {sucursalLabel && (
+                                <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#40B0C2]/10 px-2 py-0.5 text-[11px] font-semibold text-[#3a9db0]">
+                                    Sucursal {sucursalLabel}
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-1">
                             <Link
@@ -223,6 +230,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <div>
                                                 <div className="text-sm font-semibold text-gray-800">{user.name}</div>
                                                 <div className="text-xs text-gray-500">{user.email}</div>
+                                                {sucursalLabel && (
+                                                    <div className="text-[11px] font-semibold text-[#3a9db0]">Sucursal {sucursalLabel}</div>
+                                                )}
                                             </div>
                                         </div>
                                         <svg className="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">

@@ -27,11 +27,12 @@
  */
 
 /**
- * Sucursales de atención por WhatsApp. Ningún botón del sitio abre un número
- * directo: todos disparan el modal de selección de sucursal (ver
- * WhatsAppSucursalContext / WhatsAppSucursalModal) y recién ahí se arma la URL
- * final con el número de la sucursal elegida. Única fuente de verdad del número
- * — antes estaba hardcodeado en 7 archivos.
+ * Sucursales de atención por WhatsApp. La mayoría de los botones del sitio no
+ * abren un número directo: disparan el modal de selección de sucursal (ver
+ * WhatsAppSucursalContext / WhatsAppSucursalModal). El checkout es la excepción
+ * — ahí la sucursal se elige en el propio formulario (preseleccionada según la
+ * provincia, ver `sucursalSugeridaId`). Única fuente de verdad del número —
+ * antes estaba hardcodeado en 7 archivos.
  *
  * `numero`: formato internacional sin `+`, como esperan wa.me y whatsapp://.
  */
@@ -49,6 +50,52 @@ export const WHATSAPP_SUCURSALES = [
         telefonoLegible: '+54 9 3516 76-6208',
     },
 ];
+
+export const SUCURSAL_POR_DEFECTO_ID = 'buenos-aires';
+
+/** Mapa id de sucursal → nombre legible. Espeja `App\Enums\Sucursal::label()`. */
+export const SUCURSAL_LABELS = Object.fromEntries(
+    WHATSAPP_SUCURSALES.map((sucursal) => [sucursal.id, sucursal.nombre])
+);
+
+/**
+ * Provincias (tal cual las lista Checkout.jsx) que atiende cada sucursal, para
+ * SUGERIR una en el checkout según la provincia elegida — la persona siempre
+ * puede cambiarla. Criterio: centro + norte + Cuyo → Córdoba; el este, el
+ * litoral (Santa Fe / Entre Ríos incluidos) y toda la Patagonia → Buenos Aires.
+ * Cualquier provincia que no esté acá cae en la sucursal por defecto.
+ */
+const PROVINCIAS_POR_SUCURSAL = {
+    cordoba: [
+        'Córdoba',
+        'Santiago del Estero',
+        'Tucumán',
+        'Salta',
+        'Jujuy',
+        'Catamarca',
+        'La Rioja',
+        'San Juan',
+        'San Luis',
+        'Mendoza',
+    ],
+};
+
+/**
+ * Id de la sucursal sugerida para `provincia`. Sin provincia o sin match →
+ * SUCURSAL_POR_DEFECTO_ID ('buenos-aires').
+ */
+export function sucursalSugeridaId(provincia) {
+    if (!provincia) return SUCURSAL_POR_DEFECTO_ID;
+    const match = Object.entries(PROVINCIAS_POR_SUCURSAL).find(([, provincias]) =>
+        provincias.includes(provincia)
+    );
+    return match ? match[0] : SUCURSAL_POR_DEFECTO_ID;
+}
+
+/** Sucursal por id; cae en la primera de la lista si el id no existe. */
+export function getSucursal(id) {
+    return WHATSAPP_SUCURSALES.find((sucursal) => sucursal.id === id) ?? WHATSAPP_SUCURSALES[0];
+}
 
 export const WHATSAPP_MENSAJE_POR_DEFECTO = '¡Hola! Necesito asesoramiento 😊';
 

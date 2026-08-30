@@ -2,11 +2,17 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Dropdown from '@/Components/Dropdown';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { WHATSAPP_SUCURSALES, SUCURSAL_LABELS } from '@/lib/whatsapp';
 
 const ESTADOS = {
     pendiente: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
     despachado: { label: 'Despachado', badge: 'bg-green-100 text-green-800 border border-green-300' },
     cancelado: { label: 'Cancelado', badge: 'bg-red-100 text-red-800 border border-red-300' },
+};
+
+const SUCURSAL_BADGE = {
+    'buenos-aires': 'bg-sky-100 text-sky-800 border border-sky-300',
+    'cordoba': 'bg-orange-100 text-orange-800 border border-orange-300',
 };
 
 const formatearPrecio = (precio) =>
@@ -24,8 +30,13 @@ const formatearFechaCorta = (fecha) =>
         year: 'numeric',
     });
 
-export default function Index({ pedidos, filtroEstado, stats }) {
+export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFiltrarSucursal, stats }) {
     const [pedidoACancelar, setPedidoACancelar] = useState(null);
+
+    const sucursalTabs = [
+        { value: 'todas', label: 'Todas' },
+        ...WHATSAPP_SUCURSALES.map((s) => ({ value: s.id, label: s.nombre })),
+    ];
 
     const totalPedidos = stats.pendientes_count + stats.despachados_count + stats.cancelados_count;
 
@@ -99,13 +110,19 @@ export default function Index({ pedidos, filtroEstado, stats }) {
         { value: 'cancelado', label: 'Cancelados', count: stats.cancelados_count },
     ];
 
-    const filtrarPor = (estado) => {
+    // Un solo helper para los dos filtros (estado y sucursal): cada uno preserva
+    // el valor actual del otro, así cambiar de sucursal no resetea el tab de estado
+    // ni al revés.
+    const aplicarFiltros = (cambios) => {
         router.get(
             route('pedidos.index'),
-            { estado },
+            { estado: filtroEstado, sucursal: filtroSucursal, ...cambios },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
+
+    const filtrarPor = (estado) => aplicarFiltros({ estado });
+    const filtrarPorSucursal = (sucursal) => aplicarFiltros({ sucursal });
 
     const cambiarEstado = (pedido, nuevoEstado) => {
         router.patch(
@@ -125,11 +142,22 @@ export default function Index({ pedidos, filtroEstado, stats }) {
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
-                        Pedidos
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-500">Gestiona los pedidos realizados por los clientes</p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                            Pedidos
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500">Gestiona los pedidos realizados por los clientes</p>
+                    </div>
+                    {!puedeFiltrarSucursal && SUCURSAL_LABELS[filtroSucursal] && (
+                        <span className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${SUCURSAL_BADGE[filtroSucursal] ?? 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Sucursal {SUCURSAL_LABELS[filtroSucursal]}
+                        </span>
+                    )}
                 </div>
             }
         >
@@ -169,6 +197,30 @@ export default function Index({ pedidos, filtroEstado, stats }) {
                             })}
                         </div>
                     </div>
+
+                    {/* Filtro por sucursal — solo admin (el vendedor queda fijado a la suya) */}
+                    {puedeFiltrarSucursal && (
+                        <div className="mb-4 px-4 sm:px-0">
+                            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Sucursal</p>
+                                <div className="flex flex-wrap gap-2 sm:gap-3">
+                                    {sucursalTabs.map((tab) => (
+                                        <button
+                                            key={tab.value}
+                                            onClick={() => filtrarPorSucursal(tab.value)}
+                                            className={`inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                                filtroSucursal === tab.value
+                                                    ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Tabs de filtro por estado */}
                     <div className="mb-6 px-4 sm:px-0">
@@ -240,9 +292,21 @@ export default function Index({ pedidos, filtroEstado, stats }) {
                                                         {pedido.cliente_nombre}
                                                     </Link>
                                                 </h3>
-                                                <p className="text-sm text-gray-500 mb-4">
+                                                <p className="text-sm text-gray-500 mb-3">
                                                     {pedido.cliente_telefono || <span className="italic text-gray-400">Sin teléfono</span>}
                                                 </p>
+
+                                                {puedeFiltrarSucursal && SUCURSAL_LABELS[pedido.sucursal] && (
+                                                    <div className="mb-4">
+                                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${SUCURSAL_BADGE[pedido.sucursal] ?? 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
+                                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            </svg>
+                                                            {SUCURSAL_LABELS[pedido.sucursal]}
+                                                        </span>
+                                                    </div>
+                                                )}
 
                                                 {pedido.codigo_descuento_texto && (
                                                     <div className="mb-2 flex justify-end">

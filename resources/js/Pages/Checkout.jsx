@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useCart } from '@/Context/CartContext';
-import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 import FormaPagoBlock from '@/Components/FormaPagoBlock';
-import { buildOrderMessage } from '@/lib/whatsapp';
+import {
+    buildOrderMessage,
+    abrirWhatsApp,
+    getSucursal,
+    sucursalSugeridaId,
+    SUCURSAL_POR_DEFECTO_ID,
+    WHATSAPP_SUCURSALES,
+} from '@/lib/whatsapp';
 
 const PROVINCIAS = [
     'Buenos Aires',
@@ -229,7 +235,6 @@ function CheckoutSummary({
 
 /* ─── Página principal ─────────────────────────────────────────────────────── */
 export default function Checkout({ canLogin }) {
-    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
     const {
         items,
         subtotal,
@@ -271,6 +276,23 @@ export default function Checkout({ canLogin }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
     const [codigoDescuentoError, setCodigoDescuentoError] = useState(null);
+
+    // Sucursal de WhatsApp con la que el cliente va a coordinar el pedido. Se
+    // sugiere según la provincia elegida (ver sucursalSugeridaId), pero es
+    // editable: una vez que el cliente la toca a mano, `sucursalEditada` queda
+    // en true y la sugerencia por provincia deja de pisarla.
+    const [sucursalId, setSucursalId] = useState(SUCURSAL_POR_DEFECTO_ID);
+    const [sucursalEditada, setSucursalEditada] = useState(false);
+    const idSucursalSugerida = sucursalSugeridaId(form.provincia);
+
+    useEffect(() => {
+        if (!sucursalEditada) setSucursalId(idSucursalSugerida);
+    }, [idSucursalSugerida, sucursalEditada]);
+
+    const elegirSucursal = (id) => {
+        setSucursalId(id);
+        setSucursalEditada(true);
+    };
 
     const update = (field) => (e) =>
         setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -363,6 +385,7 @@ export default function Checkout({ canLogin }) {
                 cliente_ciudad: form.ciudad,
                 cliente_codigo_postal: form.codigoPostal,
                 observaciones: form.observaciones,
+                sucursal: sucursalId,
                 codigo_descuento: codigoAplicado,
                 plan_pago_tarjeta_id: formaPagoSeleccionada?.planId ?? null,
                 items: items.map((item) => ({
@@ -408,11 +431,16 @@ export default function Checkout({ canLogin }) {
             return;
         }
 
+        const sucursal = getSucursal(sucursalId);
         sessionStorage.setItem('chisperio_last_order', JSON.stringify(pedido));
-        // El modal de selección de sucursal vive por encima de <App> (ver
-        // WhatsAppSucursalProvider), así que sigue abierto tras el router.visit y el
-        // usuario elige sucursal ya en la pantalla de confirmación.
-        abrirSelectorWhatsApp(message);
+        // La sucursal elegida viaja a la pantalla de confirmación para que su
+        // botón "Enviar por WhatsApp" abra el mismo número sin volver a preguntar.
+        sessionStorage.setItem('chisperio_last_sucursal', sucursal.id);
+        // Intento de apertura directa: en mobile (deep link nativo) funciona
+        // siempre; en desktop el navegador puede bloquear el window.open por no
+        // ser un gesto directo — para ese caso está el botón de reenvío en la
+        // pantalla de confirmación.
+        abrirWhatsApp(sucursal.numero, message);
         clearCart();
         quitarCodigoDescuento();
         setFormaPago(null);
@@ -596,6 +624,69 @@ export default function Checkout({ canLogin }) {
                                     </FormField>
                                 </div>
 
+                                {/* Sucursal de atención por WhatsApp */}
+                                <div className="mb-7 border-t border-black/[0.06] pt-7">
+                                    <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">
+                                        Sucursal de atención
+                                    </p>
+                                    <h3 className="text-xl font-black leading-tight tracking-tight text-[#1c1b1b]">
+                                        ¿Con qué sucursal coordinás?
+                                    </h3>
+                                    <p className="mt-1.5 text-sm font-medium text-[#81788a]">
+                                        Vas a finalizar el pedido por WhatsApp con el equipo de esta sucursal.
+                                        {form.provincia
+                                            ? ' Te marcamos la más cercana a tu provincia, pero podés cambiarla.'
+                                            : ' Elegí una provincia arriba y te sugerimos la más cercana.'}
+                                    </p>
+
+                                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        {WHATSAPP_SUCURSALES.map((sucursal) => {
+                                            const seleccionada = sucursal.id === sucursalId;
+                                            const esSugerida = Boolean(form.provincia) && sucursal.id === idSucursalSugerida;
+                                            return (
+                                                <button
+                                                    key={sucursal.id}
+                                                    type="button"
+                                                    onClick={() => elegirSucursal(sucursal.id)}
+                                                    aria-pressed={seleccionada}
+                                                    className={`relative flex flex-col items-start gap-1 rounded-2xl border-2 p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 ${
+                                                        seleccionada
+                                                            ? 'border-[#6000ca] bg-[#6000ca]/[0.04]'
+                                                            : 'border-black/[0.08] bg-[#fcfbfd] hover:border-[#6000ca]/40'
+                                                    }`}
+                                                >
+                                                    {esSugerida && (
+                                                        <span className="absolute right-3 top-3 rounded-full bg-[#6000ca]/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#6000ca]">
+                                                            Sugerida
+                                                        </span>
+                                                    )}
+                                                    <span className="flex items-center gap-2 text-sm font-black uppercase tracking-tight text-[#1c1b1b]">
+                                                        <span
+                                                            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+                                                                seleccionada ? 'border-[#6000ca]' : 'border-[#b8afc0]'
+                                                            }`}
+                                                            aria-hidden="true"
+                                                        >
+                                                            {seleccionada && <span className="h-2 w-2 rounded-full bg-[#6000ca]" />}
+                                                        </span>
+                                                        {sucursal.nombre}
+                                                    </span>
+                                                    <span className="pl-6 text-xs font-medium text-[#81788a]">
+                                                        {sucursal.telefonoLegible}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {form.provincia && sucursalId !== idSucursalSugerida && (
+                                        <p className="mt-2.5 text-xs font-medium text-[#81788a]">
+                                            Por tu provincia ({form.provincia}) te queda más cerca la sucursal{' '}
+                                            <span className="font-bold text-[#4b4356]">{getSucursal(idSucursalSugerida).nombre}</span>.
+                                        </p>
+                                    )}
+                                </div>
+
                                 {/* Observaciones */}
                                 <div className="mb-7 border-t border-black/[0.06] pt-7">
                                     <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">
@@ -621,7 +712,8 @@ export default function Checkout({ canLogin }) {
                                     </span>
                                     <p>
                                         Tu carrito y tus datos se van a enviar en forma de mensaje de{' '}
-                                        <span className="font-extrabold text-[#6000ca]">WhatsApp</span>
+                                        <span className="font-extrabold text-[#6000ca]">WhatsApp</span> a la sucursal{' '}
+                                        <span className="font-extrabold text-[#6000ca]">{getSucursal(sucursalId).nombre}</span>
                                         , para que nuestro personal te atienda y puedas finalizar tu compra.
                                     </p>
                                 </div>
