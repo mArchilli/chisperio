@@ -1,4 +1,5 @@
 import InputError from '@/Components/InputError';
+import PasswordInput from '@/Components/PasswordInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -67,14 +68,14 @@ export default function Login({ status, canResetPassword }) {
                         Contraseña
                     </label>
 
-                    <input
+                    <PasswordInput
                         id="password"
-                        type="password"
                         name="password"
                         value={data.password}
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
-                        className="mt-1.5 block w-full rounded-xl border-gray-200 bg-gray-50 text-[#1c1b1b] shadow-sm transition-colors focus:border-[#6000ca] focus:bg-white focus:ring-[#6000ca]"
+                        containerClassName="mt-1.5"
+                        className="block w-full rounded-xl border-gray-200 bg-gray-50 text-[#1c1b1b] shadow-sm transition-colors focus:border-[#6000ca] focus:bg-white focus:ring-[#6000ca]"
                     />
 
                     <InputError message={errors.password} className="mt-2" />

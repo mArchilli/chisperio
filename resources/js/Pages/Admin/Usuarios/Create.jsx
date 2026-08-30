@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
+import PasswordInput from '@/Components/PasswordInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { WHATSAPP_SUCURSALES } from '@/lib/whatsapp';
 
@@ -72,8 +73,7 @@ export default function Create() {
                                     <label htmlFor="password" className="block text-sm font-bold text-gray-700 mb-2">
                                         Contraseña <span className="text-[#A72DAB]">*</span>
                                     </label>
-                                    <input
-                                        type="password"
+                                    <PasswordInput
                                         id="password"
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
@@ -87,8 +87,7 @@ export default function Create() {
                                     <label htmlFor="password_confirmation" className="block text-sm font-bold text-gray-700 mb-2">
                                         Confirmar contraseña <span className="text-[#A72DAB]">*</span>
                                     </label>
-                                    <input
-                                        type="password"
+                                    <PasswordInput
                                         id="password_confirmation"
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
