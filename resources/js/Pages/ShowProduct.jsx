@@ -739,6 +739,20 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
 
                                         <PillsCantidad producto={producto} qty={qty} onChange={cambiarQty} className="mb-3" />
 
+                                        {qty > 1 && (
+                                            <div className="mb-3 rounded-2xl border border-[#6000ca]/[0.12] bg-white px-4 py-3">
+                                                <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#81788a]">
+                                                    Total por {qty} unidades
+                                                </p>
+                                                <p className="text-xl font-black leading-tight text-[#6000ca]">
+                                                    {formatPrice(totalProductoActual)}
+                                                </p>
+                                                <p className="mt-0.5 text-[11px] font-semibold text-[#81788a]">
+                                                    {formatPrice(precioInfo.precioFinalConOpciones)} cada una
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                             <div className="flex h-14 w-full items-center justify-between rounded-full border border-black/[0.08] bg-white px-1 shadow-sm sm:w-auto">
                                                 <button
