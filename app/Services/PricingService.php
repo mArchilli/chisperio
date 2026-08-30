@@ -32,15 +32,22 @@ class PricingService
      * (PedidoController::store) es el único caller que lo pasa en true, como
      * defensa en profundidad detrás del guard explícito que ya corre ahí antes de
      * llegar a este método — ver resolverVariante().
+     *
+     * $cantidadParaEscala: si se pasa, resuelve la escala de precio con ESE número
+     * en vez de $cantidad. Lo usa el checkout cuando una misma compra reparte un
+     * producto en varias líneas (una por color): las N unidades totales definen el
+     * tramo de precio por cantidad, no la cantidad de cada línea suelta. $cantidad
+     * sigue siendo la de la línea (para el subtotal, que lo calcula el caller).
      */
     public function calcularPrecio(
         Producto $producto,
         int $cantidad,
         ?int $varianteId = null,
         array $addonIds = [],
-        bool $exigirVariante = false
+        bool $exigirVariante = false,
+        ?int $cantidadParaEscala = null
     ): PriceResult {
-        $escalaAplicada = $producto->escalaAplicable($cantidad);
+        $escalaAplicada = $producto->escalaAplicable($cantidadParaEscala ?? $cantidad);
         $precioLista = round((float) ($escalaAplicada?->precio_unitario ?? $producto->precio), 2);
 
         $oferta = $producto->ofertaVigente;

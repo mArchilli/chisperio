@@ -95,10 +95,16 @@ export function resolverAddons(addons, addonIds) {
  * variante y el total de add-ons DESPUÉS del descuento de la oferta (nunca se
  * recalcula el descuento sobre ellos, porque no tienen descuento propio) —
  * mismo criterio que PricingService::calcularPrecio.
+ *
+ * `cantidadParaEscala` es opcional: si se pasa, la escala de precio por cantidad se
+ * resuelve con ESE número en vez de `cantidad`. Lo usa el carrito cuando un mismo
+ * producto está repartido en varias líneas (una por color): las unidades totales
+ * definen el tramo, no la cantidad de cada línea. `cantidad` sigue siendo la de la
+ * línea (para el subtotal). Espeja PricingService::calcularPrecio ($cantidadParaEscala).
  */
-export function resolverPrecio(producto, cantidad, varianteId = null, addonIds = []) {
+export function resolverPrecio(producto, cantidad, varianteId = null, addonIds = [], cantidadParaEscala = null) {
     const escalas = producto.escalas_precio || [];
-    const escalaAplicada = resolverEscalaAplicable(escalas, cantidad);
+    const escalaAplicada = resolverEscalaAplicable(escalas, cantidadParaEscala ?? cantidad);
     const precioBase = redondear2(Number(producto.precio));
     const precioLista = redondear2(
         escalaAplicada ? Number(escalaAplicada.precio_unitario) : precioBase

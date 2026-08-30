@@ -431,4 +431,37 @@ class PricingServiceTest extends TestCase
 
         $this->service->calcularPrecio($producto, 1, null, [$addonInactivo->id]);
     }
+
+    public function test_cantidad_para_escala_resuelve_la_escala_por_ese_numero_no_por_la_cantidad_de_la_linea(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+            'precio_unitario' => 800,
+        ]);
+
+        // La línea tiene 2 unidades (no llega sola a la escala de 5), pero el total
+        // de la compra para este producto son 5 — se cobra al precio de la escala.
+        $result = $this->service->calcularPrecio($producto, 2, null, [], false, 5);
+
+        $this->assertNotNull($result->escala_aplicada);
+        $this->assertSame($escala->id, $result->escala_aplicada->id);
+        $this->assertSame(800.0, $result->precio_unitario_final);
+    }
+
+    public function test_sin_cantidad_para_escala_usa_la_cantidad_de_la_linea(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        EscalaPrecio::factory()->create([
+            'producto_id' => $producto->id,
+            'cantidad_minima' => 5,
+            'precio_unitario' => 800,
+        ]);
+
+        $result = $this->service->calcularPrecio($producto, 2);
+
+        $this->assertNull($result->escala_aplicada);
+        $this->assertSame(1000.0, $result->precio_unitario_final);
+    }
 }

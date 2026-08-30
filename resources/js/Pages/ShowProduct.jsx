@@ -6,12 +6,13 @@ import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
 import PillsCantidad from '@/Components/PillsCantidad';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
 import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
+import RepartoVariantes from '@/Components/RepartoVariantes';
 import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
 import { useCart } from '@/Context/CartContext';
 import { redondear2, resolverPrecio } from '@/lib/pricing';
 import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
 import { resolverMediaParaVariante } from '@/lib/media';
-import { cantidadMaxima, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
+import { cantidadMaxima, cantidadMaximaTotalVariantes, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
 
 /**
  * Cantidad inicial: toma `?qty=` de la URL si vino de un pill tocado en una card
@@ -24,6 +25,46 @@ function qtyInicialDesdeUrl(producto) {
     const valor = parseInt(new URLSearchParams(window.location.search).get('qty'), 10);
     const qty = Number.isFinite(valor) && valor >= 1 ? valor : 1;
     return capearCantidad(producto, qty);
+}
+
+const topeStockVariante = (variante) =>
+    variante.stock === null || variante.stock === undefined ? Infinity : Math.max(0, variante.stock);
+
+/**
+ * Ajusta el reparto de colores (`{ [varianteId]: count }`) para que sume exactamente
+ * `objetivo` unidades: respeta lo ya asignado (clampeado al stock de cada color) y
+ * rellena lo que falte empezando por `preferidoId` (el color "actual") y siguiendo
+ * por el orden de `variantes`. Así "todas del mismo color" es el default sin que el
+ * cliente toque nada al subir la cantidad. Recorta si venía asignado de más.
+ */
+function normalizarAsignaciones(previas, objetivo, variantes, preferidoId) {
+    const next = {};
+    let asignado = 0;
+
+    for (const v of variantes) {
+        const c = Math.max(0, Math.min(previas[v.id] ?? 0, topeStockVariante(v), objetivo - asignado));
+        if (c > 0) {
+            next[v.id] = c;
+            asignado += c;
+        }
+    }
+
+    if (asignado < objetivo) {
+        const ordenados = [
+            ...variantes.filter((v) => v.id === preferidoId),
+            ...variantes.filter((v) => v.id !== preferidoId),
+        ];
+        for (const v of ordenados) {
+            if (asignado >= objetivo) break;
+            const espacio = Math.min(topeStockVariante(v) - (next[v.id] ?? 0), objetivo - asignado);
+            if (espacio > 0) {
+                next[v.id] = (next[v.id] ?? 0) + espacio;
+                asignado += espacio;
+            }
+        }
+    }
+
+    return next;
 }
 
 const formatPrice = (price) =>
@@ -306,9 +347,21 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const [addonTextos, setAddonTextos] = useState({});
     const [colorPersonalizado, setColorPersonalizado] = useState('');
     const [textoPersonalizado, setTextoPersonalizado] = useState('');
+    // Reparto de la cantidad entre colores: `{ [varianteId]: count }`. Solo se usa
+    // cuando `repartoActivo` (cantidad > 1 y 2+ colores) — ver RepartoVariantes.
+    // Se siembra ya repartido para el caso de entrar con `?qty=` > 1 en la URL.
+    const [asignaciones, setAsignaciones] = useState(() => {
+        const qtyInicial = qtyInicialDesdeUrl(producto);
+        return variantes.length > 1 && qtyInicial > 1
+            ? normalizarAsignaciones({}, qtyInicial, variantes, variantes[0]?.id ?? null)
+            : {};
+    });
 
     const varianteSeleccionada = variantes.find((v) => v.id === varianteId) ?? null;
     const esColorPersonalizado = varianteSeleccionada?.es_color_personalizado ?? false;
+    // Con 2+ colores y más de 1 unidad, el cliente reparte esas unidades entre
+    // colores (RepartoVariantes) en vez de elegir uno solo (VarianteColorSwatches).
+    const repartoActivo = tieneVariantes && variantes.length > 1 && qty > 1;
 
     // Se limpian apenas se deja la variante "a elección" (cambio de color o
     // deselección) para no arrastrar una descripción vieja a otro color elegido.
@@ -339,20 +392,35 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const agotado = tieneVariantes
         ? variantes.every((v) => v.stock !== null && v.stock !== undefined && v.stock <= 0)
         : sinStock(producto);
-    const stockBajo = varianteSeleccionada
+    // Badge "¡Última unidad!" / "Quedan pocas": mira el color seleccionado. En modo
+    // reparto no aplica (el cliente ve el stock por color en el propio repartidor).
+    const stockBajo = !repartoActivo && (varianteSeleccionada
         ? tieneStockBajo(producto, varianteSeleccionada.id)
-        : (!tieneVariantes && tieneStockBajo(producto));
+        : (!tieneVariantes && tieneStockBajo(producto)));
     const maxQty = varianteSeleccionada
         ? cantidadMaxima(producto, varianteSeleccionada.id)
         : (tieneVariantes ? null : cantidadMaxima(producto));
+    // Tope real del selector de cantidad: con variantes, la SUMA del stock de todos
+    // los colores (el cliente puede repartir la cantidad entre varios), no el de uno.
+    const topeCantidad = tieneVariantes
+        ? cantidadMaximaTotalVariantes(producto)
+        : cantidadMaxima(producto);
 
+    // En modo reparto el recargo de color se muestra por fila (RepartoVariantes), no
+    // en el desglose de arriba: por eso acá se resuelve el precio sin variante.
     const precioInfo = useMemo(
-        () => resolverPrecio(producto, qty, varianteId, addonIds),
-        [producto, qty, varianteId, addonIds]
+        () => resolverPrecio(producto, qty, repartoActivo ? null : varianteId, addonIds),
+        [producto, qty, varianteId, addonIds, repartoActivo]
     );
     const tieneDescuento = precioInfo.precioFinal < precioInfo.precioBase;
     const ahorroPorcentaje = Math.round(precioInfo.ahorroTotalPorcentaje);
     const tieneOpciones = precioInfo.recargoVariante > 0 || precioInfo.addonsTotal > 0;
+
+    // Unidades ya repartidas y precio unitario "sin color" (escala + oferta + add-ons),
+    // para RepartoVariantes y para el total de la ficha en modo reparto.
+    const sumAsignado = variantes.reduce((suma, v) => suma + (asignaciones[v.id] ?? 0), 0);
+    const repartoIncompleto = repartoActivo && sumAsignado !== qty;
+    const precioBaseUnitario = redondear2(precioInfo.precioFinal + precioInfo.addonsTotal);
 
     // Simulador de recargo por tarjeta: toggle (clickear el plan ya elegido lo
     // deselecciona). Corre sobre el total de ESTE producto (precio final por unidad,
@@ -360,10 +428,17 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     // total del carrito, eso se simula recién en el paso de Carrito/Checkout.
     const planesPagoActivos = planesPagoTarjeta ?? [];
     const planPagoSeleccionado = planesPagoActivos.find((p) => p.id === planPagoId) ?? null;
-    const totalProductoActual = useMemo(
-        () => redondear2(precioInfo.precioFinalConOpciones * qty),
-        [precioInfo.precioFinalConOpciones, qty]
-    );
+    const totalProductoActual = useMemo(() => {
+        if (repartoActivo) {
+            return redondear2(
+                variantes.reduce((suma, v) => {
+                    const count = asignaciones[v.id] ?? 0;
+                    return suma + count * (precioBaseUnitario + Number(v.precio_adicional ?? 0));
+                }, 0)
+            );
+        }
+        return redondear2(precioInfo.precioFinalConOpciones * qty);
+    }, [repartoActivo, variantes, asignaciones, precioBaseUnitario, precioInfo.precioFinalConOpciones, qty]);
     const recargoInfo = useMemo(
         () => (planPagoSeleccionado ? calcularRecargoPago(totalProductoActual, planPagoSeleccionado) : null),
         [planPagoSeleccionado, totalProductoActual]
@@ -386,13 +461,44 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
         });
     };
 
-    // Reclampea qty si la variante elegida tiene menos stock que la cantidad ya tildada.
+    // Reclampea qty si no hay stock (entre todos los colores) para la cantidad tildada.
     useEffect(() => {
-        if (maxQty !== null && qty > maxQty) {
-            setQty(Math.max(1, maxQty));
+        if (topeCantidad !== null && qty > topeCantidad) {
+            setQty(Math.max(1, topeCantidad));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [maxQty]);
+    }, [topeCantidad]);
+
+    // Red de seguridad: mantiene el reparto en sync con la cantidad. En el flujo
+    // normal `cambiarQty` ya lo deja normalizado en el mismo batch (sin parpadeo);
+    // esto solo actúa en casos borde (reclampeo por stock, cambio de props).
+    useEffect(() => {
+        if (!repartoActivo) {
+            setAsignaciones((prev) => (Object.keys(prev).length ? {} : prev));
+            return;
+        }
+        setAsignaciones((prev) => {
+            const suma = variantes.reduce((s, v) => s + (prev[v.id] ?? 0), 0);
+            return suma === qty ? prev : normalizarAsignaciones(prev, qty, variantes, varianteId);
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [qty, repartoActivo]);
+
+    const setAsignacionColor = (varianteIdColor, count) => {
+        setAsignaciones((prev) => {
+            const variante = variantes.find((v) => v.id === varianteIdColor);
+            if (!variante) return prev;
+            const otros = variantes.reduce(
+                (suma, v) => suma + (v.id === varianteIdColor ? 0 : (prev[v.id] ?? 0)),
+                0
+            );
+            const nuevo = Math.max(0, Math.min(count, topeStockVariante(variante), qty - otros));
+            const next = { ...prev };
+            if (nuevo === 0) delete next[varianteIdColor];
+            else next[varianteIdColor] = nuevo;
+            return next;
+        });
+    };
 
     const toggleAddon = (addonId) => {
         setAddonIds((prev) =>
@@ -421,14 +527,33 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const faltaCompletarColorPersonalizado = esColorPersonalizado
         && colorPersonalizado.trim() === ''
         && textoPersonalizado.trim() === '';
-    // maxQty === 0 cubre el caso borde de que la variante elegida se haya quedado sin
-    // stock justo después de seleccionarla (normalmente ya viene bloqueada en el swatch).
-    const puedeAgregar = !agotado && !faltaElegirVariante && !faltaCompletarColorPersonalizado && maxQty !== 0 && addonsValidos;
+    // En modo reparto: la variante "a elección" con unidades asignadas necesita su
+    // descripción, igual que en el flujo de un solo color.
+    const personalizadaEnReparto = repartoActivo
+        && variantes.some((v) => v.es_color_personalizado && (asignaciones[v.id] ?? 0) > 0);
+    const faltaColorPersonalizadoReparto = personalizadaEnReparto
+        && colorPersonalizado.trim() === ''
+        && textoPersonalizado.trim() === '';
+    // topeCantidad === 0 cubre el caso borde de que se haya quedado todo sin stock.
+    const puedeAgregar = !agotado
+        && topeCantidad !== 0
+        && addonsValidos
+        && (repartoActivo
+            ? !repartoIncompleto && !faltaColorPersonalizadoReparto
+            : !faltaElegirVariante && !faltaCompletarColorPersonalizado);
 
-    const cambiarQty = (valor) => setQty(() => {
+    const cambiarQty = (valor) => {
         const clamped = Math.max(1, valor);
-        return maxQty === null ? clamped : Math.min(clamped, maxQty);
-    });
+        const nuevoQty = topeCantidad === null ? clamped : Math.min(clamped, topeCantidad);
+        setQty(nuevoQty);
+        // Re-reparte en el mismo batch que el cambio de cantidad para que no haya un
+        // frame con "faltan N" antes de que la red de seguridad (useEffect) corrija.
+        if (tieneVariantes && variantes.length > 1) {
+            setAsignaciones((prev) =>
+                nuevoQty > 1 ? normalizarAsignaciones(prev, nuevoQty, variantes, varianteId) : {}
+            );
+        }
+    };
 
     const addToCart = () => {
         if (!puedeAgregar) return;
@@ -455,23 +580,42 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
         // (ver migración pedido_items.color_personalizado_texto, que guarda un único
         // campo): si escribió una descripción y también eligió un color de referencia,
         // se guardan los dos juntos; si solo cargó uno de los dos, se usa ese.
-        const descripcionColor = textoPersonalizado.trim();
-        const hexColor = colorPersonalizado.trim();
-        const colorPersonalizadoTexto = esColorPersonalizado
-            ? (descripcionColor && hexColor ? `${descripcionColor} (${hexColor})` : descripcionColor || hexColor || null)
-            : null;
+        const construirColorPersonalizadoTexto = () => {
+            const descripcionColor = textoPersonalizado.trim();
+            const hexColor = colorPersonalizado.trim();
+            return descripcionColor && hexColor
+                ? `${descripcionColor} (${hexColor})`
+                : descripcionColor || hexColor || null;
+        };
 
-        addToCartContext(producto, qty, {
-            varianteId: varianteSeleccionada?.id ?? null,
-            variante: varianteSeleccionada && {
-                id: varianteSeleccionada.id,
-                nombre: varianteSeleccionada.nombre,
-                color_hex: varianteSeleccionada.color_hex,
-                precio_adicional: Number(varianteSeleccionada.precio_adicional),
-            },
-            addons: addonsSeleccionados,
-            colorPersonalizadoTexto,
+        const snapshotVariante = (v) => ({
+            id: v.id,
+            nombre: v.nombre,
+            color_hex: v.color_hex,
+            precio_adicional: Number(v.precio_adicional),
         });
+
+        if (repartoActivo) {
+            // Una línea de carrito por color asignado. El precio por cantidad se
+            // resuelve después sobre la suma de todas (ver CartContext.cantidadPorProducto).
+            variantes.forEach((v) => {
+                const count = asignaciones[v.id] ?? 0;
+                if (count <= 0) return;
+                addToCartContext(producto, count, {
+                    varianteId: v.id,
+                    variante: snapshotVariante(v),
+                    addons: addonsSeleccionados,
+                    colorPersonalizadoTexto: v.es_color_personalizado ? construirColorPersonalizadoTexto() : null,
+                });
+            });
+        } else {
+            addToCartContext(producto, qty, {
+                varianteId: varianteSeleccionada?.id ?? null,
+                variante: varianteSeleccionada && snapshotVariante(varianteSeleccionada),
+                addons: addonsSeleccionados,
+                colorPersonalizadoTexto: esColorPersonalizado ? construirColorPersonalizadoTexto() : null,
+            });
+        }
 
         if (toast) clearTimeout(window._toastTimer);
         setToast(`${producto.titulo} agregado al carrito`);
@@ -646,7 +790,9 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                 </div>
                                 {!agotado && (
                                     <p className="mt-1 text-xs font-semibold text-[#81788a]">
-                                        Precio unitario para {qty} {qty === 1 ? 'unidad' : 'unidades'}
+                                        {repartoActivo
+                                            ? `Precio base por unidad para ${qty} unidades — el recargo de cada color se suma abajo`
+                                            : `Precio unitario para ${qty} ${qty === 1 ? 'unidad' : 'unidades'}`}
                                     </p>
                                 )}
 
@@ -669,7 +815,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                             </div>
                                         )}
                                         <div className="flex items-center justify-between border-t border-[#6000ca]/10 pt-1.5 text-sm font-black text-[#1c1b1b]">
-                                            <span>Total por unidad</span>
+                                            <span>{repartoActivo ? 'Por unidad (sin color)' : 'Total por unidad'}</span>
                                             <span>{formatPrice(precioInfo.precioFinalConOpciones)}</span>
                                         </div>
                                     </div>
@@ -713,15 +859,29 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                 <>
                                     {(tieneVariantes || tieneAddons) && (
                                         <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-white p-4 sm:p-5">
-                                            <VarianteColorSwatches
-                                                variantes={variantes}
-                                                value={varianteId}
-                                                onChange={setVarianteId}
-                                                colorPersonalizado={colorPersonalizado}
-                                                textoPersonalizado={textoPersonalizado}
-                                                onColorPersonalizadoChange={setColorPersonalizado}
-                                                onTextoPersonalizadoChange={setTextoPersonalizado}
-                                            />
+                                            {repartoActivo ? (
+                                                <RepartoVariantes
+                                                    variantes={variantes}
+                                                    qty={qty}
+                                                    asignaciones={asignaciones}
+                                                    onChange={setAsignacionColor}
+                                                    precioBaseUnitario={precioBaseUnitario}
+                                                    colorPersonalizado={colorPersonalizado}
+                                                    textoPersonalizado={textoPersonalizado}
+                                                    onColorPersonalizadoChange={setColorPersonalizado}
+                                                    onTextoPersonalizadoChange={setTextoPersonalizado}
+                                                />
+                                            ) : (
+                                                <VarianteColorSwatches
+                                                    variantes={variantes}
+                                                    value={varianteId}
+                                                    onChange={setVarianteId}
+                                                    colorPersonalizado={colorPersonalizado}
+                                                    textoPersonalizado={textoPersonalizado}
+                                                    onColorPersonalizadoChange={setColorPersonalizado}
+                                                    onTextoPersonalizadoChange={setTextoPersonalizado}
+                                                />
+                                            )}
                                             <ProductoAddonsChecklist
                                                 addons={addons}
                                                 seleccionados={addonIds}
@@ -742,13 +902,17 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                         {qty > 1 && (
                                             <div className="mb-3 rounded-2xl border border-[#6000ca]/[0.12] bg-white px-4 py-3">
                                                 <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#81788a]">
-                                                    Total por {qty} unidades
+                                                    {repartoActivo && repartoIncompleto
+                                                        ? `Total (${sumAsignado} de ${qty} asignadas)`
+                                                        : `Total por ${qty} unidades`}
                                                 </p>
                                                 <p className="text-xl font-black leading-tight text-[#6000ca]">
                                                     {formatPrice(totalProductoActual)}
                                                 </p>
                                                 <p className="mt-0.5 text-[11px] font-semibold text-[#81788a]">
-                                                    {formatPrice(precioInfo.precioFinalConOpciones)} cada una
+                                                    {repartoActivo
+                                                        ? `${qty} unidades repartidas entre colores`
+                                                        : `${formatPrice(precioInfo.precioFinalConOpciones)} cada una`}
                                                 </p>
                                             </div>
                                         )}
@@ -769,7 +933,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                                 <button
                                                     type="button"
                                                     onClick={() => cambiarQty(qty + 1)}
-                                                    disabled={maxQty !== null && qty >= maxQty}
+                                                    disabled={topeCantidad !== null && qty >= topeCantidad}
                                                     className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                                                     aria-label="Aumentar cantidad"
                                                 >
@@ -794,9 +958,14 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                                 Elegí un color para poder agregarlo al carrito.
                                             </p>
                                         )}
-                                        {!faltaElegirVariante && maxQty !== null && (
+                                        {repartoIncompleto && (
+                                            <p className="mt-3 text-center text-[11px] font-bold text-[#ba1a1a] sm:text-left">
+                                                Repartí las {qty} unidades entre los colores de arriba para continuar.
+                                            </p>
+                                        )}
+                                        {!faltaElegirVariante && !repartoIncompleto && topeCantidad !== null && (
                                             <p className="mt-3 text-center text-[11px] font-semibold text-[#81788a] sm:text-left">
-                                                Quedan {maxQty} {maxQty === 1 ? 'unidad' : 'unidades'} disponibles.
+                                                Quedan {topeCantidad} {topeCantidad === 1 ? 'unidad' : 'unidades'} disponibles{repartoActivo ? ' entre todos los colores' : ''}.
                                             </p>
                                         )}
                                     </div>

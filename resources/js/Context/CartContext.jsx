@@ -409,11 +409,24 @@ export function CartProvider({ children }) {
     // umbral de escala o el nivel al que apunta la oferta vigente. precioUnitario/
     // subtotalItem usan precioFinalConOpciones (precio con oferta + recargo de
     // variante + total de add-ons) para que el subtotal de la línea ya refleje todo.
+    // Total de unidades por producto sumando TODAS sus líneas: un producto repartido
+    // en varias líneas (una por color, ver el repartidor de ShowProduct) resuelve su
+    // precio por cantidad sobre este total, no sobre la cantidad de cada línea suelta
+    // — mismo criterio que PedidoController::store en el checkout.
+    const cantidadPorProducto = useMemo(() => {
+        const acc = {};
+        for (const item of items) {
+            acc[item.producto_id] = (acc[item.producto_id] ?? 0) + item.cantidad;
+        }
+        return acc;
+    }, [items]);
+
     const itemsConPrecio = useMemo(
         () =>
             items.map((item) => {
                 const addonIds = item.addons.map((a) => a.addon_id);
-                const precioInfo = resolverPrecio(item.producto, item.cantidad, item.varianteId, addonIds);
+                const cantidadParaEscala = cantidadPorProducto[item.producto_id] ?? item.cantidad;
+                const precioInfo = resolverPrecio(item.producto, item.cantidad, item.varianteId, addonIds, cantidadParaEscala);
                 const stockDisponible = cantidadMaxima(item.producto, item.varianteId);
                 return {
                     ...item,
@@ -424,7 +437,7 @@ export function CartProvider({ children }) {
                     sinStock: stockDisponible === 0,
                 };
             }),
-        [items]
+        [items, cantidadPorProducto]
     );
 
     const cartCount = items.reduce((acc, item) => acc + item.cantidad, 0);

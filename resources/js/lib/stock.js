@@ -60,3 +60,16 @@ export function capearCantidad(producto, cantidad, varianteId = null) {
     const max = cantidadMaxima(producto, varianteId);
     return max === null ? cantidad : Math.min(cantidad, max);
 }
+
+/**
+ * Suma del stock de todas las variantes activas del producto; `null` (sin tope) si
+ * alguna es ilimitada o el producto no tiene variantes. Es el tope de cantidad
+ * cuando el cliente puede repartir esa cantidad entre varios colores en la ficha
+ * (ver RepartoVariantes) — el stock de un color individual ya no es el límite.
+ */
+export function cantidadMaximaTotalVariantes(producto) {
+    const activas = (producto.variantes || []).filter((v) => v.is_active !== false);
+    if (activas.length === 0) return cantidadMaxima(producto);
+    if (activas.some((v) => v.stock === null || v.stock === undefined)) return null;
+    return activas.reduce((suma, v) => suma + Math.max(0, v.stock), 0);
+}

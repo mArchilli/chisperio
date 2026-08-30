@@ -230,6 +230,15 @@ class PedidoController extends Controller
                     ->get()
                     ->keyBy('id');
 
+                // Una misma compra puede traer varias líneas del mismo producto (una
+                // por color elegido en el repartidor de la ficha). El precio por
+                // cantidad se resuelve sobre el TOTAL de unidades de ese producto en
+                // el pedido, no sobre la cantidad de cada línea suelta — ver
+                // PricingService::calcularPrecio ($cantidadParaEscala).
+                $cantidadPorProducto = collect($validated['items'])
+                    ->groupBy('producto_id')
+                    ->map(fn ($grupo) => (int) collect($grupo)->sum('cantidad'));
+
                 $subtotal = 0;
                 $itemsData = [];
 
@@ -263,7 +272,8 @@ class PedidoController extends Controller
                         $item['cantidad'],
                         $varianteId,
                         $addonsInput->pluck('addon_id')->all(),
-                        exigirVariante: true
+                        exigirVariante: true,
+                        cantidadParaEscala: $cantidadPorProducto[$item['producto_id']]
                     );
 
                     $addonsSeleccionados = collect($priceResult->addons_aplicados)
