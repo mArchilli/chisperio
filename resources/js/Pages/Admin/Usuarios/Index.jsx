@@ -118,11 +118,21 @@ export default function Index({ usuarios }) {
                                                         </td>
                                                         <td className="px-6 py-5 text-sm text-gray-600">{usuario.email}</td>
                                                         <td className="px-6 py-5">
-                                                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                                                                usuario.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'
-                                                            }`}>
-                                                                {usuario.role === 'admin' ? 'Administrador' : 'Vendedor'}
-                                                            </span>
+                                                            <div className="flex flex-col items-start gap-1.5">
+                                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                                                    usuario.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'
+                                                                }`}>
+                                                                    {usuario.role === 'admin' ? 'Administrador' : 'Vendedor'}
+                                                                </span>
+                                                                {usuario.debe_cambiar_password && (
+                                                                    <span
+                                                                        className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
+                                                                        title="Todavía no configuró su clave en el primer ingreso"
+                                                                    >
+                                                                        Clave sin configurar
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="px-6 py-5 text-sm text-gray-600">
                                                             {SUCURSAL_LABELS[usuario.sucursal] || <span className="text-gray-300">—</span>}

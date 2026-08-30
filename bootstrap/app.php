@@ -18,6 +18,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            // Fuerza a un vendedor recién creado a configurar su propia clave en
+            // el primer ingreso antes de poder usar cualquier otra ruta.
+            \App\Http\Middleware\RequerirCambioDePassword::class,
         ]);
 
         $middleware->alias([

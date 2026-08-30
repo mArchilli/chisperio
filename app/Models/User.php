@@ -20,6 +20,7 @@ class User extends Authenticatable
         'password',
         'role',
         'sucursal',
+        'debe_cambiar_password',
     ];
 
     protected $hidden = [
@@ -34,6 +35,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => RolUsuario::class,
             'sucursal' => Sucursal::class,
+            'debe_cambiar_password' => 'boolean',
         ];
     }
 

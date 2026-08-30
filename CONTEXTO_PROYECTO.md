@@ -1,6 +1,6 @@
 # Chisperío — Contexto del Proyecto
 
-> Documento generado para dar contexto rápido a un asistente (Claude) sobre el estado actual del sistema. Última actualización: 2026-08-29.
+> Documento generado para dar contexto rápido a un asistente (Claude) sobre el estado actual del sistema. Última actualización: 2026-08-30.
 
 ## 1. Qué es
 
@@ -35,7 +35,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 | Tabla | Columnas clave |
 |---|---|
-| `users` | id, name, email(unique), password, **role** (`admin`\|`vendedor`), **sucursal** (nullable `buenos-aires`\|`cordoba` — obligatoria para vendedor, `null` para admin) |
+| `users` | id, name, email(unique), password, **role** (`admin`\|`vendedor`), **sucursal** (nullable `buenos-aires`\|`cordoba` — obligatoria para vendedor, `null` para admin), **debe_cambiar_password** (bool, default false — se pone en `true` al crear un vendedor desde el panel: la clave que le asigna el admin es temporal y en el primer ingreso se lo obliga a configurar la suya; ver §11) |
 | `categorias` | id, nombre, descripcion |
 | `subcategorias` | id, nombre, descripcion, categoria_id (FK) |
 | `productos` | id, titulo, descripcion(text), precio(decimal 10,2), is_active, is_featured, **stock** (nullable int — `null` = ilimitado) |
@@ -59,7 +59,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 ## 4. Modelos (`app/Models/`)
 
-- **User** — cast `role` a `RolUsuario` y `sucursal` a `Sucursal` (null para admin), `esAdmin(): bool`.
+- **User** — cast `role` a `RolUsuario`, `sucursal` a `Sucursal` (null para admin) y `debe_cambiar_password` a `bool`, `esAdmin(): bool`.
 - **Categoria** / **Subcategoria** — relaciones N:M con Producto vía los pivots.
 - **Producto** — `imagenes()`/`videos()` (subsets de `media()` por `tipo`), `imagenPrincipal()`, `ofertaVigente()`, `escalasPrecio()`, `movimientosStock()`, `variantes()`/`variantesActivas()` (ordenadas por `orden`), `tieneVariantes(): bool`, `addons()`/`addonsActivos()` (con pivot `precio_override`/`orden`). Métodos de negocio: `tieneStockIlimitado()`, `tieneStockDisponible(int)` (⚠️ con variantes, ignora `productos.stock` y agrega sobre `variantesActivas()` — ver deuda técnica en §14, hay un caso borde con la única variante inactiva), `escalaAplicable(int $cantidad): ?EscalaPrecio`, `scopeConStock()`, `mediaParaVariante(?int $varianteId)` (⚠️ no la llama ningún controller — la resolución real de galería por color pasa por el espejo en JS `resolverMediaParaVariante`, ver §10 y deuda técnica en §14).
 - **ProductoVariante** (tabla `producto_variantes`) — `producto()`, `mediaEspecifica()` (medios propios vía `producto_media.producto_variante_id`), `esPersonalizada(): bool` (true = "Otro / a elección del cliente"), `tieneStockIlimitado()`/`tieneStockDisponible(int)` (mismo criterio que Producto), `scopeActivas()`.
@@ -97,7 +97,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 **`routes/legacy_redirects.php`** — incluido al principio de `web.php`. Redirects 301 desde las URLs indexadas del WordPress anterior (relevadas de su `wp-sitemap.xml` en producción) hacia sus equivalentes acá: páginas fijas y el mapa dinámico `/product-category/{slug}` que resuelve categoría/subcategoría **por nombre** contra la base (no por id hardcodeado, porque en producción se administran a mano). Pendiente a propósito: los 57 redirects de producto individual (`/product/{slug}/`), hasta que el catálogo real esté cargado. Nota: no se puede registrar un redirect en `/productos` porque colisiona con la carpeta física `public/productos/`.
 
-**`routes/auth.php`** — Breeze estándar (login, forgot/reset password, verify-email, confirm-password, logout). **No hay registro self-service** (fue removido intencionalmente).
+**`routes/auth.php`** — Breeze estándar (login, forgot/reset password, verify-email, confirm-password, logout). **No hay registro self-service** (fue removido intencionalmente). Suma `GET|PUT password/configurar` (`password.configurar` / `password.configurar.update`, dentro del grupo `auth`) para el primer ingreso del vendedor — ver §8 (`ConfigurarPasswordController`) y §11.
 
 ## 8. Controladores (`app/Http/Controllers/`)
 
@@ -107,7 +107,8 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 - **OfertaController** — CRUD con tipo/valor/alcance de descuento, valida solapamiento de fechas entre ofertas activas del mismo producto, `toggleActive`.
 - **CodigoDescuentoController** — CRUD admin (bloquea borrar códigos ya usados), `toggleActive`. **CodigoDescuentoValidacionController** — endpoint público de previsualización.
 - **PedidoController** — `index`/`show`, `cambiarEstado` (valida transición, repone stock y libera cupo de código al cancelar), `store` (checkout: valida stock optimista, y por cada item — **antes** de tocar precio o stock — si el producto tiene variantes activas exige `variante_id` en el request, sea la variante de color fijo o "a elección" (rechaza 422 si no vino, mensaje con el producto puntual); calcula precio real server-side con `PricingService` (`exigirVariante: true` como defensa en profundidad detrás del chequeo anterior); si la variante resuelta es `es_color_personalizado`, exige además `color_personalizado_texto` no vacío; valida que cada addon con `requiere_texto` haya traído su texto; resuelve código con lock; crea pedido+items con el snapshot completo en una transacción; descuenta stock; guarda `sucursal` — la del request, o Buenos Aires por defecto). **Filtro por sucursal**: `index` fuerza el filtro a la sucursal del vendedor (para el admin es libre, default `todas`) y scopea con él tanto la lista como todas las stat cards; `show`/`cambiarEstado` llaman a `autorizarSucursal()` que aborta 403 si un vendedor toca un pedido de otra sucursal. Props nuevas a Inertia: `filtroSucursal`, `puedeFiltrarSucursal`.
-- **UsuarioController** — CRUD de usuarios/roles, protege contra eliminar o degradar al único admin. `sucursal` obligatoria si el rol es `vendedor` (`reglaSucursal()` con `Rule::requiredIf`), forzada a `null` para admin (`sucursalSegunRol()`).
+- **UsuarioController** — CRUD de usuarios/roles, protege contra eliminar o degradar al único admin. `sucursal` obligatoria si el rol es `vendedor` (`reglaSucursal()` con `Rule::requiredIf`), forzada a `null` para admin (`sucursalSegunRol()`). Al crear un **vendedor** setea `debe_cambiar_password = true` (la clave del admin es temporal; ver §11); al crear un admin queda en `false`. `index` incluye la columna para mostrar el badge "Clave sin configurar" en `Admin/Usuarios/Index`.
+- **Auth/ConfigurarPasswordController** — primer ingreso del vendedor: `create` muestra `Auth/ConfigurarPassword` (redirige a `dashboard` si ya no le corresponde), `update` valida la nueva clave (`Password::defaults()` + `confirmed`), **rechaza reusar la clave temporal** (`Hash::check` contra la actual), la guarda y baja `debe_cambiar_password`. Protegido por el middleware `RequerirCambioDePassword` (global en el grupo `web`, `bootstrap/app.php`): mientras la marca esté activa, cualquier ruta que no sea `password.configurar(.update)` ni `logout` redirige al formulario.
 - **ConfiguracionEnvioController** — edit/update del monto mínimo de envío gratis.
 - **MetricasController** — facturación (totales, comparación de período, series, top 5 productos).
 - **DashboardController** — stats generales para `/dashboard`. Para un vendedor, los números de pedidos (pendientes, despachados del mes, serie por día, producto más vendido) quedan scopeados a su sucursal vía `Pedido::scopeDeSucursal`; los de catálogo (productos activos/sin stock) siguen globales.
@@ -122,7 +123,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 **Públicas**: `Welcome.jsx`, `Tienda.jsx` (con barra de búsqueda; el botón "Agregar" rápido de cada card se comporta como link a la ficha en vez de agregar directo cuando `producto.tiene_variantes` — para no saltear la elección de color; sin variantes, agrega directo al carrito igual que siempre), `ShowProduct.jsx` (galería con lightbox zoom + video; **con variantes**, arranca con la primera variante activa ya seleccionada — no hace falta clickear para ver precio/stock/foto reales — y la galería se resuelve contra la media propia de esa variante, cayendo a la general si no tiene ninguna; si la variante activa es "a elección del cliente", despliega un input de color libre + texto; tabla de precios por cantidad), `Carrito.jsx`, `Checkout.jsx` (envío a sucursal física: provincia + ciudad, no domicilio; bloque de código de descuento y barra de envío gratis; **selector de sucursal de WhatsApp** presugerido por la provincia — ver §12), `ConfirmacionPedido.jsx`, `Contacto.jsx`, `Mayoristas.jsx`, `Dashboard.jsx`.
 
-**Auth/Profile**: Breeze estándar (sin Register).
+**Auth/Profile**: Breeze estándar (sin Register). Suma **`ConfigurarPassword.jsx`** (`GuestLayout`) — pantalla del primer ingreso del vendedor: pide y confirma la clave nueva y ofrece "Cerrar sesión". La sirve `Auth/ConfigurarPasswordController` (ver §8/§11).
 
 **Páginas de error** — las renderiza el handler de excepciones (`bootstrap/app.php` → `$exceptions->respond()`), en vez del error crudo de Laravel/Symfony que Inertia mostraba como un modal con el HTML embebido:
 - **`NotFound.jsx`** (404) — diseño del **sitio público**: `LandingHeader` + `LandingFooter` reales, tipografía negra en mayúsculas, acentos `#6000ca`/`#FF00D4`, fondos difusos y chispas decorativas; copy temático (chispas frías / fuegos artificiales / equipamiento), CTA al catálogo + inicio + chips de búsqueda; si hay sesión, suma "Volver al panel".
@@ -160,6 +161,8 @@ Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`
 
 `EnsureUserHasRole` hace `abort(403)` a secas (sin mensaje): el 403 lo intercepta el handler de `bootstrap/app.php` y lo renderiza como la página `Error.jsx` (ver §9), así el vendedor que clickea un acceso solo-admin del Dashboard ve una pantalla "No tenés permisos" en vez del error crudo. Los `abort(403, '...')` con mensaje puntual (p. ej. el guard de sucursal) sí muestran ese texto en la página. El 404 usa `NotFound.jsx` (diseño del sitio público).
 
+**Primer ingreso del vendedor (clave propia).** Cuando el admin crea un vendedor desde `admin/usuarios`, la contraseña que le carga es **temporal**: el registro nace con `users.debe_cambiar_password = true`. El middleware `RequerirCambioDePassword` (global en el grupo `web`, appendeado en `bootstrap/app.php` después de `HandleInertiaRequests`) redirige **cualquier** request de ese usuario a `password.configurar` hasta que defina su clave — las únicas rutas que deja pasar son `password.configurar`, `password.configurar.update` y `logout`. `Auth/ConfigurarPasswordController@update` valida la clave nueva (`Password::defaults()` + `confirmed`), **rechaza que sea igual a la temporal** (`Hash::check`), la persiste y pone la marca en `false`; de ahí redirige a `dashboard`. La pantalla es `Auth/ConfigurarPassword.jsx` sobre `GuestLayout`. El admin creado por el mismo formulario **no** pasa por esto (`debe_cambiar_password = false`). En `Admin/Usuarios/Index` un badge ámbar "Clave sin configurar" marca a los vendedores que todavía no lo hicieron. Cubierto por `tests/Feature/Auth/ConfigurarPasswordTest.php`.
+
 ## 12. Integración WhatsApp
 
 - **Sucursales centralizadas** en `resources/js/lib/whatsapp.js` → `WHATSAPP_SUCURSALES`: Buenos Aires (`5491127930349`) y Córdoba (`5493516766208` / `+54 9 3516 76-6208`). Única fuente de verdad — antes el número estaba hardcodeado en 7 archivos.
@@ -183,6 +186,7 @@ Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`
 - `DOCUMENTOS_PDF_PATH` (consumida por `config/documentos.php`, default `docs/pdfs/`) tampoco está en `.env.example` — mismo patrón de deuda que las de arriba.
 - `VITE_PRODUCT_IMAGES_PATH`/`VITE_PRODUCT_VIDEOS_PATH` (env vars con prefijo `VITE_`) existen en `.env` pero **no se usan en ningún lado del frontend** — config muerta, candidata a limpieza.
 - No hay registro de usuarios self-service (removido a propósito) — alta solo por seeder/admin.
+- El "primer ingreso" del vendedor (`debe_cambiar_password`, ver §11) solo se dispara al **crear** el vendedor. Si un admin le resetea la clave desde `admin/usuarios/edit`, la marca no vuelve a `true` — el vendedor entra directo con la clave nueva sin que se le pida cambiarla. Si hiciera falta, agregar el flag en `UsuarioController::update` cuando el rol es `vendedor` y vino `password`.
 - El carrito sigue viviendo enteramente en el navegador (`localStorage`/`sessionStorage`), no hay sesión de carrito en backend.
 - `Producto::mediaParaVariante()` (PHP) no lo llama ningún controller — toda la resolución real de "qué imagen/video mostrar para este color" pasa por su espejo en JS (`resolverMediaParaVariante`, `resources/js/lib/media.js`). Si el día de mañana se toca uno de los dos sin el otro, van a divergir en silencio.
 - `Producto::tieneStockDisponible()` decide si usar el branch de stock-por-variante mirando `tieneVariantes()` (cualquiera, activa o no), pero después agrega solo sobre `variantesActivas()`. Un producto cuya **única** variante quedó inactiva termina reportado como sin stock disponible (afecta el chequeo optimista del checkout y potencialmente `scopeConStock()`) aunque el producto en sí tenga de sobra. Detectado en QA de la mejora de color a elección, no forma parte de ella — queda pendiente.

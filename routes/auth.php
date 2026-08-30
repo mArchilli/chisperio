@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\ConfigurarPasswordController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -30,6 +31,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    // Primer ingreso de un vendedor: configura su propia clave (la que le puso el
+    // admin es temporal). RequerirCambioDePassword redirige acá hasta que lo haga.
+    Route::get('password/configurar', [ConfigurarPasswordController::class, 'create'])
+        ->name('password.configurar');
+
+    Route::put('password/configurar', [ConfigurarPasswordController::class, 'update'])
+        ->name('password.configurar.update');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 

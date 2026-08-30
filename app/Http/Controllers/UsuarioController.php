@@ -19,7 +19,7 @@ class UsuarioController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Usuarios/Index', [
-            'usuarios' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'sucursal']),
+            'usuarios' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'sucursal', 'debe_cambiar_password']),
         ]);
     }
 
@@ -45,6 +45,9 @@ class UsuarioController extends Controller
             'role' => $validated['role'],
             'sucursal' => $this->sucursalSegunRol($validated),
             'email_verified_at' => now(), // alta manual por admin: se considera verificado
+            // La clave que puso el admin es temporal: el vendedor define la suya
+            // propia en el primer ingreso (RequerirCambioDePassword). El admin no.
+            'debe_cambiar_password' => RolUsuario::from($validated['role']) === RolUsuario::Vendedor,
         ]);
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente.');
