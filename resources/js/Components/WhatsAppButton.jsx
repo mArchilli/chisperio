@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { useScrolledPast } from '@/hooks/useScrolledPast';
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 
 const EXCLUDED_PREFIXES = [
     '/carrito',
@@ -15,7 +16,7 @@ const EXCLUDED_PREFIXES = [
     '/profile',
 ];
 
-const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent('¡Hola! Necesito ayuda con mi pedido 😊')}`;
+const WHATSAPP_MESSAGE = '¡Hola! Necesito ayuda con mi pedido 😊';
 
 // Cuánto esperar, una vez que el botón ya está visible, antes de mostrar la leyenda.
 const CALLOUT_DELAY_MS = 1500;
@@ -26,6 +27,7 @@ function shouldShow(path) {
 }
 
 export default function WhatsAppButton() {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
     const [visible, setVisible] = useState(() => shouldShow(window.location.pathname));
     // No aparece hasta que el usuario scrollea un poco, para no taparle el hero apenas
     // entra al sitio (mismo criterio que el botón flotante del carrito).
@@ -76,14 +78,13 @@ export default function WhatsAppButton() {
                 se puede cerrar con la cruz y queda cerrada por el resto de la sesión. */}
             {showCallout && (
                 <div className="absolute bottom-full right-0 mb-3 flex w-56 items-start gap-2 rounded-2xl border border-gray-100 bg-white py-2.5 pl-4 pr-2 text-gray-800 shadow-xl [animation:chisperio-callout-enter_220ms_ease-out] motion-reduce:[animation:none]">
-                    <a
-                        href={WHATSAPP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 text-sm font-semibold leading-snug hover:text-[#1ebe5c]"
+                    <button
+                        type="button"
+                        onClick={() => abrirSelectorWhatsApp(WHATSAPP_MESSAGE)}
+                        className="flex-1 text-left text-sm font-semibold leading-snug hover:text-[#1ebe5c]"
                     >
                         ¿Necesitás asesoramiento? Hacé clic acá
-                    </a>
+                    </button>
                     <button
                         type="button"
                         onClick={dismissCallout}
@@ -105,10 +106,9 @@ export default function WhatsAppButton() {
                 }
             `}</style>
 
-            <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+            <button
+                type="button"
+                onClick={() => abrirSelectorWhatsApp(WHATSAPP_MESSAGE)}
                 aria-label="Contactar por WhatsApp"
                 className="
                     flex items-center justify-center
@@ -123,7 +123,7 @@ export default function WhatsAppButton() {
                 <svg viewBox="0 0 32 32" className="w-8 h-8 fill-white" xmlns="http://www.w3.org/2000/svg">
                     <path d="M16.003 2.667C8.636 2.667 2.667 8.636 2.667 16c0 2.354.617 4.562 1.693 6.476L2.667 29.333l7.061-1.852A13.267 13.267 0 0 0 16.003 29.333C23.369 29.333 29.333 23.369 29.333 16S23.369 2.667 16.003 2.667zm0 24.267a11.12 11.12 0 0 1-5.667-1.553l-.406-.24-4.19 1.099 1.12-4.086-.265-.42A11.12 11.12 0 0 1 4.882 16c0-6.135 4.992-11.12 11.12-11.12S27.12 9.865 27.12 16s-4.986 10.934-11.117 10.934zm6.1-8.294c-.334-.167-1.974-.974-2.28-1.085-.306-.112-.53-.167-.752.167-.224.334-.865 1.085-1.06 1.308-.194.224-.39.251-.723.084-.334-.167-1.408-.52-2.682-1.657-.991-.886-1.66-1.98-1.854-2.314-.194-.334-.021-.514.146-.68.15-.149.334-.39.501-.585.167-.195.224-.334.334-.557.112-.224.056-.419-.028-.585-.084-.167-.752-1.813-1.03-2.481-.272-.651-.548-.563-.752-.574-.194-.01-.419-.012-.64-.012-.224 0-.585.084-.89.418-.306.334-1.168 1.14-1.168 2.782s1.196 3.228 1.362 3.451c.167.224 2.354 3.595 5.705 5.044.797.344 1.419.55 1.904.703.8.255 1.53.219 2.106.133.642-.096 1.974-.807 2.252-1.587.278-.78.278-1.45.195-1.587-.083-.14-.306-.224-.64-.39z" />
                 </svg>
-            </a>
+            </button>
         </div>
     );
 }

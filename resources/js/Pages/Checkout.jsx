@@ -2,15 +2,13 @@ import { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useCart } from '@/Context/CartContext';
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 import FormaPagoBlock from '@/Components/FormaPagoBlock';
 import { buildOrderMessage } from '@/lib/whatsapp';
-
-// Reemplazar con el número de WhatsApp del negocio (formato internacional sin +)
-const WHATSAPP_NUMBER = '5491127930349';
 
 const PROVINCIAS = [
     'Buenos Aires',
@@ -231,6 +229,7 @@ function CheckoutSummary({
 
 /* ─── Página principal ─────────────────────────────────────────────────────── */
 export default function Checkout({ canLogin }) {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
     const {
         items,
         subtotal,
@@ -336,18 +335,6 @@ export default function Checkout({ canLogin }) {
         envioGratis: { alcanzado: envioGratisAlcanzado, montoMinimo: montoMinimoEnvioGratis },
     });
 
-    const openWhatsApp = (message) => {
-        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent
-        );
-        const encoded = encodeURIComponent(message);
-        if (isMobile) {
-            window.location.href = `whatsapp://send?phone=${WHATSAPP_NUMBER}&text=${encoded}`;
-        } else {
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, '_blank');
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         const validationErrors = validate();
@@ -422,7 +409,10 @@ export default function Checkout({ canLogin }) {
         }
 
         sessionStorage.setItem('chisperio_last_order', JSON.stringify(pedido));
-        openWhatsApp(message);
+        // El modal de selección de sucursal vive por encima de <App> (ver
+        // WhatsAppSucursalProvider), así que sigue abierto tras el router.visit y el
+        // usuario elige sucursal ya en la pantalla de confirmación.
+        abrirSelectorWhatsApp(message);
         clearCart();
         quitarCodigoDescuento();
         setFormaPago(null);

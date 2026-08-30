@@ -26,6 +26,50 @@
  * }
  */
 
+/**
+ * Sucursales de atención por WhatsApp. Ningún botón del sitio abre un número
+ * directo: todos disparan el modal de selección de sucursal (ver
+ * WhatsAppSucursalContext / WhatsAppSucursalModal) y recién ahí se arma la URL
+ * final con el número de la sucursal elegida. Única fuente de verdad del número
+ * — antes estaba hardcodeado en 7 archivos.
+ *
+ * `numero`: formato internacional sin `+`, como esperan wa.me y whatsapp://.
+ */
+export const WHATSAPP_SUCURSALES = [
+    {
+        id: 'buenos-aires',
+        nombre: 'Buenos Aires',
+        numero: '5491127930349',
+        telefonoLegible: '+54 9 11 2793-0349',
+    },
+    {
+        id: 'cordoba',
+        nombre: 'Córdoba',
+        numero: '5493516766208',
+        telefonoLegible: '+54 9 3516 76-6208',
+    },
+];
+
+export const WHATSAPP_MENSAJE_POR_DEFECTO = '¡Hola! Necesito asesoramiento 😊';
+
+/**
+ * Abre WhatsApp hacia `numero` (formato internacional sin `+`) con `mensaje`
+ * prellenado. En mobile usa el deep link nativo; en desktop, wa.me en una
+ * pestaña nueva. Mismo criterio que usaban Checkout.jsx / ConfirmacionPedido.jsx
+ * antes de centralizarse acá.
+ */
+export function abrirWhatsApp(numero, mensaje = WHATSAPP_MENSAJE_POR_DEFECTO) {
+    const esMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+    );
+    const encoded = encodeURIComponent(mensaje);
+    if (esMobile) {
+        window.location.href = `whatsapp://send?phone=${numero}&text=${encoded}`;
+    } else {
+        window.open(`https://wa.me/${numero}?text=${encoded}`, '_blank', 'noopener,noreferrer');
+    }
+}
+
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
         style: 'currency',

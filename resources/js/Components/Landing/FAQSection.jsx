@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 
 const WHATSAPP_MESSAGE = '¡Hola! Tengo una consulta para Chisperío.';
-const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 const INSTAGRAM_URL = 'https://www.instagram.com/chisperio.argentina/';
 
 const FAQS = [
@@ -69,15 +69,19 @@ function InstagramIcon() {
     );
 }
 
-function SocialLink({ href, label, children }) {
+function SocialLink({ href, label, onClick, children }) {
+    const className = 'flex h-12 w-12 items-center justify-center rounded-xl border border-[#6000ca]/20 bg-white text-[#6000ca] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 motion-reduce:transform-none lg:h-16 lg:w-16 lg:rounded-2xl';
+
+    if (onClick) {
+        return (
+            <button type="button" onClick={onClick} aria-label={label} className={className}>
+                {children}
+            </button>
+        );
+    }
+
     return (
-        <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={label}
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#6000ca]/20 bg-white text-[#6000ca] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 motion-reduce:transform-none lg:h-16 lg:w-16 lg:rounded-2xl"
-        >
+        <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className={className}>
             {children}
         </a>
     );
@@ -133,6 +137,7 @@ function FAQItem({ item, index, isOpen, onToggle }) {
 
 export default function FAQSection() {
     const [openItem, setOpenItem] = useState(FAQS[0].id);
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
 
     return (
         <section
@@ -174,7 +179,10 @@ export default function FAQSection() {
                             </p>
 
                             <div className="mt-5 flex gap-3 lg:gap-4">
-                                <SocialLink href={WHATSAPP_URL} label="Contactar a Chisperío por WhatsApp">
+                                <SocialLink
+                                    onClick={() => abrirSelectorWhatsApp(WHATSAPP_MESSAGE)}
+                                    label="Contactar a Chisperío por WhatsApp"
+                                >
                                     <WhatsAppIcon />
                                 </SocialLink>
                                 <SocialLink href={INSTAGRAM_URL} label="Visitar @chisperio.argentina en Instagram">

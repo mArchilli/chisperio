@@ -6,6 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
 import { CartProvider } from './Context/CartContext';
+import { WhatsAppSucursalProvider } from './Context/WhatsAppSucursalContext';
 import WhatsAppButton from './Components/WhatsAppButton';
 import CartButton from './Components/CartButton';
 
@@ -23,16 +24,18 @@ createInertiaApp({
 
         root.render(
             <CartProvider>
-                <Toaster position="top-center" />
-                <App {...props}>
-                    {({ Component, props: pageProps, key }) => (
-                        <>
-                            <Component key={key} {...pageProps} />
-                            <CartButton />
-                            <WhatsAppButton />
-                        </>
-                    )}
-                </App>
+                <WhatsAppSucursalProvider>
+                    <Toaster position="top-center" />
+                    <App {...props}>
+                        {({ Component, props: pageProps, key }) => (
+                            <>
+                                <Component key={key} {...pageProps} />
+                                <CartButton />
+                                <WhatsAppButton />
+                            </>
+                        )}
+                    </App>
+                </WhatsAppSucursalProvider>
             </CartProvider>
         );
     },

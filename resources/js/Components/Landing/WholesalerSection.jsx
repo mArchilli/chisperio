@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 
-const WHOLESALER_WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent('¡Hola! Quiero recibir información sobre compras mayoristas.')}`;
+const WHOLESALER_WHATSAPP_MESSAGE = '¡Hola! Quiero recibir información sobre compras mayoristas.';
 
 const benefits = [
     {
@@ -24,6 +25,8 @@ const benefits = [
 ];
 
 export default function WholesalerSection() {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
+
     return (
         <section
             id="mayoristas"
@@ -80,14 +83,13 @@ export default function WholesalerSection() {
                             >
                                 Ir al catálogo
                             </Link>
-                            <a
-                                href={WHOLESALER_WHATSAPP_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <button
+                                type="button"
+                                onClick={() => abrirSelectorWhatsApp(WHOLESALER_WHATSAPP_MESSAGE)}
                                 className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-[#6000ca] px-7 py-3 text-center text-xs font-extrabold uppercase tracking-[0.08em] text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4"
                             >
                                 Contactarme por WhatsApp
-                            </a>
+                            </button>
                         </div>
                     </div>
 

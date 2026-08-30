@@ -1,3 +1,5 @@
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
+
 const MACHINES = [
     'Bastón de Mano Chispas Frías',
     'Lanzallama Escénico Profesional',
@@ -7,7 +9,6 @@ const MACHINES = [
 ];
 
 const RENTAL_MESSAGE = '¡Hola! Quiero consultar por el alquiler de maquinaria para mi evento.';
-const RENTAL_WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent(RENTAL_MESSAGE)}`;
 
 function ArrowIcon() {
     return (
@@ -43,6 +44,9 @@ function WhatsAppIcon() {
 }
 
 export default function RentalMachine() {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
+    const consultarAlquiler = () => abrirSelectorWhatsApp(RENTAL_MESSAGE);
+
     return (
         <section
             id="alquiler"
@@ -94,16 +98,15 @@ export default function RentalMachine() {
                             Coordinamos envíos a todo el país para que el equipo llegue donde lo necesitás.
                         </div>
 
-                        <a
-                            href={RENTAL_WHATSAPP_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <button
+                            type="button"
+                            onClick={consultarAlquiler}
                             className="mt-7 inline-flex items-center gap-2.5 rounded-full bg-white px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.08em] text-[#6000ca] shadow-lg transition-all hover:bg-[#1c1b1b] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#6000ca] active:scale-95 md:px-7"
                         >
                             <WhatsAppIcon />
                             Consultar alquiler
                             <ArrowIcon />
-                        </a>
+                        </button>
                     </div>
 
                     <div className="p-7 md:p-10 lg:p-12">
@@ -133,15 +136,14 @@ export default function RentalMachine() {
                             <p className="max-w-md text-xs font-medium leading-relaxed text-[#4b4356]">
                                 Contanos la fecha, la ciudad y el tipo de evento para recomendarte la mejor opción.
                             </p>
-                            <a
-                                href={RENTAL_WHATSAPP_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <button
+                                type="button"
+                                onClick={consultarAlquiler}
                                 className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-[#6000ca]/20 bg-white text-[#6000ca] transition-all hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
                                 aria-label="Consultar disponibilidad por WhatsApp"
                             >
                                 <ArrowIcon />
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>

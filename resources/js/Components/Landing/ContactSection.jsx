@@ -1,3 +1,5 @@
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
+
 function WhatsAppIcon({ className = '' }) {
     return (
         <svg viewBox="0 0 32 32" className={`fill-current ${className}`} aria-hidden="true">
@@ -24,12 +26,15 @@ function TikTokIcon({ className = '' }) {
 }
 
 // Completá cada `href` con la URL pública cuando las redes estén disponibles.
+// La tarjeta de WhatsApp no lleva `href`: abre el modal de selección de sucursal.
 const CONTACT_CHANNELS = [
     {
         id: 'whatsapp',
         name: 'WhatsApp',
         description: 'Escribinos para recibir atención personalizada sobre productos, pedidos o alquileres.',
         href: null,
+        whatsapp: true,
+        message: '¡Hola! Tengo una consulta para Chisperío.',
         icon: WhatsAppIcon,
     },
     {
@@ -69,9 +74,23 @@ function CardContent({ channel }) {
     );
 }
 
-function ContactCard({ channel }) {
+function ContactCard({ channel, onWhatsApp }) {
     const hasDestination = Boolean(channel.href);
     const baseClassName = 'relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-[#6000ca]/30 bg-white p-4 shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] sm:p-5 md:rounded-[2rem] md:p-6';
+    const interactiveClassName = `group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca] hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 active:scale-[0.99] motion-reduce:transform-none ${baseClassName}`;
+
+    if (channel.whatsapp) {
+        return (
+            <button
+                type="button"
+                onClick={() => onWhatsApp(channel.message)}
+                aria-label={`Contactar por ${channel.name}`}
+                className={`w-full text-left ${interactiveClassName}`}
+            >
+                <CardContent channel={channel} />
+            </button>
+        );
+    }
 
     const handleClick = (event) => {
         if (!hasDestination) event.preventDefault();
@@ -85,7 +104,7 @@ function ContactCard({ channel }) {
             onClick={handleClick}
             aria-label={`Contactar por ${channel.name}`}
             aria-disabled={hasDestination ? undefined : 'true'}
-            className={`group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca] hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 active:scale-[0.99] motion-reduce:transform-none ${baseClassName}`}
+            className={interactiveClassName}
         >
             <CardContent channel={channel} />
         </a>
@@ -93,6 +112,8 @@ function ContactCard({ channel }) {
 }
 
 export default function ContactSection() {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
+
     return (
         <section
             id="contacto"
@@ -114,7 +135,7 @@ export default function ContactSection() {
 
                 <div className="mt-10 grid grid-cols-1 gap-4 md:mt-12 md:grid-cols-3 md:gap-5 lg:gap-6">
                     {CONTACT_CHANNELS.map((channel) => (
-                        <ContactCard key={channel.id} channel={channel} />
+                        <ContactCard key={channel.id} channel={channel} onWhatsApp={abrirSelectorWhatsApp} />
                     ))}
                 </div>
             </div>

@@ -1,12 +1,12 @@
 # Chisperío — Contexto del Proyecto
 
-> Documento generado para dar contexto rápido a un asistente (Claude) sobre el estado actual del sistema. Última actualización: 2026-08-26.
+> Documento generado para dar contexto rápido a un asistente (Claude) sobre el estado actual del sistema. Última actualización: 2026-08-29.
 
 ## 1. Qué es
 
 **Chisperío** es un e-commerce (Laravel + Inertia.js + React) para venta de **artículos de pirotecnia y efectos especiales para eventos**: chispas frías, fuegos artificiales, máquinas de humo, lanzallamas, velas, etc. (Nada de golosinas pese al nombre "chispas").
 
-El checkout **sí persiste el pedido en base de datos** (tabla `pedidos` + `pedido_items`, con descuento real de stock y resolución server-side del código de descuento). Una vez creado el pedido, el frontend arma un mensaje de WhatsApp con el resumen y lo abre vía `wa.me`/`whatsapp://` — el negocio coordina el pago/envío por chat, pero el pedido en sí ya quedó registrado antes de eso, no depende de que el mensaje se envíe.
+El checkout **sí persiste el pedido en base de datos** (tabla `pedidos` + `pedido_items`, con descuento real de stock y resolución server-side del código de descuento). Una vez creado el pedido, el frontend arma un mensaje de WhatsApp con el resumen, abre el **modal de selección de sucursal** (Buenos Aires / Córdoba) y recién con la sucursal elegida lo abre vía `wa.me`/`whatsapp://` — el negocio coordina el pago/envío por chat, pero el pedido en sí ya quedó registrado antes de eso, no depende de que el mensaje se envíe.
 
 ## 2. Stack técnico
 
@@ -127,7 +127,8 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 
 - **CartContext** (`Context/CartContext.jsx`) — carrito en `localStorage['chisperio_cart']`, snapshot de precio/escalas/oferta/stock por item (recalcula en cada render vía `resolverPrecio`), estado del **drawer de carrito** compartido (`cartDrawerOpen`/`openCartDrawer`/`closeCartDrawer`), y manejo completo de código de descuento (aplicar/quitar/revalidación automática contra el endpoint público). Cada línea de carrito puede llevar `varianteId`/`variante` (snapshot nombre/color_hex/precio_adicional), `addons` (array `{addon_id, nombre, precio, texto_personalizado}`) y `colorPersonalizadoTexto` — `generarLineKey()` arma una identidad de línea distinta por cada combinación (dos líneas del mismo producto con distinto color/addons no se suman entre sí). Al montar, revalida contra `GET /api/productos/{id}/precio` la variante/addons de cada línea persistida: si algo dejó de existir o se desactivó desde que se agregó, se quita de la línea (no del carrito entero) con un aviso.
 - **CartButton.jsx** — drawer de carrito de alto completo con overlay blureado; el botón flotante (FAB) solo aparece en **desktop** y recién tras hacer scroll; en **mobile** el ícono del carrito del navbar (`LandingHeader`) dispara el mismo drawer en vez de navegar a `/carrito`.
-- **WhatsAppButton.jsx** — flotante, oculto hasta hacer scroll; muestra una leyenda dismisible ("¿Necesitás asesoramiento?") 1.5s después de aparecer, con memoria de cierre por sesión (`sessionStorage`).
+- **WhatsAppButton.jsx** — flotante, oculto hasta hacer scroll; muestra una leyenda dismisible ("¿Necesitás asesoramiento?") 1.5s después de aparecer, con memoria de cierre por sesión (`sessionStorage`). Igual que el resto de los botones de WhatsApp del sitio, no abre un número directo: dispara el modal de selección de sucursal.
+- **WhatsAppSucursalModal.jsx** + **Context/WhatsAppSucursalContext.jsx** — modal único a nivel de app (montado por `WhatsAppSucursalProvider`, por encima de `<App>` en `app.jsx`, así sobrevive a la navegación de Inertia). Cualquier botón de WhatsApp llama a `abrirSelectorWhatsApp(mensaje)` (hook `useWhatsAppSucursal`); el usuario elige **Buenos Aires** o **Córdoba** y recién ahí se abre `wa.me`/`whatsapp://` con el número de esa sucursal y el mensaje.
 - **ProductImageLightbox.jsx** — lightbox de galería con zoom/pan/pinch (`react-zoom-pan-pinch`), navegación entre imágenes. **ImageLightbox.jsx** — versión simple de una sola imagen (usada en `Admin/Pedidos/Show`).
 - **VarianteColorSwatches.jsx** — selector de color en `ShowProduct.jsx`: swatches normales por `color_hex`, y un swatch arcoíris para la variante `es_color_personalizado` que, al estar seleccionada (por default o por click, da igual), despliega un `<input type="color">` + un texto libre para que el cliente describa lo que quiere.
 - **VariantesColorRepeater.jsx** (admin, `Admin/Productos/Create|Edit`) — repeater de variantes de color (nombre, color, precio adicional, stock, activo, flag "es un color a elección del cliente" — tildar uno destilda automáticamente cualquier otro del mismo producto), con aviso si una variante no tiene imagen propia cargada en el gestor de multimedia.
@@ -138,7 +139,7 @@ No hay carrito en backend — vive en `localStorage` del navegador (ver `CartCon
 - **CodigoDescuentoBlock.jsx** — input + estado de código de descuento aplicado, compartido entre `Carrito.jsx` y `Checkout.jsx`.
 - **Landing/** — `LandingHeader`, `HeroSection`, `TrustBanner`, `CategoriesSection`, `OutstandingProducts` (mismo criterio que la card de `Tienda.jsx`: "Agregar" se vuelve link a la ficha si `producto.tiene_variantes`), `RentalMachine`, `ReviewsSection`, `FAQSection`, `ContactSection`, `WholesalerSection`, `LandingFooter` (incluye un link discreto **"Acceso equipo"** hacia `/login`, mismo estilo que el resto de los links del footer).
 - **hooks/** — `useNotificacionEnvioGratis` (toast una vez por sesión al cruzar el umbral), `useScrolledPast` (bool tras cruzar un umbral de scroll, usado por los botones flotantes).
-- **lib/** — `pricing.js` (espejo JS de `PricingService::calcularPrecio`, incluye resolución de variante/addons — sin la validación estricta de pertenencia, esa solo vive en el backend), `stock.js` (`sinStock`, `tieneStockBajo`, `cantidadMaxima`, etc. — todas aceptan un `varianteId` opcional para mirar el stock de esa variante en vez del producto), `media.js` (`resolverMediaParaVariante(imagenes, videos, varianteId)` — espejo pensado para `Producto::mediaParaVariante()`, aunque hoy es el único lado que realmente se usa, ver §14), `whatsapp.js` (`buildOrderMessage(pedido)` — única fuente de verdad del formato del mensaje, compartida por `Checkout.jsx` y `ConfirmacionPedido.jsx`; agrega la línea de color de la variante fija, "Color solicitado" para la variante a elección, y una línea por cada add-on, solo cuando el item efectivamente los tiene).
+- **lib/** — `pricing.js` (espejo JS de `PricingService::calcularPrecio`, incluye resolución de variante/addons — sin la validación estricta de pertenencia, esa solo vive en el backend), `stock.js` (`sinStock`, `tieneStockBajo`, `cantidadMaxima`, etc. — todas aceptan un `varianteId` opcional para mirar el stock de esa variante en vez del producto), `media.js` (`resolverMediaParaVariante(imagenes, videos, varianteId)` — espejo pensado para `Producto::mediaParaVariante()`, aunque hoy es el único lado que realmente se usa, ver §14), `whatsapp.js` (`buildOrderMessage(pedido)` — única fuente de verdad del formato del mensaje, compartida por `Checkout.jsx` y `ConfirmacionPedido.jsx`; agrega la línea de color de la variante fija, "Color solicitado" para la variante a elección, y una línea por cada add-on, solo cuando el item efectivamente los tiene — más `WHATSAPP_SUCURSALES` (única fuente de verdad de los números por sucursal) y `abrirWhatsApp(numero, mensaje)`).
 - **Layouts**: `GuestLayout`, `AuthenticatedLayout` (Breeze).
 
 ## 11. Sistema de roles
@@ -147,7 +148,9 @@ Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`
 
 ## 12. Integración WhatsApp
 
-- Número **hardcodeado en 7 archivos** (`WhatsAppButton.jsx`, `Checkout.jsx`, `ConfirmacionPedido.jsx`, `WholesalerSection.jsx`, `RentalMachine.jsx`, `LandingFooter.jsx`, `FAQSection.jsx`): `5491127930349`. Sigue siendo deuda técnica centralizarlo.
+- **Sucursales centralizadas** en `resources/js/lib/whatsapp.js` → `WHATSAPP_SUCURSALES`: Buenos Aires (`5491127930349`) y Córdoba (`5493516766208` / `+54 9 3516 76-6208`). Única fuente de verdad — antes el número estaba hardcodeado en 7 archivos.
+- **Ningún botón de WhatsApp abre un número directo.** Todos (botón flotante, footer, FAQ, alquiler, mayoristas, tarjeta de contacto, "Enviar pedido por WhatsApp" del checkout y su reenvío desde la confirmación) llaman a `abrirSelectorWhatsApp(mensaje)` del `WhatsAppSucursalProvider` (hook `useWhatsAppSucursal`), que abre `WhatsAppSucursalModal`. Al elegir sucursal, `abrirWhatsApp(numero, mensaje)` abre el deep link nativo en mobile o `wa.me` en pestaña nueva en desktop.
+- El provider vive por encima de `<App>` (ver `app.jsx`), así que el modal sobrevive al `router.visit` — el checkout lo abre y el usuario puede elegir sucursal ya en la pantalla de confirmación.
 - El pedido **ya está persistido en backend** antes de armar el mensaje (a diferencia de como funcionaba originalmente) — el mensaje de WhatsApp es la vía de aviso/coordinación, no el único registro del pedido. Igual se guarda una copia en `sessionStorage['chisperio_last_order']` para poder reenviarlo desde la confirmación.
 
 ## 13. SEO y deploy a producción
@@ -164,7 +167,6 @@ Ya no es "cualquier usuario logueado tiene acceso admin": existe `RolUsuario` (`
 - `PRODUCTOS_IMG_PATH`/`PRODUCTOS_VIDEO_PATH` están seteadas en `.env` real y consumidas por `config/productos.php`, pero **no están en `.env.example`**.
 - `DOCUMENTOS_PDF_PATH` (consumida por `config/documentos.php`, default `docs/pdfs/`) tampoco está en `.env.example` — mismo patrón de deuda que las de arriba.
 - `VITE_PRODUCT_IMAGES_PATH`/`VITE_PRODUCT_VIDEOS_PATH` (env vars con prefijo `VITE_`) existen en `.env` pero **no se usan en ningún lado del frontend** — config muerta, candidata a limpieza.
-- Número de WhatsApp sigue hardcodeado en 7 archivos (ver sección 12).
 - No hay registro de usuarios self-service (removido a propósito) — alta solo por seeder/admin.
 - El carrito sigue viviendo enteramente en el navegador (`localStorage`/`sessionStorage`), no hay sesión de carrito en backend.
 - `Producto::mediaParaVariante()` (PHP) no lo llama ningún controller — toda la resolución real de "qué imagen/video mostrar para este color" pasa por su espejo en JS (`resolverMediaParaVariante`, `resources/js/lib/media.js`). Si el día de mañana se toca uno de los dos sin el otro, van a divergir en silencio.

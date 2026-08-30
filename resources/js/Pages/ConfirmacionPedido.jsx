@@ -2,21 +2,8 @@ import { useEffect, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 import { buildOrderMessage } from '@/lib/whatsapp';
-
-const WHATSAPP_NUMBER = '5491127930349';
-
-function openWhatsApp(message) {
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-    );
-    const encoded = encodeURIComponent(message);
-    if (isMobile) {
-        window.location.href = `whatsapp://send?phone=${WHATSAPP_NUMBER}&text=${encoded}`;
-    } else {
-        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, '_blank');
-    }
-}
 
 const STEPS = [
     {
@@ -37,6 +24,7 @@ const STEPS = [
 ];
 
 export default function ConfirmacionPedido({ canLogin }) {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
     const [message, setMessage] = useState(null);
 
     useEffect(() => {
@@ -103,10 +91,11 @@ export default function ConfirmacionPedido({ canLogin }) {
                         {message && (
                             <>
                                 <p className="text-xs text-[#7c7388] mb-3">
-                                    ¿No se abrió WhatsApp automáticamente?
+                                    ¿No llegaste a enviar el pedido por WhatsApp?
                                 </p>
                                 <button
-                                    onClick={() => openWhatsApp(message)}
+                                    type="button"
+                                    onClick={() => abrirSelectorWhatsApp(message)}
                                     className="w-full flex items-center justify-center gap-2.5 bg-[#25D366] text-white font-bold py-3.5 rounded-xl hover:bg-[#1ebe5a] active:scale-[0.98] transition-all shadow-md shadow-green-500/15 text-sm"
                                 >
                                     <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">

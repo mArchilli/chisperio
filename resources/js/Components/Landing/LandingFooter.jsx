@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
+import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 
 const WHATSAPP_MESSAGE = '¡Hola! Quiero asesoramiento para mi evento.';
-const WHATSAPP_URL = `https://wa.me/5491127930349?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
 const FOOTER_LINKS = [
     {
@@ -19,7 +19,7 @@ const FOOTER_LINKS = [
             { label: 'Sobre nosotros', href: '/#sobre-nosotros' },
             { label: 'Alquiler de maquinaria', href: '/#alquiler' },
             { label: 'Tu carrito', routeName: 'carrito.index' },
-            { label: 'Contacto por WhatsApp', href: WHATSAPP_URL, external: true },
+            { label: 'Contacto por WhatsApp', whatsapp: true },
             { label: 'Acceso equipo', routeName: 'login' },
         ],
     },
@@ -51,11 +51,21 @@ function WhatsAppIcon() {
 
 const SOCIALS = [
     { label: 'Instagram', icon: InstagramIcon },
-    { label: 'WhatsApp', icon: WhatsAppIcon, href: WHATSAPP_URL },
+    { label: 'WhatsApp', icon: WhatsAppIcon, whatsapp: true },
 ];
 
-function FooterLink({ item }) {
+function FooterLink({ item, onWhatsApp }) {
     const className = 'group inline-flex w-fit items-center gap-2 text-sm font-semibold text-white/65 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#1c1b1b]';
+    const bullet = <span className="h-1.5 w-1.5 rounded-full bg-[#8f32ff] transition-transform group-hover:scale-150" aria-hidden="true" />;
+
+    if (item.whatsapp) {
+        return (
+            <button type="button" onClick={onWhatsApp} className={className}>
+                {bullet}
+                {item.label}
+            </button>
+        );
+    }
 
     if (item.routeName) {
         const routeHref = route(item.routeName, item.params);
@@ -63,7 +73,7 @@ function FooterLink({ item }) {
 
         return (
             <Link href={href} className={className}>
-                <span className="h-1.5 w-1.5 rounded-full bg-[#8f32ff] transition-transform group-hover:scale-150" aria-hidden="true" />
+                {bullet}
                 {item.label}
             </Link>
         );
@@ -76,15 +86,28 @@ function FooterLink({ item }) {
             rel={item.external ? 'noopener noreferrer' : undefined}
             className={className}
         >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#8f32ff] transition-transform group-hover:scale-150" aria-hidden="true" />
+            {bullet}
             {item.label}
         </a>
     );
 }
 
-function SocialBubble({ social }) {
+function SocialBubble({ social, onWhatsApp }) {
     const Icon = social.icon;
     const className = 'flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white transition-all hover:-translate-y-1 hover:border-[#8f32ff] hover:bg-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1b1b]';
+
+    if (social.whatsapp) {
+        return (
+            <button
+                type="button"
+                onClick={onWhatsApp}
+                className={className}
+                aria-label={`Contactar por ${social.label}`}
+            >
+                <Icon />
+            </button>
+        );
+    }
 
     if (!social.href) {
         return (
@@ -108,6 +131,9 @@ function SocialBubble({ social }) {
 }
 
 export default function LandingFooter() {
+    const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
+    const abrirWhatsApp = () => abrirSelectorWhatsApp(WHATSAPP_MESSAGE);
+
     return (
         <footer className="border-t-2 border-[#6000ca] bg-[#1c1b1b] text-white">
             <div className="bg-[#6000ca]">
@@ -121,16 +147,15 @@ export default function LandingFooter() {
                         </p>
                     </div>
 
-                    <a
-                        href={WHATSAPP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        type="button"
+                        onClick={abrirWhatsApp}
                         className="inline-flex w-fit flex-shrink-0 items-center gap-3 rounded-full bg-white px-6 py-4 text-xs font-extrabold uppercase tracking-[0.08em] text-[#6000ca] shadow-lg transition-all hover:bg-[#1c1b1b] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#6000ca] active:scale-95 md:px-8"
                     >
                         <WhatsAppIcon />
                         Hablemos por WhatsApp
                         <ArrowIcon />
-                    </a>
+                    </button>
                 </div>
             </div>
 
@@ -155,7 +180,7 @@ export default function LandingFooter() {
                             </p>
                             <div className="flex flex-wrap gap-3">
                                 {SOCIALS.map((social) => (
-                                    <SocialBubble key={social.label} social={social} />
+                                    <SocialBubble key={social.label} social={social} onWhatsApp={abrirWhatsApp} />
                                 ))}
                             </div>
                         </div>
@@ -170,7 +195,7 @@ export default function LandingFooter() {
                                 <ul className="mt-5 space-y-3.5">
                                     {group.links.map((item) => (
                                         <li key={item.label}>
-                                            <FooterLink item={item} />
+                                            <FooterLink item={item} onWhatsApp={abrirWhatsApp} />
                                         </li>
                                     ))}
                                 </ul>
