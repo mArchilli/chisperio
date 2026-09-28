@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\CodigoDescuentoController;
+use App\Http\Controllers\ComboController;
 use App\Http\Controllers\ConfiguracionEnvioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentoController;
@@ -24,6 +25,7 @@ use Inertia\Inertia;
 require __DIR__.'/legacy_redirects.php';
 
 Route::get('/tienda', [TiendaController::class, 'index'])->name('tienda.index');
+Route::get('/tienda/combos/{combo}', [TiendaController::class, 'showCombo'])->name('combos.show');
 Route::get('/tienda/{producto}', [TiendaController::class, 'show'])->name('tienda.show');
 
 Route::get('/contacto', function () {
@@ -139,6 +141,17 @@ Route::middleware('auth')->group(function () {
             'destroy' => 'productos.destroy',
         ]);
         Route::patch('admin/productos/{producto}/toggle-featured', [ProductoController::class, 'toggleFeatured'])->name('productos.toggle-featured');
+
+        Route::resource('admin/combos', ComboController::class)->names([
+            'index' => 'combos.index',
+            'create' => 'combos.create',
+            'store' => 'combos.store',
+            'show' => 'combos.admin-show',
+            'edit' => 'combos.edit',
+            'update' => 'combos.update',
+            'destroy' => 'combos.destroy',
+        ]);
+        Route::patch('admin/combos/{combo}/toggle-featured', [ComboController::class, 'toggleFeatured'])->name('combos.toggle-featured');
 
         Route::resource('admin/ofertas', OfertaController::class)->names([
             'index' => 'ofertas.index',

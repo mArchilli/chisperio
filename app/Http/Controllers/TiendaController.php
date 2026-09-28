@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTransferObjects\ComboPriceResult;
 use App\DataTransferObjects\PriceResult;
 use App\Models\Categoria;
+use App\Models\Combo;
+use App\Models\ComboProducto;
 use App\Models\EscalaPrecio;
 use App\Models\Producto;
 use App\Services\PricingService;
@@ -77,8 +80,48 @@ class TiendaController extends Controller
         ]);
     }
 
+    /**
+     * Ficha pública de un combo: mismo espíritu que show() para un producto, pero sin
+     * escalas/add-ons (los combos no los tienen — ver Combo/ComboProducto). Carga los
+     * items con el producto y sus variantes activas para que el frontend arme un
+     * selector de color por cada item que ComboProducto::requiereSeleccionVariante().
+     */
+    public function showCombo(Combo $combo, PricingService $pricingService)
+    {
+        abort_if(! $combo->is_active, 404);
+
+        $combo->load([
+            'imagenes',
+            'videos',
+            'imagenPrincipal',
+            'items.producto.variantesActivas',
+            'items.productoVariante',
+        ]);
+
+        $precioActual = $this->serializarPrecioCombo($pricingService->calcularPrecioCombo($combo, 1));
+
+        // El combo se ve como un producto para resolverPrecio() en el frontend (ver
+        // serializarComboParaVidriera): sin escalas, y con oferta_vigente en la misma
+        // forma tipo_descuento/valor_descuento/alcance que usa un producto.
+        $combo->setAttribute('escalas_precio', []);
+        $combo->setAttribute('oferta_vigente', $this->ofertaVigenteComboArray($combo));
+        $combo->setAttribute('precio_actual', $precioActual);
+        $combo->setAttribute('stock', $combo->stockDisponible());
+
+        return Inertia::render('ShowCombo', [
+            'combo' => $combo,
+            'canLogin' => Route::has('login'),
+        ]);
+    }
+
     public function index(Request $request)
     {
+        // Los combos viven en su propia pestaña/filtro de la vidriera (no se mezclan con
+        // productos en la misma página) — ver la decisión de diseño en el plan de combos.
+        if ($request->filter === 'combos') {
+            return $this->indexCombos($request);
+        }
+
         // A diferencia de los "relacionados" de la ficha y los destacados de la home,
         // acá NO se usa conStock(): el catálogo tiene que listar también los productos
         // sin stock (marcados "Sin stock" y sin poder agregarse al carrito en el
@@ -212,6 +255,98 @@ class TiendaController extends Controller
             'recargo_variante' => $resultado->recargo_variante,
             'addons_total' => $resultado->addons_total,
             'precio_final_unitario' => $resultado->precio_final_con_opciones,
+        ];
+    }
+
+    /**
+     * Mismo shape reducido que serializarPrecio() pero para un combo (sin variante ni
+     * add-ons, ver ComboPriceResult).
+     */
+    private function serializarPrecioCombo(ComboPriceResult $resultado): array
+    {
+        return [
+            'precio_lista' => $resultado->precio_lista,
+            'precio_unitario_final' => $resultado->precio_unitario_final,
+            'ahorro_porcentaje' => $resultado->ahorro_porcentaje,
+            'oferta_aplicada' => $resultado->descuento_aplicado,
+        ];
+    }
+
+    /**
+     * Listado paginado de combos activos para la pestaña "Combos" de la vidriera.
+     * A diferencia del listado de productos, no se filtra por stock (mismo criterio
+     * que Producto: se muestran igual, marcados "Sin stock" en el frontend).
+     */
+    private function indexCombos(Request $request)
+    {
+        $query = Combo::with(['imagenPrincipal', 'items.producto.variantesActivas', 'items.productoVariante'])
+            ->where('is_active', true);
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                    ->orWhere('descripcion', 'like', "%{$search}%");
+            });
+        }
+
+        $combos = $query->latest()->paginate(12)->withQueryString();
+
+        $combos->getCollection()->transform(fn (Combo $combo) => $this->serializarComboParaVidriera($combo));
+
+        return Inertia::render('Tienda', [
+            'productos' => $combos,
+            'categorias' => Categoria::with('subcategorias')->get(),
+            'filters' => $request->only(['categoria', 'subcategoria', 'filter', 'q']),
+            'canLogin' => Route::has('login'),
+        ]);
+    }
+
+    /**
+     * Da a un Combo la misma forma que un Producto en lo que hace falta para que
+     * ProductCard/resolverPrecio (pricing.js) y el resto de Tienda.jsx lo rendericen
+     * sin cambios: `escalas_precio` vacío (sin escalas por cantidad), `oferta_vigente`
+     * con la misma forma tipo_descuento/valor_descuento/alcance que usa un producto
+     * (alcance siempre "todos", un combo no tiene escalas). `tiene_variantes` reutiliza
+     * el mismo campo/branch que ya usa la card para decidir "Elegir opciones" vs
+     * "Agregar" directo, aunque acá signifique "algún item del combo exige elegir color".
+     */
+    private function serializarComboParaVidriera(Combo $combo): array
+    {
+        return [
+            'id' => $combo->id,
+            'tipo' => 'combo',
+            'titulo' => $combo->titulo,
+            'descripcion' => $combo->descripcion,
+            'precio' => (float) $combo->precio,
+            'escalas_precio' => [],
+            'is_active' => $combo->is_active,
+            'is_featured' => $combo->is_featured,
+            'stock' => $combo->stockDisponible(),
+            'tiene_variantes' => $combo->items->contains(fn (ComboProducto $item) => $item->requiereSeleccionVariante()),
+            'imagen_principal' => $combo->imagenPrincipal,
+            'categorias' => [],
+            'oferta_vigente' => $this->ofertaVigenteComboArray($combo),
+            'envio_gratis' => $combo->envio_gratis,
+        ];
+    }
+
+    /**
+     * Da al descuento propio del combo (columnas planas, ver Combo::descuentoVigente())
+     * la misma forma que `producto.oferta_vigente` espera resolverPrecio() en
+     * pricing.js: alcance siempre "todos" porque un combo no tiene escalas de precio.
+     */
+    private function ofertaVigenteComboArray(Combo $combo): ?array
+    {
+        if (! $combo->descuentoVigente()) {
+            return null;
+        }
+
+        return [
+            'tipo_descuento' => $combo->tipo_descuento->value,
+            'valor_descuento' => (float) $combo->valor_descuento,
+            'alcance' => 'todos',
+            'producto_escala_precio_id' => null,
         ];
     }
 }

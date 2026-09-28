@@ -15,6 +15,7 @@ import {
     SUCURSAL_POR_DEFECTO_ID,
     WHATSAPP_SUCURSALES,
 } from '@/lib/whatsapp';
+import { itemsIncluidosCombo } from '@/lib/combo';
 
 const PROVINCIAS = [
     'Buenos Aires',
@@ -329,17 +330,27 @@ export default function Checkout({ canLogin }) {
             email: form.email,
         },
         observaciones: form.observaciones || null,
-        items: items.map((item) => ({
-            titulo: item.titulo,
-            cantidad: item.cantidad,
-            subtotalItem: item.subtotalItem,
-            variante: item.variante ? { nombre: item.variante.nombre } : null,
-            colorPersonalizadoTexto: item.colorPersonalizadoTexto || null,
-            addons: item.addons.map((addon) => ({
-                nombre: addon.nombre,
-                texto_personalizado: addon.texto_personalizado,
-            })),
-        })),
+        items: items.map((item) =>
+            item.tipo === 'combo'
+                ? {
+                      titulo: item.titulo,
+                      cantidad: item.cantidad,
+                      subtotalItem: item.subtotalItem,
+                      componentes: itemsIncluidosCombo(item),
+                      envioGratis: item.combo?.envio_gratis ?? false,
+                  }
+                : {
+                      titulo: item.titulo,
+                      cantidad: item.cantidad,
+                      subtotalItem: item.subtotalItem,
+                      variante: item.variante ? { nombre: item.variante.nombre } : null,
+                      colorPersonalizadoTexto: item.colorPersonalizadoTexto || null,
+                      addons: item.addons.map((addon) => ({
+                          nombre: addon.nombre,
+                          texto_personalizado: addon.texto_personalizado,
+                      })),
+                  }
+        ),
         subtotal,
         codigoDescuento: codigoAplicado,
         montoDescuento,
@@ -388,16 +399,28 @@ export default function Checkout({ canLogin }) {
                 sucursal: sucursalId,
                 codigo_descuento: codigoAplicado,
                 plan_pago_tarjeta_id: formaPagoSeleccionada?.planId ?? null,
-                items: items.map((item) => ({
-                    producto_id: item.producto_id,
-                    cantidad: item.cantidad,
-                    variante_id: item.varianteId,
-                    color_personalizado_texto: item.colorPersonalizadoTexto || null,
-                    addons: item.addons.map((addon) => ({
-                        addon_id: addon.addon_id,
-                        texto_personalizado: addon.texto_personalizado,
+                items: items
+                    .filter((item) => item.tipo !== 'combo')
+                    .map((item) => ({
+                        producto_id: item.producto_id,
+                        cantidad: item.cantidad,
+                        variante_id: item.varianteId,
+                        color_personalizado_texto: item.colorPersonalizadoTexto || null,
+                        addons: item.addons.map((addon) => ({
+                            addon_id: addon.addon_id,
+                            texto_personalizado: addon.texto_personalizado,
+                        })),
                     })),
-                })),
+                combos: items
+                    .filter((item) => item.tipo === 'combo')
+                    .map((item) => ({
+                        combo_id: item.combo_id,
+                        cantidad: item.cantidad,
+                        selecciones: (item.selecciones || []).map((s) => ({
+                            combo_producto_id: s.comboItemId,
+                            variante_id: s.varianteId,
+                        })),
+                    })),
             });
         } catch (error) {
             setIsSubmitting(false);

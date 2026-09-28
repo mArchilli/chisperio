@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import toast from 'react-hot-toast';
 import { resolverPrecio, redondear2 } from '@/lib/pricing';
 import { cantidadMaxima } from '@/lib/stock';
+import { stockDisponibleCombo } from '@/lib/combo';
 import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
 
 const CartContext = createContext(null);
@@ -59,6 +60,66 @@ function snapshotProducto(producto) {
 }
 
 /**
+ * Subconjunto de `combo` que necesita resolverPrecio (precio fijo, sin escalas) y
+ * stockDisponibleCombo (items con su producto/variantes activas), guardado como foto
+ * del combo al momento de agregarlo — mismo espíritu que snapshotProducto. El combo
+ * ya viene "duck-typed" como un producto desde el backend (TiendaController): sin
+ * escalas de precio y con `oferta_vigente` en la misma forma tipo_descuento/valor_descuento.
+ */
+function snapshotCombo(combo) {
+    return {
+        id: combo.id,
+        titulo: combo.titulo,
+        precio: Number(combo.precio),
+        escalas_precio: [],
+        oferta_vigente: combo.oferta_vigente ?? null,
+        envio_gratis: combo.envio_gratis ?? false,
+        items: (combo.items ?? []).map((item) => ({
+            id: item.id,
+            producto_id: item.producto_id,
+            cantidad: item.cantidad,
+            producto_variante_id: item.producto_variante_id ?? null,
+            producto: item.producto
+                ? {
+                      id: item.producto.id,
+                      titulo: item.producto.titulo,
+                      is_active: item.producto.is_active !== false,
+                      stock: item.producto.stock ?? null,
+                      variantes_activas: item.producto.variantes_activas ?? [],
+                  }
+                : null,
+            producto_variante: item.producto_variante ?? null,
+        })),
+    };
+}
+
+/**
+ * Mapa { [comboItemId]: varianteId } a partir del array de selecciones que arma
+ * ShowCombo.jsx — shape que espera stockDisponibleCombo (lib/combo.js).
+ */
+function seleccionPorItem(selecciones) {
+    const mapa = {};
+    (selecciones ?? []).forEach((s) => {
+        mapa[s.comboItemId] = s.varianteId;
+    });
+    return mapa;
+}
+
+/**
+ * Identidad de una línea de combo en el carrito: dos combos iguales con distinta
+ * combinación de colores elegidos son líneas separadas, mismo criterio que
+ * generarLineKey para productos.
+ */
+function generarComboLineKey(comboId, selecciones) {
+    const seleccionesKey = (selecciones ?? [])
+        .map((s) => `${s.comboItemId}:${s.varianteId ?? ''}`)
+        .sort()
+        .join('|');
+
+    return `combo:${comboId}::${seleccionesKey}`;
+}
+
+/**
  * Identidad de una línea de carrito: dos líneas del mismo producto con distinta
  * variante, distinta combinación de add-ons/textos de personalización, o distinta
  * descripción de color a medida, son líneas separadas (no se suman cantidades
@@ -86,11 +147,14 @@ function generarLineKey(productoId, varianteId, addons, colorPersonalizadoTexto 
 }
 
 function esItemValido(item) {
+    if (!item || typeof item !== 'object' || typeof item.cantidad !== 'number') return false;
+
+    if (item.tipo === 'combo') {
+        return item.combo && typeof item.combo === 'object' && typeof item.combo.precio !== 'undefined';
+    }
+
     return (
-        item &&
-        typeof item === 'object' &&
         typeof (item.producto_id ?? item.id) !== 'undefined' &&
-        typeof item.cantidad === 'number' &&
         item.producto &&
         typeof item.producto === 'object' &&
         typeof item.producto.precio !== 'undefined'
@@ -106,6 +170,21 @@ function esItemValido(item) {
  * identidad real pero lineKey distinto.
  */
 function normalizarItem(item) {
+    if (item.tipo === 'combo') {
+        const selecciones = Array.isArray(item.selecciones) ? item.selecciones : [];
+
+        return {
+            lineKey: generarComboLineKey(item.combo_id ?? item.combo?.id, selecciones),
+            tipo: 'combo',
+            combo_id: item.combo_id ?? item.combo?.id,
+            titulo: item.titulo,
+            imagen: item.imagen ?? null,
+            cantidad: item.cantidad,
+            combo: item.combo,
+            selecciones,
+        };
+    }
+
     const productoId = item.producto_id ?? item.id;
     const varianteId = item.varianteId ?? null;
     const addons = Array.isArray(item.addons) ? item.addons : [];
@@ -293,18 +372,60 @@ export function CartProvider({ children }) {
         });
     }, []);
 
+    // Agrega un combo al carrito. `selecciones` es un array de
+    // `{ comboItemId, productoId, varianteId, varianteNombre, varianteColorHex }`,
+    // uno por cada item del combo que ComboProducto::requiereSeleccionVariante() —
+    // arma ShowCombo.jsx. Dos combos iguales con distinta combinación de colores
+    // elegidos quedan en líneas separadas (ver generarComboLineKey).
+    const addComboToCart = useCallback((combo, qty = 1, selecciones = []) => {
+        const comboSnapshot = snapshotCombo(combo);
+        const max = stockDisponibleCombo(comboSnapshot, seleccionPorItem(selecciones));
+        const capear = (cantidad) => (max === null ? cantidad : Math.min(cantidad, max));
+        const lineKey = generarComboLineKey(combo.id, selecciones);
+
+        setItems((prev) => {
+            const existing = prev.find((item) => item.lineKey === lineKey);
+            if (existing) {
+                return prev.map((item) =>
+                    item.lineKey === lineKey
+                        ? { ...item, combo: comboSnapshot, cantidad: capear(item.cantidad + qty) }
+                        : item
+                );
+            }
+            return [
+                ...prev,
+                {
+                    lineKey,
+                    tipo: 'combo',
+                    combo_id: combo.id,
+                    titulo: combo.titulo,
+                    imagen: combo.imagen_principal?.ruta ?? null,
+                    cantidad: capear(qty),
+                    combo: comboSnapshot,
+                    selecciones,
+                },
+            ];
+        });
+    }, []);
+
     const removeFromCart = useCallback((lineKey) => {
         setItems((prev) => prev.filter((item) => item.lineKey !== lineKey));
     }, []);
 
     // Capea al stock de la variante (si la línea tiene una) o del producto, cuando
-    // no es ilimitado. No hace nada si `qty` da 0 o menos: para vaciar una línea sin
-    // stock se usa removeFromCart, no bajar el contador a 0.
+    // no es ilimitado. Para una línea de combo, capea al stock derivado de sus
+    // componentes (stockDisponibleCombo) en vez de cantidadMaxima. No hace nada si
+    // `qty` da 0 o menos: para vaciar una línea sin stock se usa removeFromCart, no
+    // bajar el contador a 0.
     const updateQty = useCallback((lineKey, qty) => {
         if (qty < 1) return;
         setItems((prev) =>
             prev.map((item) => {
                 if (item.lineKey !== lineKey) return item;
+                if (item.tipo === 'combo') {
+                    const max = stockDisponibleCombo(item.combo, seleccionPorItem(item.selecciones));
+                    return { ...item, cantidad: max === null ? qty : Math.min(qty, max) };
+                }
                 const max = cantidadMaxima(item.producto, item.varianteId);
                 return { ...item, cantidad: max === null ? qty : Math.min(qty, max) };
             })
@@ -388,6 +509,10 @@ export function CartProvider({ children }) {
 
         (async () => {
             for (const item of items) {
+                // Las líneas de combo no pasan por este chequeo (no tienen un único
+                // producto_id contra el que consultar /api/productos/{id}/precio) — el
+                // checkout vuelve a resolver y validar cada selección server-side igual.
+                if (item.tipo === 'combo') continue;
                 if (item.varianteId === null && item.addons.length === 0) continue;
                 // eslint-disable-next-line no-await-in-loop
                 const resultado = await revalidarLinea(item);
@@ -416,6 +541,7 @@ export function CartProvider({ children }) {
     const cantidadPorProducto = useMemo(() => {
         const acc = {};
         for (const item of items) {
+            if (item.tipo === 'combo') continue;
             acc[item.producto_id] = (acc[item.producto_id] ?? 0) + item.cantidad;
         }
         return acc;
@@ -424,6 +550,22 @@ export function CartProvider({ children }) {
     const itemsConPrecio = useMemo(
         () =>
             items.map((item) => {
+                if (item.tipo === 'combo') {
+                    // El precio del combo es fijo (no depende de escalas/variante/add-ons) —
+                    // resolverPrecio igual funciona porque el combo viene "duck-typed" como
+                    // un producto (escalas_precio: [], oferta_vigente con la misma forma).
+                    const precioInfo = resolverPrecio(item.combo, item.cantidad);
+                    const stockDisponible = stockDisponibleCombo(item.combo, seleccionPorItem(item.selecciones));
+                    return {
+                        ...item,
+                        precioInfo,
+                        precioUnitario: precioInfo.precioFinalConOpciones,
+                        subtotalItem: redondear2(precioInfo.precioFinalConOpciones * item.cantidad),
+                        stockDisponible,
+                        sinStock: stockDisponible === 0,
+                    };
+                }
+
                 const addonIds = item.addons.map((a) => a.addon_id);
                 const cantidadParaEscala = cantidadPorProducto[item.producto_id] ?? item.cantidad;
                 const precioInfo = resolverPrecio(item.producto, item.cantidad, item.varianteId, addonIds, cantidadParaEscala);
@@ -593,6 +735,7 @@ export function CartProvider({ children }) {
             value={{
                 items: itemsConPrecio,
                 addToCart,
+                addComboToCart,
                 removeFromCart,
                 updateQty,
                 clearCart,

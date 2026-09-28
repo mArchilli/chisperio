@@ -13,6 +13,14 @@
  *     variante: { nombre } | null,
  *     colorPersonalizadoTexto: string | null,
  *     addons: [{ nombre, texto_personalizado }],
+ *   } | {
+ *     // Línea de combo (ver itemsIncluidosCombo en lib/combo.js): en vez de
+ *     // variante/addons, cada componente con su color (fijo o elegido), y si el
+ *     // combo en sí tiene envío gratis (Combo.envio_gratis, independiente del monto
+ *     // mínimo global de envío gratis).
+ *     titulo, cantidad, subtotalItem,
+ *     componentes: [{ titulo, cantidad, varianteNombre: string | null }],
+ *     envioGratis: boolean,
  *   }],
  *   subtotal: number,
  *   codigoDescuento: string | null,
@@ -142,6 +150,21 @@ const formatPercent = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
  */
 function lineasItem(item) {
     const lineas = [`• ${item.titulo} x${item.cantidad} — ${formatPrice(item.subtotalItem)}`];
+
+    // Línea de combo: en vez de un único color, lista cada producto incluido con su
+    // variante (fija o elegida) — ver itemsIncluidosCombo (lib/combo.js), que arma
+    // este array en Checkout.jsx antes de llamar a buildOrderMessage.
+    if (item.componentes) {
+        lineas.push('   Incluye:');
+        item.componentes.forEach((componente) => {
+            const color = componente.varianteNombre ? ` (Color: ${componente.varianteNombre})` : '';
+            lineas.push(`     - ${componente.cantidad}x ${componente.titulo}${color}`);
+        });
+        if (item.envioGratis) {
+            lineas.push('   🚚 Este combo incluye envío gratis');
+        }
+        return lineas;
+    }
 
     if (item.variante) {
         lineas.push(`   Color: ${item.variante.nombre}`);

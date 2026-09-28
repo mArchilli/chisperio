@@ -8,6 +8,7 @@ use App\Enums\Sucursal;
 use App\Exceptions\StockInsuficienteException;
 use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
+use App\Models\Combo;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\PlanPagoTarjeta;
@@ -205,7 +206,10 @@ class PedidoController extends Controller
             'sucursal' => ['nullable', Rule::enum(Sucursal::class)],
             'codigo_descuento' => 'nullable|string',
             'plan_pago_tarjeta_id' => 'nullable|integer',
-            'items' => 'required|array|min:1',
+            // Un pedido puede ser solo de productos sueltos, solo de combos, o una
+            // mezcla — por eso ninguno de los dos arrays es 'required' en sí mismo,
+            // pero se exige que al menos uno traiga contenido (chequeo debajo).
+            'items' => 'nullable|array',
             'items.*.producto_id' => 'required|integer|exists:productos,id',
             'items.*.cantidad' => 'required|integer|min:1',
             'items.*.variante_id' => 'nullable|integer',
@@ -213,11 +217,63 @@ class PedidoController extends Controller
             'items.*.addons.*.addon_id' => 'required|integer',
             'items.*.addons.*.texto_personalizado' => 'nullable|string|max:1000',
             'items.*.color_personalizado_texto' => 'nullable|string|max:255',
+            'combos' => 'nullable|array',
+            'combos.*.combo_id' => 'required|integer|exists:combos,id',
+            'combos.*.cantidad' => 'required|integer|min:1',
+            'combos.*.selecciones' => 'nullable|array',
+            'combos.*.selecciones.*.combo_producto_id' => 'required|integer',
+            'combos.*.selecciones.*.variante_id' => 'nullable|integer',
         ]);
+
+        if (empty($validated['items']) && empty($validated['combos'])) {
+            throw ValidationException::withMessages([
+                'items' => 'El pedido necesita al menos un producto o un combo.',
+            ]);
+        }
+
+        $validated['items'] ??= [];
+
+        // Resuelve cada línea de combo (variante fija del admin o elegida por el
+        // comprador, validando que pertenezca al producto y esté activa) UNA vez acá
+        // para el chequeo optimista de stock aplanado por producto/variante, y otra vez
+        // dentro de la transacción para el precio/snapshot real — mismo espíritu que ya
+        // tiene el resto del método (el chequeo de acá es un adelanto de UX, el que
+        // importa de verdad es el que corre con lock dentro de StockService::descontar()).
+        $combosResueltos = collect($validated['combos'] ?? [])->map(fn ($combo) => $this->resolverLineaCombo($combo));
+
+        $itemsParaValidar = collect($validated['items'])
+            ->map(fn ($item) => [
+                'producto_id' => $item['producto_id'],
+                'variante_id' => $item['variante_id'] ?? null,
+                'cantidad' => (int) $item['cantidad'],
+            ]);
+
+        foreach ($combosResueltos as $resuelto) {
+            foreach ($resuelto['componentes'] as $componente) {
+                $itemsParaValidar->push([
+                    'producto_id' => $componente['producto_id'],
+                    'variante_id' => $componente['producto_variante_id'],
+                    'cantidad' => $componente['cantidad_total'],
+                ]);
+            }
+        }
+
+        // Un mismo producto/variante puede aparecer repetido entre varias líneas (un
+        // item suelto + un combo, o dos combos distintos) — se suman las cantidades
+        // antes de validar, así el chequeo es sobre el total real que hace falta.
+        $itemsParaValidarMerged = $itemsParaValidar
+            ->groupBy(fn ($item) => $item['producto_id'] . ':' . ($item['variante_id'] ?? 'null'))
+            ->map(fn ($grupo) => [
+                'producto_id' => $grupo->first()['producto_id'],
+                'variante_id' => $grupo->first()['variante_id'],
+                'cantidad' => $grupo->sum('cantidad'),
+            ])
+            ->values()
+            ->all();
 
         // Chequeo optimista (sin lock) para dar feedback rápido antes de intentar escribir.
         // El chequeo real y definitivo, con lock por fila, pasa dentro de descontar() más abajo.
-        $faltantes = $stockService->validarDisponibilidad($validated['items']);
+        $faltantes = $stockService->validarDisponibilidad($itemsParaValidarMerged);
 
         if (! empty($faltantes)) {
             $this->abortarPorStockInsuficiente($faltantes);
@@ -334,6 +390,31 @@ class PedidoController extends Controller
                     ];
                 }
 
+                // Líneas de combo: se resuelve cada una otra vez acá (fresca, dentro de la
+                // transacción) en vez de reusar $combosResueltos de afuera — mismo criterio
+                // que el resto del método, que recarga productos/ofertas fresh en vez de
+                // confiar en el chequeo optimista previo.
+                foreach ($validated['combos'] ?? [] as $comboInput) {
+                    $resuelto = $this->resolverLineaCombo($comboInput);
+                    $combo = $resuelto['combo'];
+                    $cantidadCombo = $resuelto['cantidad'];
+
+                    $precioCombo = $pricingService->calcularPrecioCombo($combo, $cantidadCombo);
+
+                    $comboSubtotal = round($precioCombo->precio_unitario_final * $cantidadCombo, 2);
+                    $subtotal += $comboSubtotal;
+
+                    $itemsData[] = [
+                        'combo_id' => $combo->id,
+                        'combo_items_seleccionados' => $resuelto['componentes'],
+                        'titulo' => $combo->titulo,
+                        'precio_unitario' => $precioCombo->precio_unitario_final,
+                        'cantidad' => $cantidadCombo,
+                        'subtotal' => $comboSubtotal,
+                        'precio_base_unitario' => $precioCombo->precio_lista,
+                    ];
+                }
+
                 // Código de descuento: se resuelve y lockea ACÁ, dentro de la transacción —
                 // nunca se confía en lo que mandó el frontend (Fases 2 y 3 son solo
                 // previsualización de UX). Si no es válido, resolverParaCheckout() lanza
@@ -444,6 +525,69 @@ class PedidoController extends Controller
             'id' => $pedido->id,
             'total' => $pedido->total,
         ], 201);
+    }
+
+    /**
+     * Resuelve una línea de combo del request ({combo_id, cantidad, selecciones}) contra
+     * su receta real (combo_productos): por cada item, usa la variante fija del admin si
+     * la hay; si no, busca la elegida por el comprador en `selecciones` (por
+     * combo_producto_id) y valida que sea una variante activa de ESE producto — mismo
+     * criterio de "no confiar en el frontend" que PricingService::resolverVariante. Si el
+     * producto no tiene variantes activas, no hace falta ninguna selección.
+     *
+     * Devuelve el combo cargado, la cantidad de combos pedida, y el snapshot de
+     * componentes ya resuelto (`combo_items_seleccionados`) con las cantidades totales
+     * (cantidad de receta × cantidad de combos) listas para precio/stock.
+     *
+     * @return array{combo: Combo, cantidad: int, componentes: array<int, array{producto_id: int, producto_variante_id: ?int, titulo: string, variante_nombre: ?string, variante_color_hex: ?string, cantidad_por_combo: int, cantidad_total: int}>}
+     */
+    private function resolverLineaCombo(array $comboInput): array
+    {
+        $combo = Combo::with(['items.producto.variantesActivas', 'items.productoVariante'])
+            ->find($comboInput['combo_id']);
+
+        if ($combo === null || ! $combo->is_active) {
+            throw ValidationException::withMessages([
+                'combos' => 'Uno de los combos elegidos ya no está disponible.',
+            ]);
+        }
+
+        $cantidadCombo = (int) $comboInput['cantidad'];
+        $seleccionesInput = collect($comboInput['selecciones'] ?? [])->keyBy('combo_producto_id');
+
+        $componentes = [];
+
+        foreach ($combo->items as $item) {
+            $varianteResuelta = null;
+
+            if ($item->producto_variante_id !== null) {
+                $varianteResuelta = $item->productoVariante;
+            } elseif ($item->producto->variantesActivas->isNotEmpty()) {
+                $varianteIdElegida = $seleccionesInput->get($item->id)['variante_id'] ?? null;
+
+                if ($varianteIdElegida !== null) {
+                    $varianteResuelta = $item->producto->variantesActivas->firstWhere('id', (int) $varianteIdElegida);
+                }
+
+                if ($varianteResuelta === null) {
+                    throw ValidationException::withMessages([
+                        'combos' => "Elegí un color para \"{$item->producto->titulo}\" dentro del combo \"{$combo->titulo}\".",
+                    ]);
+                }
+            }
+
+            $componentes[] = [
+                'producto_id' => $item->producto_id,
+                'producto_variante_id' => $varianteResuelta?->id,
+                'titulo' => $item->producto->titulo,
+                'variante_nombre' => $varianteResuelta?->nombre,
+                'variante_color_hex' => $varianteResuelta?->color_hex,
+                'cantidad_por_combo' => $item->cantidad,
+                'cantidad_total' => $item->cantidad * $cantidadCombo,
+            ];
+        }
+
+        return ['combo' => $combo, 'cantidad' => $cantidadCombo, 'componentes' => $componentes];
     }
 
     /**

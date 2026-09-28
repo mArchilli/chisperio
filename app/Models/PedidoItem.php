@@ -22,6 +22,8 @@ class PedidoItem extends Model
         'addons_seleccionados',
         'addons_total_unitario',
         'precio_base_unitario',
+        'combo_id',
+        'combo_items_seleccionados',
     ];
 
     protected $casts = [
@@ -31,6 +33,7 @@ class PedidoItem extends Model
         'addons_seleccionados' => 'array',
         'addons_total_unitario' => 'decimal:2',
         'precio_base_unitario' => 'decimal:2',
+        'combo_items_seleccionados' => 'array',
     ];
 
     public function pedido(): BelongsTo
@@ -46,5 +49,10 @@ class PedidoItem extends Model
     public function productoVariante(): BelongsTo
     {
         return $this->belongsTo(ProductoVariante::class);
+    }
+
+    public function combo(): BelongsTo
+    {
+        return $this->belongsTo(Combo::class);
     }
 }

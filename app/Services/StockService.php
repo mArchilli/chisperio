@@ -6,7 +6,6 @@ use App\Enums\MotivoMovimientoStock;
 use App\Exceptions\StockInsuficienteException;
 use App\Models\MovimientoStock;
 use App\Models\Pedido;
-use App\Models\PedidoItem;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
 use Illuminate\Support\Facades\DB;
@@ -84,16 +83,16 @@ class StockService
     public function descontar(Pedido $pedido): void
     {
         DB::transaction(function () use ($pedido) {
-            $items = $this->itemsOrdenadosParaLock($pedido);
+            $operaciones = $this->operacionesOrdenadasParaLock($pedido);
 
-            foreach ($items as $item) {
-                if ($item->producto_variante_id !== null) {
-                    $this->descontarVariante($pedido, $item);
+            foreach ($operaciones as $operacion) {
+                if ($operacion['producto_variante_id'] !== null) {
+                    $this->descontarVariante($pedido, $operacion['producto_id'], $operacion['producto_variante_id'], $operacion['cantidad']);
 
                     continue;
                 }
 
-                $this->descontarProducto($pedido, $item);
+                $this->descontarProducto($pedido, $operacion['producto_id'], $operacion['cantidad']);
             }
         });
     }
@@ -119,126 +118,154 @@ class StockService
                 return;
             }
 
-            $items = $this->itemsOrdenadosParaLock($pedido);
+            $operaciones = $this->operacionesOrdenadasParaLock($pedido);
 
-            foreach ($items as $item) {
-                if ($item->producto_variante_id !== null) {
-                    $this->reponerVariante($pedido, $item);
+            foreach ($operaciones as $operacion) {
+                if ($operacion['producto_variante_id'] !== null) {
+                    $this->reponerVariante($pedido, $operacion['producto_id'], $operacion['producto_variante_id'], $operacion['cantidad']);
 
                     continue;
                 }
 
-                $this->reponerProducto($pedido, $item);
+                $this->reponerProducto($pedido, $operacion['producto_id'], $operacion['cantidad']);
             }
         });
     }
 
     /**
-     * Orden estable (producto_id, luego producto_variante_id) para que dos transacciones
-     * concurrentes que tocan los mismos productos/variantes siempre pidan los locks en el
-     * mismo orden y no se deadlockeen entre sí.
+     * Aplana los items del pedido en operaciones de stock {producto_id,
+     * producto_variante_id, cantidad} y las ordena de forma estable (producto_id,
+     * luego producto_variante_id) para que dos transacciones concurrentes que tocan
+     * los mismos productos/variantes siempre pidan los locks en el mismo orden y no
+     * se deadlockeen entre sí.
+     *
+     * Una línea de producto suelto es 1 operación (como siempre). Una línea de combo
+     * (`combo_id` seteado) se expande en N operaciones, una por cada componente de su
+     * snapshot `combo_items_seleccionados` (ver PedidoController::store), con la
+     * cantidad total ya calculada (cantidad_por_combo * cantidad del combo vendido).
      */
-    private function itemsOrdenadosParaLock(Pedido $pedido)
+    private function operacionesOrdenadasParaLock(Pedido $pedido): \Illuminate\Support\Collection
     {
-        return $pedido->items()
-            ->with(['producto', 'productoVariante'])
-            ->get()
-            ->sortBy([
-                ['producto_id', 'asc'],
-                ['producto_variante_id', 'asc'],
+        $items = $pedido->items()->with(['producto', 'productoVariante'])->get();
+
+        $operaciones = collect();
+
+        foreach ($items as $item) {
+            if ($item->combo_id !== null) {
+                foreach ($item->combo_items_seleccionados ?? [] as $componente) {
+                    $operaciones->push([
+                        'producto_id' => $componente['producto_id'],
+                        'producto_variante_id' => $componente['producto_variante_id'] ?? null,
+                        'cantidad' => (int) $componente['cantidad_total'],
+                    ]);
+                }
+
+                continue;
+            }
+
+            $operaciones->push([
+                'producto_id' => $item->producto_id,
+                'producto_variante_id' => $item->producto_variante_id,
+                'cantidad' => (int) $item->cantidad,
             ]);
+        }
+
+        return $operaciones->sortBy([
+            ['producto_id', 'asc'],
+            ['producto_variante_id', 'asc'],
+        ])->values();
     }
 
-    private function descontarProducto(Pedido $pedido, PedidoItem $item): void
+    private function descontarProducto(Pedido $pedido, int $productoId, int $cantidad): void
     {
-        $producto = Producto::where('id', $item->producto_id)->lockForUpdate()->first();
+        $producto = Producto::where('id', $productoId)->lockForUpdate()->first();
 
         if ($producto === null || $producto->tieneStockIlimitado()) {
             return;
         }
 
-        if (! $producto->tieneStockDisponible($item->cantidad)) {
-            throw new StockInsuficienteException($producto->id, $item->cantidad, max(0, $producto->stock));
+        if (! $producto->tieneStockDisponible($cantidad)) {
+            throw new StockInsuficienteException($producto->id, $cantidad, max(0, $producto->stock));
         }
 
-        $producto->stock -= $item->cantidad;
+        $producto->stock -= $cantidad;
         $producto->save();
 
         MovimientoStock::create([
             'producto_id' => $producto->id,
             'pedido_id' => $pedido->id,
-            'cantidad' => -$item->cantidad,
+            'cantidad' => -$cantidad,
             'motivo' => MotivoMovimientoStock::PedidoCreado,
             'stock_resultante' => $producto->stock,
         ]);
     }
 
-    private function descontarVariante(Pedido $pedido, PedidoItem $item): void
+    private function descontarVariante(Pedido $pedido, int $productoId, int $varianteId, int $cantidad): void
     {
-        $variante = ProductoVariante::where('id', $item->producto_variante_id)->lockForUpdate()->first();
+        $variante = ProductoVariante::where('id', $varianteId)->lockForUpdate()->first();
 
         if ($variante === null || $variante->tieneStockIlimitado()) {
             return;
         }
 
-        if (! $variante->tieneStockDisponible($item->cantidad)) {
+        if (! $variante->tieneStockDisponible($cantidad)) {
             throw new StockInsuficienteException(
-                $item->producto_id,
-                $item->cantidad,
+                $productoId,
+                $cantidad,
                 max(0, $variante->stock),
                 $variante->id
             );
         }
 
-        $variante->stock -= $item->cantidad;
+        $variante->stock -= $cantidad;
         $variante->save();
 
         MovimientoStock::create([
-            'producto_id' => $item->producto_id,
+            'producto_id' => $productoId,
             'producto_variante_id' => $variante->id,
             'pedido_id' => $pedido->id,
-            'cantidad' => -$item->cantidad,
+            'cantidad' => -$cantidad,
             'motivo' => MotivoMovimientoStock::PedidoCreado,
             'stock_resultante' => $variante->stock,
         ]);
     }
 
-    private function reponerProducto(Pedido $pedido, PedidoItem $item): void
+    private function reponerProducto(Pedido $pedido, int $productoId, int $cantidad): void
     {
-        $producto = Producto::where('id', $item->producto_id)->lockForUpdate()->first();
+        $producto = Producto::where('id', $productoId)->lockForUpdate()->first();
 
         if ($producto === null || $producto->tieneStockIlimitado()) {
             return;
         }
 
-        $producto->stock += $item->cantidad;
+        $producto->stock += $cantidad;
         $producto->save();
 
         MovimientoStock::create([
             'producto_id' => $producto->id,
             'pedido_id' => $pedido->id,
-            'cantidad' => $item->cantidad,
+            'cantidad' => $cantidad,
             'motivo' => MotivoMovimientoStock::PedidoCancelado,
             'stock_resultante' => $producto->stock,
         ]);
     }
 
-    private function reponerVariante(Pedido $pedido, PedidoItem $item): void
+    private function reponerVariante(Pedido $pedido, int $productoId, int $varianteId, int $cantidad): void
     {
-        $variante = ProductoVariante::where('id', $item->producto_variante_id)->lockForUpdate()->first();
+        $variante = ProductoVariante::where('id', $varianteId)->lockForUpdate()->first();
 
         if ($variante === null || $variante->tieneStockIlimitado()) {
             return;
         }
 
-        $variante->stock += $item->cantidad;
+        $variante->stock += $cantidad;
         $variante->save();
 
         MovimientoStock::create([
-            'producto_id' => $item->producto_id,
+            'producto_id' => $productoId,
             'producto_variante_id' => $variante->id,
             'pedido_id' => $pedido->id,
-            'cantidad' => $item->cantidad,
+            'cantidad' => $cantidad,
             'motivo' => MotivoMovimientoStock::PedidoCancelado,
             'stock_resultante' => $variante->stock,
         ]);

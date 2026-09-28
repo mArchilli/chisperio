@@ -335,6 +335,14 @@ class ProductoController extends Controller
      */
     public function destroy(Producto $producto)
     {
+        $combos = $producto->comboProductos()->with('combo')->get()->pluck('combo.titulo')->unique()->filter();
+
+        if ($combos->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'producto' => "No se puede eliminar: este producto forma parte del combo \"{$combos->implode('", "')}\". Sacalo del combo primero.",
+            ]);
+        }
+
         $producto->delete();
 
         return redirect()->route('productos.index')

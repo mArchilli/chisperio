@@ -106,7 +106,10 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     // así que la cantidad elegida en los pills es la que se usa ahí directamente. Además
     // propagamos esa cantidad como ?qty= en los links a la ficha, para no resetear a 1
     // si el usuario prefiere seguir eligiendo ahí (ShowProduct la toma como qty inicial).
-    const productHref = route('tienda.show', qty > 1 ? { producto: producto.id, qty } : producto.id);
+    const esCombo = producto.tipo === 'combo';
+    const productHref = esCombo
+        ? route('combos.show', producto.id)
+        : route('tienda.show', qty > 1 ? { producto: producto.id, qty } : producto.id);
 
     return (
         <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)]">
@@ -141,6 +144,12 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 {stockBajo && (
                     <span className="absolute bottom-3 left-3 z-10 rounded-full bg-amber-400 px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
                         {producto.stock === 1 ? '¡Última unidad!' : `Quedan ${producto.stock}`}
+                    </span>
+                )}
+
+                {esCombo && producto.envio_gratis && !agotado && (
+                    <span className="absolute bottom-3 right-3 z-10 rounded-full bg-[#40B0C2] px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg">
+                        🚚 Envío gratis
                     </span>
                 )}
 
@@ -352,7 +361,7 @@ function CartToast({ message }) {
 export default function Tienda({ productos, categorias, filters, canLogin }) {
     const [quantities, setQuantities] = useState({});
     const [toast, setToast] = useState(null);
-    const { addToCart: addToCartContext } = useCart();
+    const { addToCart: addToCartContext, addComboToCart: addComboToCartContext } = useCart();
 
     const activeFilter = filters.filter || 'todos';
     const activeCategoriaId = filters.categoria ? Number(filters.categoria) : null;
@@ -444,7 +453,14 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
 
     const addToCart = (producto) => {
         const qty = getQty(producto.id);
-        addToCartContext(producto, qty);
+        // El quick-add solo llega acá cuando !producto.tiene_variantes (ver ProductCard):
+        // para un combo eso significa que ningún item exige elegir color, así que se
+        // agrega sin selecciones — igual que un producto sin variantes.
+        if (producto.tipo === 'combo') {
+            addComboToCartContext(producto, qty, []);
+        } else {
+            addToCartContext(producto, qty);
+        }
         if (toast) clearTimeout(window._toastTimer);
         setToast(`${producto.titulo} agregado al carrito`);
         window._toastTimer = setTimeout(() => setToast(null), 2500);
@@ -540,6 +556,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                                         { key: 'todos', label: 'Todos' },
                                         { key: 'destacados', label: 'Destacados' },
                                         { key: 'ofertas', label: 'Ofertas' },
+                                        { key: 'combos', label: 'Combos' },
                                     ].map(({ key, label }) => (
                                         <Chip
                                             key={key}

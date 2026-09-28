@@ -165,6 +165,15 @@ class Producto extends Model
     }
 
     /**
+     * Líneas de combo (combo_productos) que incluyen este producto en su receta —
+     * la usa el guard de borrado en ProductoController::destroy.
+     */
+    public function comboProductos(): HasMany
+    {
+        return $this->hasMany(ComboProducto::class);
+    }
+
+    /**
      * `stock === null` significa stock ilimitado (comportamiento por defecto de todo
      * el catálogo hasta que se cargue un número real).
      */

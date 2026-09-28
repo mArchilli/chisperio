@@ -6,6 +6,7 @@ import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 import FormaPagoBlock from '@/Components/FormaPagoBlock';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
+import { itemsIncluidosCombo } from '@/lib/combo';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -48,6 +49,8 @@ function BagIcon({ className = 'h-5 w-5' }) {
 
 function CartItem({ item, onUpdateQty, onRemove }) {
     const enElTope = item.stockDisponible !== null && item.cantidad >= item.stockDisponible;
+    const esCombo = item.tipo === 'combo';
+    const itemsIncluidos = esCombo ? itemsIncluidosCombo(item) : [];
 
     return (
         <article
@@ -79,37 +82,59 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                     <div className="flex items-start justify-between gap-2 sm:gap-4">
                         <div className="min-w-0 flex-1">
                             <p className="mb-1.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#6000ca] sm:text-[10px]">
-                                Producto seleccionado
+                                {esCombo ? 'Combo' : 'Producto seleccionado'}
                             </p>
                             <h2 className="line-clamp-2 text-sm font-extrabold leading-snug text-[#1c1b1b] sm:text-lg md:text-xl">
                                 {item.titulo}
                             </h2>
 
-                            {item.variante && (
-                                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-[#f7f6f9] px-2.5 py-1 text-[10px] font-bold text-[#4b4356]">
-                                    <span
-                                        className="h-3 w-3 flex-shrink-0 rounded-full border border-black/10"
-                                        style={
-                                            item.colorPersonalizadoTexto
-                                                ? { background: GRADIENTE_PERSONALIZADO }
-                                                : { backgroundColor: item.variante.color_hex || '#e5e5e5' }
-                                        }
-                                        aria-hidden="true"
-                                    />
-                                    {item.colorPersonalizadoTexto || item.variante.nombre}
-                                </span>
-                            )}
-
-                            {item.addons.length > 0 && (
-                                <ul className="mt-1.5 space-y-0.5">
-                                    {item.addons.map((addon) => (
-                                        <li key={addon.addon_id} className="text-[11px] font-medium leading-snug text-[#81788a]">
-                                            {addon.nombre}
-                                            {addon.texto_personalizado ? `: "${addon.texto_personalizado}"` : ''}
-                                            {' — +'}{formatPrice(addon.precio)}
+                            {esCombo ? (
+                                <ul className="mt-1.5 space-y-1">
+                                    {itemsIncluidos.map((comboItem) => (
+                                        <li key={comboItem.id} className="flex items-center gap-1.5 text-[11px] font-medium leading-snug text-[#81788a]">
+                                            <span>{comboItem.cantidad} × {comboItem.titulo}</span>
+                                            {comboItem.varianteNombre && (
+                                                <span className="inline-flex items-center gap-1 rounded-full border border-black/[0.06] bg-[#f7f6f9] px-2 py-0.5 text-[10px] font-bold text-[#4b4356]">
+                                                    <span
+                                                        className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-black/10"
+                                                        style={{ backgroundColor: comboItem.varianteColorHex || '#e5e5e5' }}
+                                                        aria-hidden="true"
+                                                    />
+                                                    {comboItem.varianteNombre}
+                                                </span>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>
+                            ) : (
+                                <>
+                                    {item.variante && (
+                                        <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-[#f7f6f9] px-2.5 py-1 text-[10px] font-bold text-[#4b4356]">
+                                            <span
+                                                className="h-3 w-3 flex-shrink-0 rounded-full border border-black/10"
+                                                style={
+                                                    item.colorPersonalizadoTexto
+                                                        ? { background: GRADIENTE_PERSONALIZADO }
+                                                        : { backgroundColor: item.variante.color_hex || '#e5e5e5' }
+                                                }
+                                                aria-hidden="true"
+                                            />
+                                            {item.colorPersonalizadoTexto || item.variante.nombre}
+                                        </span>
+                                    )}
+
+                                    {item.addons.length > 0 && (
+                                        <ul className="mt-1.5 space-y-0.5">
+                                            {item.addons.map((addon) => (
+                                                <li key={addon.addon_id} className="text-[11px] font-medium leading-snug text-[#81788a]">
+                                                    {addon.nombre}
+                                                    {addon.texto_personalizado ? `: "${addon.texto_personalizado}"` : ''}
+                                                    {' — +'}{formatPrice(addon.precio)}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </>
                             )}
 
                             {item.sinStock ? (

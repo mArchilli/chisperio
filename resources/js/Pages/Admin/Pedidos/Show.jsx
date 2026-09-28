@@ -170,9 +170,26 @@ export default function Show({ pedido }) {
                                                                 )}
                                                             </button>
                                                             <div>
-                                                                <div className="text-sm font-medium text-gray-900">{item.titulo}</div>
-                                                                {!item.producto && (
+                                                                <div className="text-sm font-medium text-gray-900">
+                                                                    {item.titulo}
+                                                                    {item.combo_id && (
+                                                                        <span className="ml-2 inline-flex items-center rounded-full bg-[#40B0C2]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#40B0C2]">
+                                                                            Combo
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {!item.producto && !item.combo_id && (
                                                                     <div className="text-xs text-gray-400 italic">Producto eliminado del catálogo</div>
+                                                                )}
+                                                                {item.combo_items_seleccionados?.length > 0 && (
+                                                                    <ul className="mt-1.5 space-y-0.5">
+                                                                        {item.combo_items_seleccionados.map((componente, i) => (
+                                                                            <li key={i} className="text-xs text-gray-500">
+                                                                                <span className="font-semibold text-gray-700">{componente.cantidad_total}x {componente.titulo}</span>
+                                                                                {componente.variante_nombre ? ` — Color: ${componente.variante_nombre}` : ''}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
                                                                 )}
                                                                 {item.variante_nombre && (
                                                                     <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-600">

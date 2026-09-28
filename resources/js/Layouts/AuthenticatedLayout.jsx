@@ -39,6 +39,11 @@ export default function AuthenticatedLayout({ header, children }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
         )}] : []),
+        ...(isAdmin ? [{ name: 'Combos', href: 'combos.index', current: 'combos.*', icon: (
+            <svg className={`h-5 w-5 ${!sidebarCollapsed ? 'mr-3' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12V8H4v4m16 0v8H4v-8m16 0h-2.5m-13.5 0H4M12 3v5m0 0L9.5 5.5M12 8l2.5-2.5" />
+            </svg>
+        )}] : []),
         { name: 'Precios', href: 'precios.index', current: 'precios.*', icon: (
             <svg className={`h-5 w-5 ${!sidebarCollapsed ? 'mr-3' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

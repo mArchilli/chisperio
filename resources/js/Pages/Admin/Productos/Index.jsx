@@ -17,6 +17,7 @@ export default function Index({ productos }) {
     const { auth } = usePage().props;
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [productoToDelete, setProductoToDelete] = useState(null);
+    const [deleteError, setDeleteError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
@@ -49,18 +50,21 @@ export default function Index({ productos }) {
 
     const openDeleteModal = (producto) => {
         setProductoToDelete(producto);
+        setDeleteError(null);
         setShowDeleteModal(true);
     };
 
     const closeDeleteModal = () => {
         setShowDeleteModal(false);
         setProductoToDelete(null);
+        setDeleteError(null);
     };
 
     const handleDelete = () => {
         if (productoToDelete) {
             router.delete(route('productos.destroy', productoToDelete.id), {
                 onSuccess: () => closeDeleteModal(),
+                onError: (errors) => setDeleteError(errors.producto || 'No se pudo eliminar el producto.'),
             });
         }
     };
@@ -760,9 +764,12 @@ export default function Index({ productos }) {
                                         </h3>
                                         <div className="mt-2">
                                             <p className="text-sm text-gray-500">
-                                                ¿Estás seguro de que deseas eliminar el producto "<strong>{productoToDelete?.titulo}</strong>"? 
+                                                ¿Estás seguro de que deseas eliminar el producto "<strong>{productoToDelete?.titulo}</strong>"?
                                                 Esta acción no se puede deshacer.
                                             </p>
+                                            {deleteError && (
+                                                <p className="mt-2 text-sm font-semibold text-red-600">{deleteError}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

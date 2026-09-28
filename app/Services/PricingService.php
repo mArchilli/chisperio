@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\ComboPriceResult;
 use App\DataTransferObjects\PriceResult;
 use App\Enums\AlcanceOferta;
 use App\Enums\TipoDescuento;
 use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
+use App\Models\Combo;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
 use App\Models\Producto;
@@ -190,5 +192,44 @@ class PricingService
         };
 
         return round(max(0.0, $precio), 2);
+    }
+
+    /**
+     * Precio de un combo: a diferencia de calcularPrecio(), no hay escalas por
+     * cantidad ni recargo de variante ni add-ons — el precio del combo es fijo e
+     * indiferente al precio de los productos que lo componen (ver Combo::precio).
+     * $cantidad no afecta el precio unitario, solo lo recibe el caller para el
+     * subtotal, igual que calcularPrecio().
+     */
+    public function calcularPrecioCombo(Combo $combo, int $cantidad): ComboPriceResult
+    {
+        $precioLista = round((float) $combo->precio, 2);
+        $precioFinal = $precioLista;
+        $descuentoAplicado = false;
+
+        if ($combo->descuentoVigente()) {
+            $valor = (float) $combo->valor_descuento;
+
+            $precio = match ($combo->tipo_descuento) {
+                TipoDescuento::Porcentaje => $precioLista * (1 - $valor / 100),
+                TipoDescuento::Fijo => $precioLista - $valor,
+            };
+
+            $precioFinal = round(max(0.0, $precio), 2);
+            $descuentoAplicado = true;
+        }
+
+        $ahorroUnitario = round(max(0, $precioLista - $precioFinal), 2);
+        $ahorroPorcentaje = $precioLista > 0
+            ? round(($ahorroUnitario / $precioLista) * 100, 2)
+            : 0.0;
+
+        return new ComboPriceResult(
+            precio_lista: $precioLista,
+            precio_unitario_final: $precioFinal,
+            descuento_aplicado: $descuentoAplicado,
+            ahorro_unitario: $ahorroUnitario,
+            ahorro_porcentaje: $ahorroPorcentaje,
+        );
     }
 }
