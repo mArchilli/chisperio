@@ -45,7 +45,7 @@ function ProductImage({ producto }) {
 
     if (!imagePath || imageFailed) {
         return (
-            <div className="flex h-full w-full items-center justify-center bg-[#f6f3f8]" aria-hidden="true">
+            <div className="flex h-full w-full items-center justify-center bg-white" aria-hidden="true">
                 <span className="flex h-24 w-24 items-center justify-center rounded-full border border-[#6000ca]/10 bg-white/75 text-5xl font-black text-[#6000ca]/25 shadow-sm">
                     {producto.titulo?.charAt(0).toUpperCase()}
                 </span>
@@ -57,7 +57,7 @@ function ProductImage({ producto }) {
         <img
             src={`/${imagePath}`}
             alt={producto.titulo}
-            className="h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.04] md:p-7"
+            className="h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.04] md:p-7"
             loading="lazy"
             onError={() => setImageFailed(true)}
         />
@@ -74,7 +74,7 @@ function ProductCard({ producto, added, onAddToCart }) {
         <article className="group flex min-w-0 flex-none basis-[84%] snap-start flex-col overflow-hidden rounded-[1.75rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] sm:basis-[calc(50%-0.625rem)] lg:basis-[calc(33.333%-0.875rem)] xl:basis-[calc(20%-1.2rem)]">
             <Link
                 href={route('tienda.show', producto.id)}
-                className="relative block aspect-[4/3] overflow-hidden bg-[#f6f3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                className="relative block aspect-[4/3] overflow-hidden bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
                 aria-label={`Ver ${producto.titulo}`}
             >
                 <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-4">

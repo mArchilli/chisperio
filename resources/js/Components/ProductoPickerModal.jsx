@@ -76,7 +76,7 @@ export default function ProductoPickerModal({ show, productos, onSelect, onClose
                                                 <img
                                                     src={`/${ruta}`}
                                                     alt={producto.titulo}
-                                                    className="h-full w-full object-contain p-2 mix-blend-multiply transition-transform group-hover:scale-105"
+                                                    className="h-full w-full object-contain p-2 transition-transform group-hover:scale-105"
                                                 />
                                             ) : (
                                                 <div className="flex h-full w-full items-center justify-center">

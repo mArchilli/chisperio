@@ -33,7 +33,7 @@ Route::permanentRedirect('/home/cart', '/carrito');
 Route::permanentRedirect('/resumen-de-compra', '/carrito');
 Route::permanentRedirect('/home/checkout', '/checkout');
 Route::permanentRedirect('/home/checkout/resumen-pedido', '/confirmacion-pedido');
-Route::permanentRedirect('/compra-mayorista', '/mayoristas');
+Route::permanentRedirect('/compra-mayorista', '/');
 Route::permanentRedirect('/quienessomos', '/#sobre-nosotros');
 Route::permanentRedirect('/servicios', '/#alquiler');
 Route::permanentRedirect('/ayuda', '/#preguntas-frecuentes');

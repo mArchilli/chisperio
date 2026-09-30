@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
+import BackToCatalog from '@/Components/BackToCatalog';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
 import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
@@ -35,7 +36,7 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
             onClick={() => onSelect(i)}
             aria-label={`Ver ${isVideo ? 'video' : 'imagen'} ${i + 1} de ${total}`}
             aria-pressed={i === activeIdx}
-            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-[#f6f3f8] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
+            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
                 i === activeIdx ? 'border-[#6000ca] shadow-[0_10px_25px_-18px_rgba(96,0,202,0.8)]' : 'border-black/[0.06] hover:border-[#6000ca]/35'
             }`}
         >
@@ -47,7 +48,7 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
                     </span>
                 </>
             ) : (
-                <img src={`/${item.ruta}`} alt="" className="h-full w-full object-contain p-2.5 mix-blend-multiply transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none" />
+                <img src={`/${item.ruta}`} alt="" className="h-full w-full object-contain p-2.5 transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none" />
             )}
             {i === activeIdx && <span className="absolute inset-x-3 bottom-1.5 h-0.5 rounded-full bg-[#6000ca]" />}
         </button>
@@ -65,7 +66,7 @@ function ComboGallery({ imagenes, videos, titulo }) {
 
     if (items.length === 0) {
         return (
-            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
+            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
                 <span className="relative flex h-36 w-36 select-none items-center justify-center rounded-full border border-[#6000ca]/10 bg-white/75 text-7xl font-black text-[#6000ca]/20 shadow-[0_18px_50px_-30px_rgba(96,0,202,0.45)] sm:h-44 sm:w-44 sm:text-8xl">
                     {titulo?.charAt(0).toUpperCase()}
                 </span>
@@ -78,7 +79,7 @@ function ComboGallery({ imagenes, videos, titulo }) {
 
     return (
         <div className="space-y-3 lg:space-y-4">
-            <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
+            <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
                 {current.kind === 'video' ? (
                     <video key={current.id} src={`/${current.ruta}`} controls playsInline className="relative h-full w-full object-contain p-3 sm:p-5" />
                 ) : (
@@ -88,7 +89,7 @@ function ComboGallery({ imagenes, videos, titulo }) {
                         aria-label="Ver imagen ampliada"
                         className="relative block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
                     >
-                        <img src={`/${current.ruta}`} alt={titulo} className="relative h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none" />
+                        <img src={`/${current.ruta}`} alt={titulo} className="relative h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none" />
                     </button>
                 )}
             </div>
@@ -180,6 +181,8 @@ export default function ShowCombo({ combo, canLogin }) {
             <LandingHeader canLogin={canLogin} />
 
             <main className="relative pb-28 md:pb-20">
+                <BackToCatalog cardKey={`c-${combo.id}`} />
+
                 <nav aria-label="Migas de pan" className="relative hidden w-full flex-wrap items-center gap-2 px-3 py-6 text-xs font-semibold text-[#81788a] sm:px-4 md:flex">
                     <Link href="/" className="rounded-md transition-colors hover:text-[#6000ca]">Inicio</Link>
                     <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />

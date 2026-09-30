@@ -1,8 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
+import BackToCatalog from '@/Components/BackToCatalog';
 import LandingFooter from '@/Components/Landing/LandingFooter';
-import TablaPreciosPorCantidad from '@/Components/TablaPreciosPorCantidad';
 import PillsCantidad from '@/Components/PillsCantidad';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
 import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
@@ -111,7 +111,7 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
             onClick={() => onSelect(i)}
             aria-label={`Ver ${isVideo ? 'video' : 'imagen'} ${i + 1} de ${total}`}
             aria-pressed={i === activeIdx}
-            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-[#f6f3f8] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
+            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
                 i === activeIdx
                     ? 'border-[#6000ca] shadow-[0_10px_25px_-18px_rgba(96,0,202,0.8)]'
                     : 'border-black/[0.06] hover:border-[#6000ca]/35'
@@ -128,7 +128,7 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
                 <img
                     src={`/${item.ruta}`}
                     alt=""
-                    className="h-full w-full object-contain p-2.5 mix-blend-multiply transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none"
+                    className="h-full w-full object-contain p-2.5 transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none"
                 />
             )}
             {i === activeIdx && (
@@ -159,9 +159,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
 
     if (items.length === 0) {
         return (
-            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[38px] border-[#6000ca]/[0.035]" />
-                <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[#FF00D4]/[0.025] blur-2xl" />
+            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
                 <span className="relative flex h-36 w-36 select-none items-center justify-center rounded-full border border-[#6000ca]/10 bg-white/75 text-7xl font-black text-[#6000ca]/20 shadow-[0_18px_50px_-30px_rgba(96,0,202,0.45)] sm:h-44 sm:w-44 sm:text-8xl">
                     {titulo?.charAt(0).toUpperCase()}
                 </span>
@@ -177,9 +175,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
 
     return (
         <div className="space-y-3 lg:space-y-4">
-            <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-[#f6f3f8] sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
-                <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full border-[46px] border-white/45" />
-                <div className="pointer-events-none absolute -bottom-20 -left-12 h-60 w-60 rounded-full bg-[#6000ca]/[0.035] blur-2xl" />
+            <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
 
                 {current.kind === 'video' ? (
                     <video
@@ -199,7 +195,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
                         <img
                             src={`/${current.ruta}`}
                             alt={titulo}
-                            className="relative h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
+                            className="relative h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
                         />
                     </button>
                 )}
@@ -268,7 +264,7 @@ function RelatedCard({ producto }) {
             aria-label={`Ver ${producto.titulo}`}
             className="group block min-w-[78vw] max-w-[310px] flex-shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 sm:min-w-[44vw] md:min-w-0 md:max-w-none motion-reduce:transform-none"
         >
-            <div className="relative aspect-[4/3] overflow-hidden bg-[#f6f3f8]">
+            <div className="relative aspect-[4/3] overflow-hidden bg-white">
                 {hasOffer && (
                     <span className="absolute right-3 top-3 z-10 rounded-full bg-[#FF00D4] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
                         Oferta
@@ -279,7 +275,7 @@ function RelatedCard({ producto }) {
                     <img
                         src={`/${producto.imagen_principal.ruta}`}
                         alt={producto.titulo}
-                        className="h-full w-full object-contain p-5 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none"
+                        className="h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none"
                         loading="lazy"
                     />
                 ) : (
@@ -323,7 +319,6 @@ function RelatedCard({ producto }) {
 export default function ShowProduct({ producto, relacionados, canLogin }) {
     const { planesPagoTarjeta } = usePage().props;
     const [qty, setQty] = useState(() => qtyInicialDesdeUrl(producto));
-    const [isFav, setIsFav] = useState(false);
     const [expandDesc, setExpandDesc] = useState(false);
     const [toast, setToast] = useState(null);
     const [planPagoId, setPlanPagoId] = useState(null);
@@ -627,9 +622,11 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
             <Head title={producto.titulo} />
             <LandingHeader canLogin={canLogin} />
 
-            <main className="relative pb-28 md:pb-20">
+            <main className="relative mx-auto w-full max-w-[1680px] pb-28 md:pb-20">
                 <div className="pointer-events-none absolute left-[-12rem] top-16 h-[28rem] w-[28rem] rounded-full bg-[#6000ca]/[0.035] blur-3xl" />
                 <div className="pointer-events-none absolute right-[-10rem] top-[32rem] h-[24rem] w-[24rem] rounded-full bg-[#FF00D4]/[0.025] blur-3xl" />
+
+                <BackToCatalog cardKey={`p-${producto.id}`} />
 
                 <nav
                     aria-label="Migas de pan"
@@ -667,63 +664,70 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                     <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
                         <ProductGallery imagenes={galeriaImagenes} videos={galeriaVideos} titulo={producto.titulo} />
 
-                        <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
-                            <div className="mb-4 flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                    <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">
-                                        {producto.categorias?.[0]?.nombre ?? 'Selección Chisperío'}
-                                    </p>
-
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {agotado && (
-                                            <span className="rounded-full bg-[#ba1a1a] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
-                                                Sin stock
-                                            </span>
-                                        )}
-                                        {stockBajo && (
-                                            <span className="rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
-                                                {maxQty === 1 ? '¡Última unidad!' : `Quedan pocas: ${maxQty}`}
-                                            </span>
-                                        )}
-                                        {tieneDescuento && (
-                                            <span className="rounded-full bg-[#FF00D4] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
-                                                {ahorroPorcentaje}% off
-                                            </span>
-                                        )}
-                                        {!tieneDescuento && producto.is_featured && (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.06] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#6000ca]">
-                                                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                    <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.07 3.29a1 1 0 00.95.69h3.46c.97 0 1.37 1.24.59 1.81l-2.8 2.03a1 1 0 00-.36 1.12l1.07 3.29c.3.92-.76 1.69-1.54 1.12l-2.8-2.03a1 1 0 00-1.18 0l-2.8 2.03c-.78.57-1.84-.2-1.54-1.12l1.07-3.29a1 1 0 00-.36-1.12l-2.8-2.03c-.78-.57-.38-1.81.59-1.81h3.46a1 1 0 00.95-.69l1.07-3.29z" />
-                                                </svg>
-                                                Destacado
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setIsFav(!isFav)}
-                                    aria-label={isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-                                    aria-pressed={isFav}
-                                    className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 ${
-                                        isFav
-                                            ? 'border-[#FF00D4]/20 bg-[#FF00D4]/[0.08] text-[#FF00D4]'
-                                            : 'border-black/[0.07] bg-white text-[#81788a] hover:border-[#FF00D4]/25 hover:bg-[#FF00D4]/[0.05] hover:text-[#FF00D4]'
-                                    }`}
-                                >
-                                    <svg
-                                        className="h-5 w-5"
-                                        fill={isFav ? 'currentColor' : 'none'}
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth={2}
-                                        aria-hidden="true"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                    </svg>
-                                </button>
+                        {/* Mobile/tablet: el selector de color va pegado a la galería para ver el
+                            cambio de foto al instante, sin tener que bajar y subir. En desktop
+                            sigue en la tarjeta de opciones. Con reparto por colores no aplica
+                            (ahí cada color se asigna a una cantidad, ver RepartoVariantes). */}
+                        {!agotado && tieneVariantes && !repartoActivo && (
+                            <div className="rounded-[1.5rem] border border-black/[0.05] bg-white px-4 pb-1 pt-4 lg:hidden">
+                                <VarianteColorSwatches
+                                    className="mb-3"
+                                    variantes={variantes}
+                                    value={varianteId}
+                                    onChange={setVarianteId}
+                                    colorPersonalizado={colorPersonalizado}
+                                    textoPersonalizado={textoPersonalizado}
+                                    onColorPersonalizadoChange={setColorPersonalizado}
+                                    onTextoPersonalizadoChange={setTextoPersonalizado}
+                                />
                             </div>
+                        )}
+
+                        <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
+                            {(producto.categorias?.length > 0 || agotado || stockBajo || tieneDescuento || producto.is_featured) && (
+                                <div className="mb-4 flex flex-wrap items-center gap-2">
+                                    {producto.categorias?.map((cat) => (
+                                        <Link
+                                            key={cat.id}
+                                            href={route('tienda.index', { categoria: cat.id })}
+                                            className="rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.05] px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#6000ca] transition-colors hover:border-[#6000ca]/20 hover:bg-[#6000ca]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
+                                        >
+                                            {cat.nombre}
+                                        </Link>
+                                    ))}
+                                    {producto.subcategorias?.map((sub) => (
+                                        <span
+                                            key={sub.id}
+                                            className="rounded-full border border-black/[0.06] bg-white px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#4b4356]"
+                                        >
+                                            {sub.nombre}
+                                        </span>
+                                    ))}
+                                    {agotado && (
+                                        <span className="rounded-full bg-[#ba1a1a] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
+                                            Sin stock
+                                        </span>
+                                    )}
+                                    {stockBajo && (
+                                        <span className="rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
+                                            {maxQty === 1 ? '¡Última unidad!' : `Quedan pocas: ${maxQty}`}
+                                        </span>
+                                    )}
+                                    {tieneDescuento && (
+                                        <span className="rounded-full bg-[#FF00D4] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
+                                            {ahorroPorcentaje}% off
+                                        </span>
+                                    )}
+                                    {!tieneDescuento && producto.is_featured && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.06] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#6000ca]">
+                                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.07 3.29a1 1 0 00.95.69h3.46c.97 0 1.37 1.24.59 1.81l-2.8 2.03a1 1 0 00-.36 1.12l1.07 3.29c.3.92-.76 1.69-1.54 1.12l-2.8-2.03a1 1 0 00-1.18 0l-2.8 2.03c-.78.57-1.84-.2-1.54-1.12l1.07-3.29a1 1 0 00-.36-1.12l-2.8-2.03c-.78-.57-.38-1.81.59-1.81h3.46a1 1 0 00.95-.69l1.07-3.29z" />
+                                            </svg>
+                                            Destacado
+                                        </span>
+                                    )}
+                                </div>
+                            )}
 
                             <h1 className="text-[clamp(2rem,8vw,3.15rem)] font-black leading-[0.98] tracking-[-0.045em] text-[#1c1b1b] lg:text-[clamp(2.35rem,4vw,3.7rem)]">
                                 {producto.titulo}
@@ -732,12 +736,18 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                             <div className="mt-6 rounded-[1.5rem] border border-[#6000ca]/[0.08] bg-[#f7f4fa] p-5 sm:p-6">
                                 {planesPagoActivos.length > 0 && (
                                     <div className="mb-4 border-b border-[#6000ca]/10 pb-4">
-                                        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
+                                        <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
                                             Simulá el pago con tarjeta
+                                        </p>
+                                        <p className="mb-2 text-[11px] font-semibold text-[#81788a]">
+                                            {repartoIncompleto
+                                                ? `Calculado sobre ${sumAsignado} de ${qty} unidades asignadas: ${formatPrice(totalProductoActual)}`
+                                                : `Calculado sobre tu selección: ${qty} ${qty === 1 ? 'unidad' : 'unidades'} = ${formatPrice(totalProductoActual)}`}
                                         </p>
                                         <div className="flex flex-wrap gap-2">
                                             {planesPagoActivos.map((plan) => {
                                                 const activo = plan.id === planPagoId;
+                                                const conRecargo = Number(plan.recargo_porcentaje) > 0;
                                                 return (
                                                     <button
                                                         key={plan.id}
@@ -751,24 +761,30 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                                         }`}
                                                     >
                                                         {plan.cuotas === 1 ? '1 cuota' : `${plan.cuotas} cuotas`}
-                                                        {Number(plan.recargo_porcentaje) > 0 && ` +${formatPercent(plan.recargo_porcentaje)}`}
+                                                        {conRecargo ? ` (+${formatPercent(plan.recargo_porcentaje)})` : ' (sin recargo)'}
                                                     </button>
                                                 );
                                             })}
                                         </div>
 
                                         {recargoInfo && planPagoSeleccionado && (
-                                            <p className="mt-3 text-xs font-semibold text-[#4b4356]">
-                                                Total: {formatPrice(recargoInfo.total_con_recargo)} —{' '}
-                                                {planPagoSeleccionado.cuotas === 1
-                                                    ? `1 cuota de ${formatPrice(recargoInfo.monto_por_cuota)}`
-                                                    : `${planPagoSeleccionado.cuotas} cuotas de ${formatPrice(recargoInfo.monto_por_cuota)} c/u`}
-                                                {recargoInfo.recargo_monto > 0 && ` (recargo ${formatPrice(recargoInfo.recargo_monto)} incluido)`}
-                                            </p>
+                                            <div className="mt-3 rounded-xl bg-white px-3.5 py-3 text-xs font-semibold text-[#4b4356]">
+                                                <p className="text-sm font-extrabold text-[#1c1b1b]">
+                                                    {planPagoSeleccionado.cuotas === 1
+                                                        ? `Pagás 1 cuota de ${formatPrice(recargoInfo.monto_por_cuota)}`
+                                                        : `Pagás ${planPagoSeleccionado.cuotas} cuotas de ${formatPrice(recargoInfo.monto_por_cuota)}`}
+                                                </p>
+                                                <p className="mt-0.5">
+                                                    Total a pagar: {formatPrice(recargoInfo.total_con_recargo)}
+                                                    {recargoInfo.recargo_monto > 0
+                                                        ? ` (incluye ${formatPrice(recargoInfo.recargo_monto)} de recargo)`
+                                                        : ' (sin recargo)'}
+                                                </p>
+                                            </div>
                                         )}
 
                                         <p className="mt-2 text-[11px] font-medium text-[#81788a]">
-                                            Esta simulación es sobre este producto puntual. El recargo real del pedido se calcula sobre el total completo de tu compra al momento de pagar.
+                                            Es una simulación con lo que elegiste en este producto. El recargo final se calcula sobre el total de tu compra al momento de pagar.
                                         </p>
                                     </div>
                                 )}
@@ -872,15 +888,19 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                                     onTextoPersonalizadoChange={setTextoPersonalizado}
                                                 />
                                             ) : (
-                                                <VarianteColorSwatches
-                                                    variantes={variantes}
-                                                    value={varianteId}
-                                                    onChange={setVarianteId}
-                                                    colorPersonalizado={colorPersonalizado}
-                                                    textoPersonalizado={textoPersonalizado}
-                                                    onColorPersonalizadoChange={setColorPersonalizado}
-                                                    onTextoPersonalizadoChange={setTextoPersonalizado}
-                                                />
+                                                // En mobile/tablet los colores se eligen justo debajo de la
+                                                // galería (ver más arriba), así que acá solo van en desktop.
+                                                <div className="hidden lg:block">
+                                                    <VarianteColorSwatches
+                                                        variantes={variantes}
+                                                        value={varianteId}
+                                                        onChange={setVarianteId}
+                                                        colorPersonalizado={colorPersonalizado}
+                                                        textoPersonalizado={textoPersonalizado}
+                                                        onColorPersonalizadoChange={setColorPersonalizado}
+                                                        onTextoPersonalizadoChange={setTextoPersonalizado}
+                                                    />
+                                                </div>
                                             )}
                                             <ProductoAddonsChecklist
                                                 addons={addons}
@@ -969,31 +989,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                             </p>
                                         )}
                                     </div>
-
-                                    <TablaPreciosPorCantidad producto={producto} qty={qty} />
                                 </>
-                            )}
-
-                            {producto.categorias?.length > 0 && (
-                                <div className="mt-5 flex flex-wrap gap-2">
-                                    {producto.categorias.map((cat) => (
-                                        <Link
-                                            key={cat.id}
-                                            href={route('tienda.index', { categoria: cat.id })}
-                                            className="rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.05] px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#6000ca] transition-colors hover:border-[#6000ca]/20 hover:bg-[#6000ca]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
-                                        >
-                                            {cat.nombre}
-                                        </Link>
-                                    ))}
-                                    {producto.subcategorias?.map((sub) => (
-                                        <span
-                                            key={sub.id}
-                                            className="rounded-full border border-black/[0.06] bg-white px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#4b4356]"
-                                        >
-                                            {sub.nombre}
-                                        </span>
-                                    ))}
-                                </div>
                             )}
                         </div>
                     </div>

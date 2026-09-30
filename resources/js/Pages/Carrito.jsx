@@ -61,13 +61,13 @@ function CartItem({ item, onUpdateQty, onRemove }) {
             }`}
         >
             <div className="flex items-start gap-3.5 sm:gap-5">
-                <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-[1.25rem] border border-black/[0.05] bg-[#f6f3f8] sm:h-32 sm:w-32 md:h-40 md:w-40 md:rounded-[1.5rem]">
+                <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-[1.25rem] border border-black/[0.05] bg-white sm:h-32 sm:w-32 md:h-40 md:w-40 md:rounded-[1.5rem]">
                     <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-white/45" />
                     {item.imagen ? (
                         <img
                             src={`/${item.imagen}`}
                             alt={item.titulo}
-                            className={`relative h-full w-full object-contain p-3 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.035] md:p-4 motion-reduce:transition-none ${item.sinStock ? 'opacity-50 grayscale' : ''}`}
+                            className={`relative h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.035] md:p-4 motion-reduce:transition-none ${item.sinStock ? 'opacity-50 grayscale' : ''}`}
                         />
                     ) : (
                         <div className="relative flex h-full w-full items-center justify-center">

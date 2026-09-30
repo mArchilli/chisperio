@@ -164,15 +164,7 @@ class TiendaController extends Controller
         if ($request->filter === 'destacados') {
             $query->where('is_featured', true);
         } elseif ($request->filter === 'ofertas') {
-            $query->whereHas('ofertas', function ($q) {
-                $q->where('is_active', true)
-                    ->where(function ($q2) {
-                        $q2->whereNull('fecha_inicio')->orWhere('fecha_inicio', '<=', now());
-                    })
-                    ->where(function ($q2) {
-                        $q2->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now());
-                    });
-            });
+            $query->whereHas('ofertas', fn ($q) => $this->ofertaVigente($q));
         }
 
         // Productos sin stock al final del listado (stock NULL = ilimitado siempre
@@ -180,7 +172,7 @@ class TiendaController extends Controller
         $productos = $query
             ->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END')
             ->latest()
-            ->paginate(12)
+            ->paginate($this->porPagina($request))
             ->withQueryString();
 
         $productos->getCollection()->each(
@@ -191,8 +183,41 @@ class TiendaController extends Controller
             'productos'  => $productos,
             'categorias' => Categoria::with('subcategorias')->get(),
             'filters'    => $request->only(['categoria', 'subcategoria', 'filter', 'q']),
+            'disponibles' => $this->filtrosDisponibles(),
             'canLogin'   => Route::has('login'),
         ]);
+    }
+
+    /**
+     * Tamaño de la tanda del catálogo ("Cargar más"). `paginas` permite pedir de una vez
+     * varias tandas en la página 1: lo usa el botón "Volver al catálogo" de la ficha para
+     * reconstruir el listado tal como el usuario lo dejó. Tiene que coincidir con
+     * TIENDA_PAGE_SIZE en resources/js/lib/tiendaReturn.js.
+     */
+    private function porPagina(Request $request): int
+    {
+        return 24 * max(1, min(10, (int) $request->query('paginas', 1)));
+    }
+
+    /**
+     * Qué filtros especiales tienen al menos un producto, para que la vidriera oculte
+     * "Destacados"/"Ofertas" cuando no hay nada que mostrar.
+     */
+    private function filtrosDisponibles(): array
+    {
+        return [
+            'destacados' => Producto::where('is_active', true)->where('is_featured', true)->exists(),
+            'ofertas' => Producto::where('is_active', true)
+                ->whereHas('ofertas', fn ($q) => $this->ofertaVigente($q))
+                ->exists(),
+        ];
+    }
+
+    private function ofertaVigente($query): void
+    {
+        $query->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('fecha_inicio')->orWhere('fecha_inicio', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()));
     }
 
     /**
@@ -290,7 +315,7 @@ class TiendaController extends Controller
             });
         }
 
-        $combos = $query->latest()->paginate(12)->withQueryString();
+        $combos = $query->latest()->paginate($this->porPagina($request))->withQueryString();
 
         $combos->getCollection()->transform(fn (Combo $combo) => $this->serializarComboParaVidriera($combo));
 
@@ -298,6 +323,7 @@ class TiendaController extends Controller
             'productos' => $combos,
             'categorias' => Categoria::with('subcategorias')->get(),
             'filters' => $request->only(['categoria', 'subcategoria', 'filter', 'q']),
+            'disponibles' => $this->filtrosDisponibles(),
             'canLogin' => Route::has('login'),
         ]);
     }

@@ -32,6 +32,7 @@ export default function VarianteColorSwatches({
     textoPersonalizado = '',
     onColorPersonalizadoChange,
     onTextoPersonalizadoChange,
+    className = 'mb-5',
 }) {
     if (!variantes || variantes.length === 0) return null;
 
@@ -42,7 +43,7 @@ export default function VarianteColorSwatches({
         && textoPersonalizado.trim() === '';
 
     return (
-        <div className="mb-5">
+        <div className={className}>
             <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
                 Elegí un color {value === null && <span className="text-[#ba1a1a]">*</span>}
             </p>

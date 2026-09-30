@@ -85,7 +85,7 @@ function ProductoPreview({ producto, onElegir }) {
         >
             <span className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50">
                 {ruta ? (
-                    <img src={`/${ruta}`} alt={producto.titulo} className="h-full w-full object-contain p-1 mix-blend-multiply" />
+                    <img src={`/${ruta}`} alt={producto.titulo} className="h-full w-full object-contain p-1" />
                 ) : (
                     <span className="flex h-full w-full items-center justify-center text-sm font-black text-gray-300">
                         {producto.titulo.charAt(0).toUpperCase()}

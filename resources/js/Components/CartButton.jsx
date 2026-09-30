@@ -4,7 +4,6 @@ import { ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/Context/CartContext';
 import { useNotificacionEnvioGratis } from '@/hooks/useNotificacionEnvioGratis';
-import { useScrolledPast } from '@/hooks/useScrolledPast';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 
@@ -119,9 +118,7 @@ export default function CartButton() {
     const { items, removeFromCart, updateQty, cartCount, subtotal, cartDrawerOpen, closeCartDrawer, toggleCartDrawer } = useCart();
     const { configuracionEnvio } = usePage().props;
     // En mobile el botón flotante queda oculto (el ícono del navbar dispara este mismo
-    // drawer — ver LandingHeader) y en desktop no aparece hasta que el usuario scrollea
-    // un poco, para no taparle el hero apenas entra al sitio.
-    const scrolled = useScrolledPast();
+    // drawer — ver LandingHeader); en desktop está siempre visible.
 
     useNotificacionEnvioGratis(subtotal, configuracionEnvio?.montoMinimo, () => {
         toast.success('¡Desbloqueaste envío gratis! 🎉');
@@ -261,9 +258,7 @@ export default function CartButton() {
             <button
                 onClick={toggleCartDrawer}
                 aria-label={cartDrawerOpen ? 'Cerrar carrito' : 'Abrir carrito'}
-                className={`fixed bottom-8 right-[6.5rem] z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] transition-all duration-200 hover:scale-110 hover:bg-[#5000aa] active:scale-95 ${
-                    scrolled ? 'md:flex' : 'md:hidden'
-                }`}
+                className="fixed bottom-8 right-[6.5rem] z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] transition-all duration-200 hover:scale-110 hover:bg-[#5000aa] active:scale-95 md:flex"
             >
                 <ShoppingCart className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden="true" />
 

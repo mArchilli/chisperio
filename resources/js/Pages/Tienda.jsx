@@ -1,9 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
+import { TIENDA_PAGE_SIZE, cardDomId, cardKey, saveTiendaReturn } from '@/lib/tiendaReturn';
 import { cantidadMaxima, sinStock, tieneStockBajo } from '@/lib/stock';
 import PillsCantidad from '@/Components/PillsCantidad';
 
@@ -53,7 +54,7 @@ function ProductImage({ producto }) {
         <img
             src={`/${imagePath}`}
             alt={producto.titulo}
-            className="h-full w-full object-contain p-4 mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.04] md:p-5"
+            className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.04] md:p-5"
             loading="lazy"
             onError={() => setImageFailed(true)}
         />
@@ -112,10 +113,13 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
         : route('tienda.show', qty > 1 ? { producto: producto.id, qty } : producto.id);
 
     return (
-        <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)]">
+        <article
+            id={cardDomId(cardKey(producto))}
+            data-card-key={cardKey(producto)}
+            className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)]">
             <Link
                 href={productHref}
-                className="relative block aspect-[4/3] overflow-hidden bg-[#f6f3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                className="relative block aspect-[4/3] overflow-hidden bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
                 aria-label={`Ver ${producto.titulo}`}
             >
                 {agotado && (
@@ -260,72 +264,6 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     );
 }
 
-function Pagination({ currentPage, lastPage, onPageChange }) {
-    if (lastPage <= 1) return null;
-
-    const pages = [];
-    let prev = null;
-    for (let i = 1; i <= lastPage; i++) {
-        if (i === 1 || i === lastPage || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            if (prev !== null && i - prev > 1) pages.push('…');
-            pages.push(i);
-            prev = i;
-        }
-    }
-
-    const buttonBase = 'flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95';
-    const arrowClasses = `${buttonBase} border border-[#6000ca]/20 bg-white text-[#6000ca] shadow-sm hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white disabled:pointer-events-none disabled:opacity-30`;
-
-    return (
-        <nav className="flex items-center justify-center gap-1.5 px-3 py-9 sm:px-4" aria-label="Paginación">
-            <button
-                type="button"
-                disabled={currentPage === 1}
-                onClick={() => onPageChange(currentPage - 1)}
-                className={arrowClasses}
-                aria-label="Anterior"
-            >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-
-            {pages.map((page, index) =>
-                page === '…' ? (
-                    <span key={`dot-${index}`} className="px-1 text-sm text-[#81788a] select-none">…</span>
-                ) : (
-                    <button
-                        type="button"
-                        key={page}
-                        onClick={() => onPageChange(page)}
-                        className={`${buttonBase} ${
-                            page === currentPage
-                                ? 'bg-[#6000ca] text-white shadow-md shadow-[#6000ca]/20'
-                                : 'border border-black/[0.08] bg-white text-[#4b4356] hover:border-[#6000ca] hover:text-[#6000ca]'
-                        }`}
-                        aria-label={`Ir a la página ${page}`}
-                        aria-current={page === currentPage ? 'page' : undefined}
-                    >
-                        {page}
-                    </button>
-                )
-            )}
-
-            <button
-                type="button"
-                disabled={currentPage === lastPage}
-                onClick={() => onPageChange(currentPage + 1)}
-                className={arrowClasses}
-                aria-label="Siguiente"
-            >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-            </button>
-        </nav>
-    );
-}
-
 function EmptyState({ onReset }) {
     return (
         <div className="flex flex-col items-center justify-center rounded-[2rem] border border-black/[0.06] bg-white px-6 py-20 text-center shadow-[0_14px_34px_-28px_rgba(28,27,27,0.45)]">
@@ -358,7 +296,161 @@ function CartToast({ message }) {
     );
 }
 
-export default function Tienda({ productos, categorias, filters, canLogin }) {
+const SEARCH_DEBOUNCE_MS = 400;
+const SEARCH_MIN_CHARS = 2;
+
+function FilterIcon({ className = 'h-5 w-5' }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M7 12h10m-7 6h4" />
+        </svg>
+    );
+}
+
+function CloseIcon({ className = 'h-3.5 w-3.5' }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    );
+}
+
+function SheetSection({ title, children }) {
+    return (
+        <section className="border-b border-black/[0.06] px-5 py-4 last:border-b-0">
+            <h3 className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#81788a]">{title}</h3>
+            <div className="flex flex-wrap gap-2">{children}</div>
+        </section>
+    );
+}
+
+/**
+ * Menú de filtros para mobile (bottom sheet). Trabaja con un borrador y recién
+ * navega al tocar "Aplicar", así no se dispara una consulta por cada chip tocado.
+ */
+function FiltersSheet({ open, onClose, categorias, tipos, initial, onApply }) {
+    const [draft, setDraft] = useState(initial);
+
+    useEffect(() => {
+        if (open) setDraft(initial);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const onKeyDown = (event) => event.key === 'Escape' && onClose();
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener('keydown', onKeyDown);
+        };
+    }, [open, onClose]);
+
+    if (!open) return null;
+
+    const draftCat = categorias.find((category) => category.id === draft.categoria) ?? null;
+    const isPristine = draft.filter === 'todos' && !draft.categoria && !draft.subcategoria;
+
+    return (
+        <div className="fixed inset-0 z-[90] md:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
+            <button
+                type="button"
+                className="absolute inset-0 bg-black/45"
+                onClick={onClose}
+                aria-label="Cerrar filtros"
+            />
+            <div className="absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-[1.75rem] bg-white shadow-2xl">
+                <div className="flex items-center justify-between px-5 pb-3 pt-5">
+                    <h2 className="text-sm font-black uppercase tracking-[0.1em] text-[#1c1b1b]">Filtros</h2>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fcf9f8] text-[#4b4356] active:scale-95"
+                        aria-label="Cerrar"
+                    >
+                        <CloseIcon className="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto overscroll-contain border-t border-black/[0.06]">
+                    <SheetSection title="Tipo">
+                        {tipos.map(({ key, label }) => (
+                            <Chip
+                                key={key}
+                                active={draft.filter === key}
+                                onClick={() => setDraft((d) => ({ ...d, filter: key }))}
+                            >
+                                {label}
+                            </Chip>
+                        ))}
+                    </SheetSection>
+
+                    {categorias.length > 0 && (
+                        <SheetSection title="Categoría">
+                            {categorias.map((category) => (
+                                <Chip
+                                    key={category.id}
+                                    active={draft.categoria === category.id}
+                                    onClick={() =>
+                                        setDraft((d) => ({
+                                            ...d,
+                                            categoria: d.categoria === category.id ? null : category.id,
+                                            subcategoria: null,
+                                        }))
+                                    }
+                                >
+                                    {category.nombre}
+                                </Chip>
+                            ))}
+                        </SheetSection>
+                    )}
+
+                    {draftCat?.subcategorias?.length > 0 && (
+                        <SheetSection title={`Subcategoría · ${draftCat.nombre}`}>
+                            {draftCat.subcategorias.map((subcategory) => (
+                                <Chip
+                                    key={subcategory.id}
+                                    sub
+                                    active={draft.subcategoria === subcategory.id}
+                                    onClick={() =>
+                                        setDraft((d) => ({
+                                            ...d,
+                                            subcategoria: d.subcategoria === subcategory.id ? null : subcategory.id,
+                                        }))
+                                    }
+                                >
+                                    {subcategory.nombre}
+                                </Chip>
+                            ))}
+                        </SheetSection>
+                    )}
+                </div>
+
+                <div className="flex gap-3 border-t border-black/[0.06] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                    <button
+                        type="button"
+                        onClick={() => setDraft({ filter: 'todos', categoria: null, subcategoria: null })}
+                        disabled={isPristine}
+                        className="rounded-full border border-black/[0.08] px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.07em] text-[#4b4356] transition-all active:scale-95 disabled:opacity-40"
+                    >
+                        Limpiar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onApply(draft)}
+                        className="flex-1 rounded-full bg-[#6000ca] px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.07em] text-white shadow-md shadow-[#6000ca]/20 transition-all active:scale-95"
+                    >
+                        Aplicar filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function Tienda({ productos, categorias, filters, disponibles, canLogin }) {
     const [quantities, setQuantities] = useState({});
     const [toast, setToast] = useState(null);
     const { addToCart: addToCartContext, addComboToCart: addComboToCartContext } = useCart();
@@ -367,10 +459,36 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
     const activeCategoriaId = filters.categoria ? Number(filters.categoria) : null;
     const activeSubcategoriaId = filters.subcategoria ? Number(filters.subcategoria) : null;
     const activeCat = categorias.find((category) => category.id === activeCategoriaId) ?? null;
+    const activeSubcat = activeCat?.subcategorias?.find((s) => s.id === activeSubcategoriaId) ?? null;
     const [searchTerm, setSearchTerm] = useState(filters.q || '');
+    const [searching, setSearching] = useState(false);
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const searchInputRef = useRef(null);
 
+    // "Destacados" y "Ofertas" solo se ofrecen si hay productos para mostrar (o si ya
+    // es el filtro activo, para que el usuario pueda verlo y salir de ahí).
+    const tipos = [
+        { key: 'todos', label: 'Todos' },
+        ...(disponibles?.destacados || activeFilter === 'destacados' ? [{ key: 'destacados', label: 'Destacados' }] : []),
+        ...(disponibles?.ofertas || activeFilter === 'ofertas' ? [{ key: 'ofertas', label: 'Ofertas' }] : []),
+        { key: 'combos', label: 'Combos' },
+    ];
+
+    const activeFiltersCount =
+        (activeFilter !== 'todos' ? 1 : 0) + (activeCategoriaId ? 1 : 0) + (activeSubcategoriaId ? 1 : 0);
+
+    const appliedLabels = [
+        activeFilter !== 'todos' ? tipos.find((t) => t.key === activeFilter)?.label : null,
+        activeCat?.nombre,
+        activeSubcat?.nombre,
+    ].filter(Boolean);
+
+    // Sincroniza el input cuando el término cambia desde afuera (navegación, "ver todos"),
+    // pero nunca mientras se está escribiendo: una respuesta atrasada pisaría lo tipeado.
     useEffect(() => {
-        setSearchTerm(filters.q || '');
+        if (document.activeElement !== searchInputRef.current) {
+            setSearchTerm(filters.q || '');
+        }
     }, [filters.q]);
 
     useEffect(() => {
@@ -420,32 +538,121 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
             q: filters.q,
         });
 
-    const handlePageChange = (page) => {
+    // "Cargar más": el servidor sigue paginando (24 por tanda), pero el cliente va sumando
+    // cada tanda a la lista en vez de reemplazarla. La página 1 (filtro o búsqueda nueva)
+    // reinicia la lista. preserveUrl evita que la URL quede en ?page=N, que al recargar
+    // mostraría solo esa tanda.
+    const [items, setItems] = useState(productos.data);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    useEffect(() => {
+        setItems((previous) => {
+            if (productos.current_page === 1) return productos.data;
+            const known = new Set(previous.map((p) => p.id));
+            return [...previous, ...productos.data.filter((p) => !known.has(p.id))];
+        });
+    }, [productos]);
+
+    // Se calcula por cantidad de items y no por current_page/last_page: al volver de una
+    // ficha el servidor arma de una sola vez varias tandas (?paginas=N), y ahí esos
+    // números dejan de representar tandas de TIENDA_PAGE_SIZE.
+    const hasMore = items.length < productos.total;
+
+    const currentQuery = () => {
         const params = {};
         if (filters.filter && filters.filter !== 'todos') params.filter = filters.filter;
         if (filters.categoria) params.categoria = filters.categoria;
         if (filters.subcategoria) params.subcategoria = filters.subcategoria;
         if (filters.q) params.q = filters.q;
-        params.page = page;
-        router.get(route('tienda.index'), params, { preserveScroll: false });
+        return params;
+    };
+
+    // Al tocar una card se recuerda cuál fue y en qué estado estaba el listado, para que
+    // "Volver al catálogo" (ver BackToCatalog) lo reconstruya igual.
+    const rememberReturnPoint = (event) => {
+        const card = event.target.closest('[data-card-key]');
+        if (!card) return;
+        const tandas = Math.ceil(items.length / TIENDA_PAGE_SIZE);
+        saveTiendaReturn(card.dataset.cardKey, {
+            ...currentQuery(),
+            ...(tandas > 1 ? { paginas: tandas } : {}),
+        });
+    };
+
+    // Al volver desde una ficha la URL trae #card-<key>: una vez pintado el listado se
+    // centra esa card en pantalla.
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (!hash.startsWith('#card-')) return undefined;
+        // El pequeño delay deja que Inertia termine su propio reseteo de scroll al navegar.
+        const timerId = window.setTimeout(() => {
+            document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'center' });
+        }, 100);
+        return () => window.clearTimeout(timerId);
+    }, []);
+
+    const loadMore = () => {
+        if (loadingMore || !hasMore) return;
+        const params = currentQuery();
+        params.page = Math.ceil(items.length / TIENDA_PAGE_SIZE) + 1;
+        router.get(route('tienda.index'), params, {
+            preserveState: true,
+            preserveScroll: true,
+            preserveUrl: true,
+            only: ['productos'],
+            onStart: () => setLoadingMore(true),
+            onFinish: () => setLoadingMore(false),
+        });
+    };
+
+    const applySheetFilters = ({ filter, categoria, subcategoria }) => {
+        setSheetOpen(false);
+        navigate({ filter, categoria, subcategoria, q: filters.q });
+    };
+
+    // Búsqueda mientras se escribe: espera a que el usuario deje de teclear, no consulta
+    // con 1 sola letra y recarga solo lo necesario (productos + filtros) sin mover el
+    // scroll ni cerrar el teclado en mobile. Inertia cancela la visita anterior si llega
+    // una nueva, así que nunca se acumulan consultas en vuelo.
+    const runSearch = (term) => {
+        const params = {
+            filter: activeFilter,
+            categoria: activeCategoriaId,
+            subcategoria: activeSubcategoriaId,
+            q: term,
+        };
+        const clean = Object.fromEntries(
+            Object.entries(params).filter(([, value]) => value != null && value !== '' && value !== 'todos')
+        );
+        router.get(route('tienda.index'), clean, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['productos', 'filters'],
+            onStart: () => setSearching(true),
+            onFinish: () => setSearching(false),
+        });
     };
 
     useEffect(() => {
         const trimmed = searchTerm.trim();
         if (trimmed === (filters.q || '')) return undefined;
+        // Con menos de SEARCH_MIN_CHARS no se busca, salvo para limpiar una búsqueda previa.
+        if (trimmed !== '' && trimmed.length < SEARCH_MIN_CHARS) return undefined;
 
-        const timeoutId = setTimeout(() => {
-            navigate({
-                filter: activeFilter,
-                categoria: activeCategoriaId,
-                subcategoria: activeSubcategoriaId,
-                q: trimmed,
-            });
-        }, 400);
+        const timeoutId = setTimeout(() => runSearch(trimmed), SEARCH_DEBOUNCE_MS);
 
         return () => clearTimeout(timeoutId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm]);
+
+    // Enter en el teclado de mobile: busca al instante y baja el teclado para ver resultados.
+    const handleSearchSubmit = (event) => {
+        event.preventDefault();
+        const trimmed = searchTerm.trim();
+        searchInputRef.current?.blur();
+        if (trimmed !== (filters.q || '')) runSearch(trimmed);
+    };
 
     const getQty = (id) => quantities[id] ?? 1;
     const setQty = (id, value) =>
@@ -505,7 +712,8 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                             <label htmlFor="tienda-search" className="sr-only">
                                 Buscar productos
                             </label>
-                            <div className="relative">
+                            <form onSubmit={handleSearchSubmit} role="search" className="flex items-center gap-2">
+                            <div className="relative min-w-0 flex-1">
                                 <svg
                                     className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6000ca]/50"
                                     fill="none"
@@ -518,28 +726,77 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                                 </svg>
                                 <input
                                     id="tienda-search"
+                                    ref={searchInputRef}
                                     type="search"
+                                    inputMode="search"
+                                    enterKeyHint="search"
+                                    autoComplete="off"
                                     value={searchTerm}
                                     onChange={(event) => setSearchTerm(event.target.value)}
-                                    placeholder="Buscar productos por nombre o descripción…"
-                                    className="w-full rounded-full border border-black/[0.08] bg-[#fcf9f8] py-3 pl-11 pr-11 text-sm font-medium text-[#1c1b1b] placeholder:text-[#81788a] transition-all focus:border-[#6000ca]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6000ca]/20"
+                                    placeholder="Buscar productos…"
+                                    // text-base en mobile evita el zoom automático de iOS al enfocar el input.
+                                    className="w-full rounded-full border border-black/[0.08] bg-[#fcf9f8] py-3 pl-11 pr-11 text-base font-medium text-[#1c1b1b] placeholder:text-[#81788a] transition-all focus:border-[#6000ca]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6000ca]/20 md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
                                 />
-                                {searchTerm && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSearchTerm('')}
-                                        className="absolute right-3.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[#81788a] transition-colors hover:bg-black/5 hover:text-[#1c1b1b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
-                                        aria-label="Limpiar búsqueda"
-                                    >
-                                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+                                {searching ? (
+                                    <span
+                                        className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-[#6000ca]/25 border-t-[#6000ca]"
+                                        role="status"
+                                        aria-label="Buscando"
+                                    />
+                                ) : (
+                                    searchTerm && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                searchInputRef.current?.focus();
+                                            }}
+                                            className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[#81788a] transition-colors hover:bg-black/5 hover:text-[#1c1b1b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
+                                            aria-label="Limpiar búsqueda"
+                                        >
+                                            <CloseIcon />
+                                        </button>
+                                    )
                                 )}
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setSheetOpen(true)}
+                                className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#6000ca]/10 text-[#6000ca] transition-all active:scale-95 md:hidden"
+                                aria-label={activeFiltersCount > 0 ? `Abrir filtros (${activeFiltersCount} aplicados)` : 'Abrir filtros'}
+                            >
+                                <FilterIcon className="h-5 w-5" />
+                                {activeFiltersCount > 0 && (
+                                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6000ca] px-1 text-[10px] font-black text-white ring-2 ring-white">
+                                        {activeFiltersCount}
+                                    </span>
+                                )}
+                            </button>
+                            </form>
+
+                            {activeFiltersCount > 0 && (
+                                <div className="mt-3 flex flex-wrap items-center gap-2 md:hidden">
+                                    {appliedLabels.map((label) => (
+                                        <span
+                                            key={label}
+                                            className="rounded-full border border-[#6000ca]/20 bg-[#6000ca]/10 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#6000ca]"
+                                        >
+                                            {label}
+                                        </span>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate({ q: filters.q })}
+                                        className="px-1 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#4b4356] underline underline-offset-2 active:opacity-60"
+                                    >
+                                        Limpiar filtros
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex min-w-0 items-start gap-3 p-3 md:items-center md:p-4">
+                        <div className="hidden min-w-0 items-center gap-3 p-4 md:flex">
                             <span className="hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#6000ca]/10 text-[#6000ca] sm:flex" aria-hidden="true">
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M7 12h10m-7 6h4" />
@@ -552,12 +809,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
 
                             <div className="min-w-0 flex-1 overflow-x-auto no-scrollbar">
                                 <div className="flex w-max min-w-full items-center gap-2 lg:w-full lg:flex-wrap">
-                                    {[
-                                        { key: 'todos', label: 'Todos' },
-                                        { key: 'destacados', label: 'Destacados' },
-                                        { key: 'ofertas', label: 'Ofertas' },
-                                        { key: 'combos', label: 'Combos' },
-                                    ].map(({ key, label }) => (
+                                    {tipos.map(({ key, label }) => (
                                         <Chip
                                             key={key}
                                             active={activeFilter === key}
@@ -587,7 +839,7 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                         </div>
 
                         {activeCat?.subcategorias?.length > 0 && (
-                            <div className="flex min-w-0 flex-col gap-2 border-t border-black/[0.06] bg-[#fcf9f8] px-4 py-3 md:flex-row md:items-center md:gap-3">
+                            <div className="hidden min-w-0 flex-row items-center gap-3 border-t border-black/[0.06] bg-[#fcf9f8] px-4 py-3 md:flex">
                                 <span className="flex-shrink-0 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#4b4356]">
                                     {activeCat.nombre}
                                 </span>
@@ -621,11 +873,14 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                         </p>
                     </div>
 
-                    {productos.data.length === 0 ? (
+                    {items.length === 0 ? (
                         <EmptyState onReset={() => navigate({})} />
                     ) : (
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">
-                            {productos.data.map((producto) => (
+                        <div
+                            className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+                            onClickCapture={rememberReturnPoint}
+                        >
+                            {items.map((producto) => (
                                 <ProductCard
                                     key={producto.id}
                                     producto={producto}
@@ -638,14 +893,38 @@ export default function Tienda({ productos, categorias, filters, canLogin }) {
                     )}
                 </section>
 
-                <Pagination
-                    currentPage={productos.current_page}
-                    lastPage={productos.last_page}
-                    onPageChange={handlePageChange}
-                />
+                {items.length > 0 && (
+                    <div className="flex flex-col items-center gap-2 px-3 py-9 sm:px-4">
+                        <p className="text-xs font-semibold text-[#4b4356]">
+                            Mostrando {items.length} de {productos.total}
+                        </p>
+                        {hasMore && (
+                            <button
+                                type="button"
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                                className="inline-flex items-center gap-2 rounded-full bg-[#6000ca] px-8 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 disabled:opacity-70"
+                            >
+                                {loadingMore && (
+                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
+                                )}
+                                {loadingMore ? 'Cargando…' : 'Cargar más productos'}
+                            </button>
+                        )}
+                    </div>
+                )}
             </main>
 
             <LandingFooter canLogin={canLogin} />
+
+            <FiltersSheet
+                open={sheetOpen}
+                onClose={() => setSheetOpen(false)}
+                categorias={categorias}
+                tipos={tipos}
+                initial={{ filter: activeFilter, categoria: activeCategoriaId, subcategoria: activeSubcategoriaId }}
+                onApply={applySheetFilters}
+            />
 
             {toast && <CartToast message={toast} />}
         </div>

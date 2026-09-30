@@ -1,5 +1,8 @@
 import { Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
+import ElegirSucursalModal from '@/Components/ElegirSucursalModal';
+import { WHATSAPP_SUCURSALES } from '@/lib/whatsapp';
 
 const WHATSAPP_MESSAGE = '¡Hola! Quiero asesoramiento para mi evento.';
 
@@ -33,9 +36,9 @@ function ArrowIcon() {
     );
 }
 
-function InstagramIcon() {
+function InstagramIcon({ className = 'h-5 w-5' }) {
     return (
-        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072C2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838A6.162 6.162 0 1012 18.162 6.162 6.162 0 0012 5.838zm0 10.162a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
         </svg>
     );
@@ -50,9 +53,17 @@ function WhatsAppIcon() {
 }
 
 const SOCIALS = [
-    { label: 'Instagram', icon: InstagramIcon },
+    { label: 'Instagram', icon: InstagramIcon, instagram: true },
     { label: 'WhatsApp', icon: WhatsAppIcon, whatsapp: true },
 ];
+
+// Una cuenta de Instagram por sucursal (mismo criterio que la sección de contacto).
+const SUCURSALES_INSTAGRAM = WHATSAPP_SUCURSALES.map((sucursal) => ({
+    id: sucursal.id,
+    nombre: sucursal.nombre,
+    detalle: sucursal.instagramHandle,
+    href: sucursal.instagram,
+}));
 
 function FooterLink({ item, onWhatsApp }) {
     const className = 'group inline-flex w-fit items-center gap-2 text-sm font-semibold text-white/65 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#1c1b1b]';
@@ -92,15 +103,15 @@ function FooterLink({ item, onWhatsApp }) {
     );
 }
 
-function SocialBubble({ social, onWhatsApp }) {
+function SocialBubble({ social, onWhatsApp, onInstagram }) {
     const Icon = social.icon;
     const className = 'flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white transition-all hover:-translate-y-1 hover:border-[#8f32ff] hover:bg-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1b1b]';
 
-    if (social.whatsapp) {
+    if (social.whatsapp || social.instagram) {
         return (
             <button
                 type="button"
-                onClick={onWhatsApp}
+                onClick={social.whatsapp ? onWhatsApp : onInstagram}
                 className={className}
                 aria-label={`Contactar por ${social.label}`}
             >
@@ -133,6 +144,7 @@ function SocialBubble({ social, onWhatsApp }) {
 export default function LandingFooter() {
     const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
     const abrirWhatsApp = () => abrirSelectorWhatsApp(WHATSAPP_MESSAGE);
+    const [instagramAbierto, setInstagramAbierto] = useState(false);
 
     return (
         <footer className="border-t-2 border-[#6000ca] bg-[#1c1b1b] text-white">
@@ -180,7 +192,12 @@ export default function LandingFooter() {
                             </p>
                             <div className="flex flex-wrap gap-3">
                                 {SOCIALS.map((social) => (
-                                    <SocialBubble key={social.label} social={social} onWhatsApp={abrirWhatsApp} />
+                                    <SocialBubble
+                                        key={social.label}
+                                        social={social}
+                                        onWhatsApp={abrirWhatsApp}
+                                        onInstagram={() => setInstagramAbierto(true)}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -214,6 +231,15 @@ export default function LandingFooter() {
                     <span className="hidden sm:block" aria-hidden="true" />
                 </div>
             </div>
+
+            <ElegirSucursalModal
+                abierto={instagramAbierto}
+                onClose={() => setInstagramAbierto(false)}
+                titulo="Elegí una sucursal"
+                subtitulo="Seguinos en la cuenta de Instagram de tu sucursal más cercana."
+                icono={InstagramIcon}
+                opciones={SUCURSALES_INSTAGRAM}
+            />
         </footer>
     );
 }

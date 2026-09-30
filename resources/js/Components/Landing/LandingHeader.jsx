@@ -6,7 +6,7 @@ import { useCart } from '@/Context/CartContext';
 const TOPBAR_MESSAGES = [
     {
         id: 'shipping',
-        text: 'Envios a todo el pais - a domicilio',
+        text: 'Envios a todo el pais',
         icon: (
             <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M1.5 7.5A1.5 1.5 0 013 6h10.5A1.5 1.5 0 0115 7.5V15h1.379a1.5 1.5 0 011.06.44l1.62 1.62c.281.281.44.663.44 1.06V19.5a1.5 1.5 0 01-1.5 1.5H18" />
@@ -17,7 +17,7 @@ const TOPBAR_MESSAGES = [
     },
     {
         id: 'payments',
-        text: 'Todos los metodos de pago',
+        text: 'Hasta 6 cuotas',
         icon: (
             <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m3 0h2m-8 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -31,6 +31,15 @@ const TOPBAR_MESSAGES = [
             <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5v4.5l3 1.5" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        ),
+    },
+    {
+        id: 'event-service',
+        text: 'Servicio para eventos',
+        icon: (
+            <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
             </svg>
         ),
     },
@@ -50,13 +59,6 @@ const NAV_LINKS = [
         href: 'tienda.index',
         type: 'route',
         active: (url) => url.startsWith('/tienda'),
-    },
-    {
-        id: 'mayoristas',
-        label: 'Mayoristas',
-        href: 'mayoristas.index',
-        type: 'route',
-        active: (url) => url === '/mayoristas',
     },
     {
         id: 'contacto',

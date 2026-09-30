@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
-import { useScrolledPast } from '@/hooks/useScrolledPast';
 import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 
 const EXCLUDED_PREFIXES = [
@@ -29,19 +28,10 @@ function shouldShow(path) {
 export default function WhatsAppButton() {
     const { abrirSelectorWhatsApp } = useWhatsAppSucursal();
     const [visible, setVisible] = useState(() => shouldShow(window.location.pathname));
-    // No aparece hasta que el usuario scrollea un poco, para no taparle el hero apenas
-    // entra al sitio (mismo criterio que el botón flotante del carrito).
-    const scrolled = useScrolledPast();
     const [calloutReady, setCalloutReady] = useState(false);
     const [calloutDismissed, setCalloutDismissed] = useState(
         () => typeof window !== 'undefined' && sessionStorage.getItem(CALLOUT_DISMISSED_KEY) === 'true'
     );
-    // "Pegajoso": una vez que cruzó el umbral de scroll una vez, esto se queda en true
-    // aunque el usuario vuelva a subir. Si el timer de la leyenda dependiera de
-    // `scrolled` directamente, cualquier rebote hacia arriba (común en mobile, sobre
-    // todo con el bounce del emulador) cancela el timeout con el cleanup del effect y
-    // la leyenda nunca llega a dispararse.
-    const [hasScrolledOnce, setHasScrolledOnce] = useState(false);
 
     useEffect(() => {
         return router.on('navigate', (event) => {
@@ -50,16 +40,10 @@ export default function WhatsAppButton() {
     }, []);
 
     useEffect(() => {
-        if (scrolled) setHasScrolledOnce(true);
-    }, [scrolled]);
-
-    // Arranca una sola vez, apenas cruzó el umbral por primera vez, y llega a
-    // completarse pase lo que pase con el scroll después.
-    useEffect(() => {
-        if (!hasScrolledOnce || calloutDismissed) return undefined;
+        if (calloutDismissed) return undefined;
         const timer = setTimeout(() => setCalloutReady(true), CALLOUT_DELAY_MS);
         return () => clearTimeout(timer);
-    }, [hasScrolledOnce, calloutDismissed]);
+    }, [calloutDismissed]);
 
     const dismissCallout = () => {
         setCalloutDismissed(true);
@@ -68,7 +52,7 @@ export default function WhatsAppButton() {
         } catch {}
     };
 
-    if (!visible || !scrolled) return null;
+    if (!visible) return null;
 
     const showCallout = calloutReady && !calloutDismissed;
 

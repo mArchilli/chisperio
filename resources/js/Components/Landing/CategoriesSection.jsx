@@ -15,6 +15,18 @@ const CATEGORY_FILTERS = [
         categoryNames: ['fuegos artificiales'],
     },
     {
+        key: 'cotillon',
+        label: 'Cotillón',
+        image: '/images/img-filtro-velas.png',
+        categoryNames: ['cotillon'],
+    },
+    {
+        key: 'equipamiento',
+        label: 'Equipamiento',
+        image: '/images/img-filtro-maquinas.png',
+        categoryNames: ['equipamiento'],
+    },
+    {
         key: 'maquinas',
         label: 'Máquinas',
         image: '/images/img-filtro-maquinas.png',
@@ -79,7 +91,7 @@ export default function CategoriesSection({ categorias = [] }) {
                         ¿Qué tipo de efecto estás buscando?
                     </h2>
 
-                    <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-5 lg:gap-6 xl:gap-7">
+                    <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5 lg:gap-6 xl:gap-7">
                         {filters.map(({ key, label, image, category }, index) => {
                             const isActive = activeCategoryId === category.id;
                             const isLastUnpaired = filters.length % 2 === 1 && index === filters.length - 1;
@@ -103,12 +115,24 @@ export default function CategoriesSection({ categorias = [] }) {
                                                 : 'border-black/[0.06] group-hover:border-[#6000ca]/25'
                                         }`}
                                     >
-                                        <img
-                                            src={image}
-                                            alt={label}
-                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
-                                            loading="lazy"
-                                        />
+                                        {image ? (
+                                            <img
+                                                src={image}
+                                                alt={label}
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            // Categoría sin imagen propia todavía: tarjeta con la inicial.
+                                            <span
+                                                className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#f4edff] via-[#edf3ff] to-[#e8f9ff] transition-transform duration-300 group-hover:scale-[1.025]"
+                                                aria-hidden="true"
+                                            >
+                                                <span className="text-6xl font-black text-[#6000ca]/25 md:text-7xl">
+                                                    {label.charAt(0)}
+                                                </span>
+                                            </span>
+                                        )}
                                     </span>
                                     <span
                                         className={`mt-3 min-h-10 px-1 text-xs font-bold uppercase leading-snug tracking-[0.07em] transition-colors md:text-[13px] ${

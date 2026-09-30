@@ -144,12 +144,12 @@ function CheckoutSummary({
             <div className="relative mb-6 space-y-3">
                 {items.map((item) => (
                     <div key={item.lineKey} className="flex items-center gap-3 rounded-[1.25rem] border border-black/[0.05] bg-[#fcfbfd] p-2.5">
-                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl border border-black/[0.05] bg-[#f6f3f8]">
+                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl border border-black/[0.05] bg-white">
                             {item.imagen ? (
                                 <img
                                     src={`/${item.imagen}`}
                                     alt={item.titulo}
-                                    className="h-full w-full object-contain p-2 mix-blend-multiply"
+                                    className="h-full w-full object-contain p-2"
                                 />
                             ) : (
                                 <div className="flex h-full w-full items-center justify-center">
