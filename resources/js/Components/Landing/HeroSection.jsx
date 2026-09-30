@@ -15,7 +15,7 @@ const SLIDES = [
             { text: 'Combo de maletines', color: 'text-[#1c1b1b]' },
             { text: 'para tu evento.', color: 'text-[#6000ca]' },
         ],
-        description: 'Maletines con 6 bases inalámbricas, 2 controles remotos configurados y listos para usar y un cargador para cargar hasta 4 bases al mismo tiempo.',
+        description: 'Maletín con 6 bases inalámbricas, 2 controles remotos ya configurados y un cargador para 4 bases a la vez. Listo para usar.',
         buttonLabel: 'Ver combos',
         showLogo: true,
     },
@@ -30,7 +30,7 @@ const SLIDES = [
             { text: 'Encendé la pista.', color: 'text-[#1c1b1b]' },
             { text: 'Sorprendé a todos.', color: 'text-[#6000ca]' },
         ],
-        description: 'Sumá impacto visual a tus sets con pistolas AK-47 y bastones tirachispas. Ideales para DJs, fiestas, boliches y eventos que buscan encender al público en los momentos más importantes.',
+        description: 'Sumá impacto visual a tus sets con pistolas AK-47 y bastones tirachispas. Ideales para DJs, fiestas y boliches.',
         buttonLabel: 'Ver productos',
         showLogo: true,
     },
@@ -45,7 +45,7 @@ const SLIDES = [
             { text: 'Ese momento especial', color: 'text-[#1c1b1b]' },
             { text: 'merece un gran efecto', color: 'text-[#6000ca]' },
         ],
-        description: 'Encontrá bengalas, velas, chispas frías y efectos visuales para darle un toque único a cumpleaños, casamientos, entradas y todo tipo de celebraciones. Sorprendé a tus invitados y convertí cada ocasión en un recuerdo inolvidable.',
+        description: 'Chispas frías, fuegos artificiales, equipamiento y cotillón para cumpleaños, casamientos, entradas y cada celebración.',
         buttonLabel: 'Ver efectos para eventos',
         showLogo: false,
     },
@@ -70,18 +70,20 @@ function SlideContent({ slide, index, isActive }) {
     const headingClassName = isTopLayout
         ? 'w-full text-[clamp(1.75rem,8.2vw,2.15rem)] font-black uppercase leading-[0.96] tracking-tight md:text-[clamp(2rem,4.2vw,4.75rem)]'
         : index === 0
-            ? 'w-full text-[clamp(1.75rem,8.2vw,2.15rem)] font-black uppercase leading-[0.96] tracking-tight md:text-[clamp(3.75rem,4.5vw,6rem)]'
-            : 'w-full text-[clamp(1.75rem,8.2vw,2.15rem)] font-black uppercase leading-[0.96] tracking-tight md:text-[clamp(3.25rem,4.2vw,5.5rem)]';
+            ? 'w-full text-[clamp(2rem,10vw,2.6rem)] font-black uppercase leading-[0.95] tracking-tight md:text-[clamp(3.75rem,4.5vw,6rem)]'
+            : 'w-full text-[clamp(2.1rem,11vw,2.9rem)] font-black uppercase leading-[0.95] tracking-tight [text-wrap:balance] md:text-[clamp(3.25rem,4.2vw,5.5rem)]';
 
     const descriptionClassName = isTopLayout
-        ? 'mt-3 w-full max-w-4xl text-xs font-medium leading-relaxed text-[#4b4356] sm:text-sm md:mt-4 md:text-base lg:text-lg'
+        ? 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-4xl sm:text-base md:mt-4 md:text-base lg:text-lg'
         : index === 0
-            ? 'mt-3 w-full max-w-xl text-xs font-medium leading-relaxed text-[#4b4356] sm:text-sm md:mt-6 md:text-lg'
-            : 'mt-3 w-full max-w-2xl text-xs font-medium leading-relaxed text-[#4b4356] sm:text-sm md:mt-5 md:text-base lg:text-lg';
+            ? 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-xl sm:text-base md:mt-6 md:text-lg'
+            : 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-xl sm:text-base md:mt-5 md:max-w-2xl md:text-base lg:text-lg';
 
     const buttonClassName = isTopLayout
-        ? 'mt-4 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-8 py-3 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 sm:text-sm md:mt-5 md:px-10 md:py-4 md:text-base'
-        : 'mt-4 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-8 py-3 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 sm:text-sm md:mt-8 md:px-12 md:py-5 md:text-lg';
+        ? 'mt-5 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-9 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-5 md:px-10 md:py-4 md:text-base'
+        : index <= 1
+            ? 'mt-5 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-10 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-8 md:px-12 md:py-5 md:text-lg'
+            : 'mt-4 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-8 py-3 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 sm:text-sm md:mt-8 md:px-12 md:py-5 md:text-lg';
 
     return (
         <div className={containerClassName}>
