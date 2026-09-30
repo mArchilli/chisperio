@@ -686,29 +686,33 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
             <LandingHeader canLogin={canLogin} />
 
             <main className="w-full pb-6">
-                <section className="border-b border-[#6000ca]/10 bg-[#f7f6fb]">
-                    <div className="flex flex-col gap-7 px-3 py-9 sm:px-4 md:flex-row md:items-end md:justify-between md:py-11 xl:py-12">
+                <section className="relative isolate overflow-hidden border-b border-[#6000ca]/10 bg-[#1c1b1b]">
+                    {/* Banner de fondo: una imagen para mobile (vertical) y otra para desktop. El degradado
+                        oscuro asegura que el título se lea sobre la foto, que es muy cargada. */}
+                    <picture className="absolute inset-0 -z-10">
+                        <source media="(max-width: 767px)" srcSet="/images/banner-catalogo-mobile.png" />
+                        <img
+                            src="/images/banner-catalogo-desktop.png"
+                            alt=""
+                            aria-hidden="true"
+                            className="h-full w-full object-cover object-center"
+                            fetchpriority="high"
+                            draggable={false}
+                        />
+                    </picture>
+                    <div
+                        className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/60 to-black/40 md:bg-gradient-to-r md:from-black/85 md:via-black/55 md:to-black/15"
+                        aria-hidden="true"
+                    />
+
+                    <div className="flex min-h-[340px] flex-col justify-end px-3 py-9 sm:px-4 md:min-h-[380px] md:py-11 xl:py-12">
                         <div className="max-w-4xl">
-                            <h1 className="text-[clamp(2.35rem,6.5vw,4.75rem)] font-black uppercase leading-[0.94] tracking-tight text-[#1c1b1b]">
-                                Catálogo de <span className="text-[#6000ca]">productos</span>
+                            <h1 className="text-[clamp(2.35rem,6.5vw,4.75rem)] font-black uppercase leading-[0.94] tracking-tight text-white">
+                                Catálogo de <span className="text-[#8f32ff] [text-shadow:0_2px_28px_rgba(143,50,255,0.6)]">productos</span>
                             </h1>
-                            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#4b4356] md:text-base lg:text-lg">
+                            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/85 md:text-base lg:text-lg">
                                 Explorá nuestra selección de efectos especiales y encontrá lo que necesitás para transformar tu evento.
                             </p>
-                        </div>
-
-                        <div className="flex w-fit max-w-full items-center gap-3 rounded-[1.35rem] border border-[#6000ca]/10 bg-white px-4 py-3.5 shadow-[0_14px_34px_-28px_rgba(28,27,27,0.45)] md:flex-shrink-0 md:px-5 md:py-4">
-                            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#6000ca] text-white">
-                                <BagIcon className="h-5 w-5" />
-                            </span>
-                            <span className="min-w-0">
-                                <span className="block text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#6000ca]">
-                                    Compra online
-                                </span>
-                                <span className="mt-0.5 block text-xs font-bold text-[#1c1b1b] md:text-sm">
-                                    Elegí, ajustá la cantidad y sumá al carrito
-                                </span>
-                            </span>
                         </div>
                     </div>
                 </section>
