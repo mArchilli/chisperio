@@ -71,7 +71,7 @@ function ProductCard({ producto, added, onAddToCart }) {
     const discount = offer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
 
     return (
-        <article className="group flex min-w-0 flex-none basis-[84%] snap-start flex-col overflow-hidden rounded-[1.75rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] sm:basis-[calc(50%-0.625rem)] lg:basis-[calc(33.333%-0.875rem)] xl:basis-[calc(20%-1.2rem)]">
+        <article className="group flex min-w-0 flex-none basis-[84%] snap-start flex-col overflow-hidden rounded-[1.75rem] border border-black/[0.06] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 sm:basis-[calc(50%-0.625rem)] lg:basis-[calc(33.333%-0.875rem)] xl:basis-[calc(20%-1.2rem)]">
             <Link
                 href={route('tienda.show', producto.id)}
                 className="relative block aspect-[4/3] overflow-hidden bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"

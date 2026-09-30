@@ -51,7 +51,7 @@ class TiendaController extends Controller
 
         $categoriaIds = $producto->categorias->pluck('id');
 
-        $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
+        $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias', 'variantesActivas.mediaEspecifica' => fn ($q) => $q->where('tipo', 'imagen')->orderBy('orden')])
             ->where('is_active', true)
             ->where('id', '!=', $producto->id)
             ->conStock()
@@ -64,7 +64,7 @@ class TiendaController extends Controller
             ->get();
 
         if ($relacionados->isEmpty()) {
-            $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias'])
+            $relacionados = Producto::with(['imagenPrincipal', 'ofertaVigente', 'categorias', 'variantesActivas.mediaEspecifica' => fn ($q) => $q->where('tipo', 'imagen')->orderBy('orden')])
                 ->where('is_active', true)
                 ->where('id', '!=', $producto->id)
                 ->conStock()

@@ -5,7 +5,7 @@ import BackToCatalog from '@/Components/BackToCatalog';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import PillsCantidad from '@/Components/PillsCantidad';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
-import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
+import VarianteColorSwatches, { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 import RepartoVariantes from '@/Components/RepartoVariantes';
 import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
 import { useCart } from '@/Context/CartContext';
@@ -294,24 +294,32 @@ function RelatedCard({ producto }) {
     const precioInfo = resolverPrecio(producto, 1);
     const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
     const displayPrice = precioInfo.precioFinal;
+    const variantes = producto.variantes_activas ?? [];
+    const [varianteId, setVarianteId] = useState(null);
+    const variante = variantes.find((v) => v.id === varianteId) ?? null;
+
+    // Al elegir un color se previsualiza su foto (si tiene propia); si no, queda la principal.
+    const imagenRuta = variante?.media_especifica?.[0]?.ruta ?? producto.imagen_principal?.ruta ?? null;
+    const href = route('tienda.show', variante ? { producto: producto.id, variante: variante.id } : producto.id);
 
     return (
-        <Link
-            href={route('tienda.show', producto.id)}
-            aria-label={`Ver ${producto.titulo}`}
-            className="group block min-w-[78vw] max-w-[310px] flex-shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 sm:min-w-[44vw] md:min-w-0 md:max-w-none motion-reduce:transform-none"
-        >
-            <div className="relative aspect-[4/3] overflow-hidden bg-white">
+        <article className="group block min-w-[78vw] max-w-[310px] flex-shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 sm:min-w-[44vw] md:min-w-0 md:max-w-none motion-reduce:transform-none">
+            <Link
+                href={href}
+                aria-label={`Ver ${producto.titulo}`}
+                className="relative block aspect-[4/3] overflow-hidden bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+            >
                 {hasOffer && (
                     <span className="absolute right-3 top-3 z-10 rounded-full bg-[#FF00D4] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
                         Oferta
                     </span>
                 )}
 
-                {producto.imagen_principal ? (
+                {imagenRuta ? (
                     <img
-                        src={`/${producto.imagen_principal.ruta}`}
-                        alt={producto.titulo}
+                        key={imagenRuta}
+                        src={`/${imagenRuta}`}
+                        alt={variante ? `${producto.titulo} — ${variante.nombre}` : producto.titulo}
                         className="h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none"
                         loading="lazy"
                     />
@@ -322,17 +330,46 @@ function RelatedCard({ producto }) {
                         </span>
                     </div>
                 )}
-            </div>
+            </Link>
 
             <div className="p-5">
                 <p className="mb-2 min-h-4 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#6000ca]">
                     {producto.categorias?.[0]?.nombre ?? 'Selección Chisperío'}
                 </p>
-                <p className="line-clamp-2 min-h-11 text-base font-extrabold leading-snug text-[#1c1b1b] transition-colors group-hover:text-[#6000ca]">
-                    {producto.titulo}
-                </p>
 
-                <div className="mt-5 flex items-end justify-between gap-3 border-t border-black/[0.06] pt-4">
+                {variantes.length > 0 && (
+                    <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Colores disponibles">
+                        {variantes.map((v) => {
+                            const activa = v.id === varianteId;
+                            return (
+                                <button
+                                    key={v.id}
+                                    type="button"
+                                    onClick={() => setVarianteId(activa ? null : v.id)}
+                                    aria-label={v.nombre}
+                                    aria-pressed={activa}
+                                    title={v.nombre}
+                                    className={`h-6 w-6 flex-shrink-0 rounded-full border-2 border-white shadow-sm ring-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] ${
+                                        activa ? 'scale-110 ring-2 ring-[#6000ca]' : 'ring-black/15 hover:ring-[#6000ca]/50'
+                                    }`}
+                                    style={v.es_color_personalizado ? { background: GRADIENTE_PERSONALIZADO } : { backgroundColor: v.color_hex || '#e5e5e5' }}
+                                />
+                            );
+                        })}
+                        {variante && (
+                            <span className="min-w-0 truncate text-[11px] font-bold text-[#4b4356]">{variante.nombre}</span>
+                        )}
+                    </div>
+                )}
+
+                <Link
+                    href={href}
+                    className="block line-clamp-2 min-h-11 text-base font-extrabold leading-snug text-[#1c1b1b] transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
+                >
+                    {producto.titulo}
+                </Link>
+
+                <Link href={href} tabIndex={-1} aria-hidden="true" className="mt-5 flex items-end justify-between gap-3 border-t border-black/[0.06] pt-4">
                     <div className="min-w-0">
                         {hasOffer && (
                             <p className="text-[11px] font-medium leading-none text-[#81788a] line-through">
@@ -347,9 +384,9 @@ function RelatedCard({ producto }) {
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#6000ca]/15 bg-[#6000ca]/[0.04] text-[#6000ca] transition-colors group-hover:border-[#6000ca] group-hover:bg-[#6000ca] group-hover:text-white">
                         <ArrowIcon />
                     </span>
-                </div>
+                </Link>
             </div>
-        </Link>
+        </article>
     );
 }
 
@@ -357,6 +394,20 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const { planesPagoTarjeta } = usePage().props;
     const [qty, setQty] = useState(() => qtyInicialDesdeUrl(producto));
     const [expandDesc, setExpandDesc] = useState(false);
+    // "Ver descripción completa" solo tiene sentido si el texto realmente se corta con el
+    // line-clamp de mobile; con una descripción corta no hay nada más que desplegar.
+    const descRef = useRef(null);
+    const [descRecortada, setDescRecortada] = useState(false);
+
+    useEffect(() => {
+        const medir = () => {
+            const el = descRef.current;
+            if (el) setDescRecortada(el.scrollHeight > el.clientHeight + 1);
+        };
+        medir();
+        window.addEventListener('resize', medir);
+        return () => window.removeEventListener('resize', medir);
+    }, [producto.descripcion, expandDesc]);
     const [toast, setToast] = useState(null);
     const [planPagoId, setPlanPagoId] = useState(null);
     const { addToCart: addToCartContext, setFormaPago } = useCart();
@@ -374,7 +425,13 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     // de VarianteColorSwatches se despliega igual, sin importar si la selección fue
     // por este default o por un click explícito — ese componente solo mira
     // `value === variante.id`, no cómo se llegó ahí.
-    const [varianteId, setVarianteId] = useState(() => variantes[0]?.id ?? null);
+    // `?variante=<id>` (viene de las cards de productos relacionados) abre la ficha con ese color ya elegido.
+    const [varianteId, setVarianteId] = useState(() => {
+        const pedida = typeof window === 'undefined'
+            ? NaN
+            : parseInt(new URLSearchParams(window.location.search).get('variante'), 10);
+        return variantes.find((v) => v.id === pedida)?.id ?? variantes[0]?.id ?? null;
+    });
     const [addonIds, setAddonIds] = useState([]);
     const [addonTextos, setAddonTextos] = useState({});
     const [colorPersonalizado, setColorPersonalizado] = useState('');
@@ -881,10 +938,11 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                                         Sobre este producto
                                     </h2>
                                     <div
+                                        ref={descRef}
                                         className={`quill-content text-sm font-medium leading-relaxed text-[#4b4356] md:text-[15px] ${!expandDesc ? 'line-clamp-4 md:line-clamp-none' : ''}`}
                                         dangerouslySetInnerHTML={{ __html: producto.descripcion }}
                                     />
-                                    {!expandDesc && (
+                                    {!expandDesc && descRecortada && (
                                         <button
                                             type="button"
                                             onClick={() => setExpandDesc(true)}
@@ -911,7 +969,9 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                             ) : (
                                 <>
                                     {(tieneVariantes || tieneAddons) && (
-                                        <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-white p-4 sm:p-5">
+                                        // En mobile/tablet los colores se eligen bajo la galería: si no hay add-ons ni
+                                        // reparto por colores, esta tarjeta quedaría vacía, así que solo se muestra en desktop.
+                                        <div className={`mt-6 rounded-[1.5rem] border border-black/[0.05] bg-white p-4 sm:p-5 ${tieneAddons || repartoActivo ? '' : 'hidden lg:block'}`}>
                                             {repartoActivo ? (
                                                 <RepartoVariantes
                                                     variantes={variantes}
@@ -1052,7 +1112,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                             </Link>
                         </div>
 
-                        <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:hidden">
+                        <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 gap-4 overflow-x-auto px-4 pb-4 md:hidden">
                             {relacionados.map((prod) => (
                                 <RelatedCard key={prod.id} producto={prod} />
                             ))}
