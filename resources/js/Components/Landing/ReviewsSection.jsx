@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const GOOGLE_REVIEWS_URL = 'https://www.google.com/search?q=chisperio&oq=chisperio&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg8MgYIAhBFGDwyBwgDEAAYgAQyBggEEAAYHjIGCAUQRRg8MgYIBhBFGDwyBggHEEUYPNIBCDQ4ODlqMGo3qAIAsAIA&sourceid=chrome&source=chrome.ob&ie=UTF-8#lrd=0x8f7e9e5929cf69c9:0xd23641ad42e2ddaf,1,,,,';
 
@@ -129,9 +129,9 @@ function StarRating({ compact = false }) {
     );
 }
 
-function ReviewCard({ review }) {
+function ReviewCard({ review, className = '' }) {
     return (
-        <article className="flex flex-col rounded-xl border border-[#dadce0] bg-white p-5 shadow-[0_1px_2px_rgba(60,64,67,0.12)]">
+        <article className={`flex flex-col rounded-xl border border-[#dadce0] bg-white p-5 ${className}`}>
             <div className="flex items-start gap-3">
                 <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${review.avatarClass}`}>
                     {review.initials}
@@ -183,6 +183,35 @@ function NavArrow({ direction, onClick }) {
 export default function ReviewsSection() {
     const [reviewsPerPage, setReviewsPerPage] = useState(getReviewsPerPage);
     const [page, setPage] = useState(0);
+    const stripRef = useRef(null);
+    // En mobile (1 reseña por "página") se muestra un carrusel deslizable con la reseña
+    // anterior y la siguiente asomando por los costados; en pantallas más grandes sigue
+    // la grilla paginada de siempre.
+    const isCarousel = reviewsPerPage === 1;
+
+    const scrollToReview = (index, behavior = 'smooth') => {
+        const strip = stripRef.current;
+        const slide = strip?.children[index];
+        if (!strip || !slide) return;
+        strip.scrollTo({ left: slide.offsetLeft - (strip.clientWidth - slide.offsetWidth) / 2, behavior });
+    };
+
+    // El índice activo sale de cuál slide queda más cerca del centro del carrusel.
+    const handleStripScroll = () => {
+        const strip = stripRef.current;
+        if (!strip) return;
+        const center = strip.scrollLeft + strip.clientWidth / 2;
+        let nearest = 0;
+        let nearestDistance = Infinity;
+        Array.from(strip.children).forEach((slide, index) => {
+            const distance = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - center);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = index;
+            }
+        });
+        setPage((current) => (current === nearest ? current : nearest));
+    };
 
     useEffect(() => {
         const updateReviewsPerPage = () => setReviewsPerPage(getReviewsPerPage());
@@ -200,8 +229,16 @@ export default function ReviewsSection() {
     const startIndex = page * reviewsPerPage;
     const visibleReviews = REVIEWS.slice(startIndex, startIndex + reviewsPerPage);
     const goToPage = (offset) => {
-        setPage((currentPage) => (currentPage + offset + totalPages) % totalPages);
+        const next = (page + offset + totalPages) % totalPages;
+        setPage(next);
+        if (isCarousel) scrollToReview(next);
     };
+
+    // Al pasar a modo carrusel (por ejemplo al achicar la ventana), se ubica en la reseña actual.
+    useEffect(() => {
+        if (isCarousel) scrollToReview(page, 'auto');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isCarousel]);
 
     return (
         <section id="resenas" className="bg-[#f8f9fa] px-6 pb-12 pt-6 md:px-10 md:pb-16 md:pt-8 lg:px-12 xl:px-16" aria-labelledby="reviews-title">
@@ -220,11 +257,35 @@ export default function ReviewsSection() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                    {visibleReviews.map((review) => (
-                        <ReviewCard key={review.id} review={review} />
-                    ))}
-                </div>
+                {isCarousel ? (
+                    <div
+                        ref={stripRef}
+                        onScroll={handleStripScroll}
+                        className="no-scrollbar relative -mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-[9%] py-3"
+                        aria-roledescription="carrusel"
+                        aria-label="Reseñas de clientes"
+                    >
+                        {REVIEWS.map((review, index) => (
+                            <div
+                                key={review.id}
+                                className={`flex w-[82%] flex-shrink-0 snap-center snap-always transition-all duration-300 motion-reduce:transition-none ${
+                                    index === page ? 'z-10 scale-100 opacity-100' : 'scale-[0.92] opacity-60'
+                                }`}
+                            >
+                                <ReviewCard
+                                    review={review}
+                                    className="w-full"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                        {visibleReviews.map((review) => (
+                            <ReviewCard key={review.id} review={review} />
+                        ))}
+                    </div>
+                )}
 
                 <p className="sr-only" aria-live="polite">
                     Mostrando reseñas {startIndex + 1} a {startIndex + visibleReviews.length} de {REVIEWS.length}

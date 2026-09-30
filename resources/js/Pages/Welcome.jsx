@@ -7,6 +7,7 @@ import OutstandingProducts from '@/Components/Landing/OutstandingProducts';
 import RentalMachine from '@/Components/Landing/RentalMachine';
 import ReviewsSection from '@/Components/Landing/ReviewsSection';
 import FAQSection from '@/Components/Landing/FAQSection';
+import LocationSection from '@/Components/Landing/LocationSection';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 
 export default function Welcome({ canLogin, productosDestacados = [], categorias = [] }) {
@@ -22,6 +23,7 @@ export default function Welcome({ canLogin, productosDestacados = [], categorias
                 <RentalMachine />
                 <ReviewsSection />
                 <FAQSection />
+                <LocationSection />
             </main>
             <LandingFooter />
         </div>

@@ -54,7 +54,7 @@ function ProductImage({ producto }) {
         <img
             src={`/${imagePath}`}
             alt={producto.titulo}
-            className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.04] md:p-5"
+            className="h-full w-full object-contain p-1.5 transition-transform duration-500 group-hover:scale-[1.04] md:p-5"
             loading="lazy"
             onError={() => setImageFailed(true)}
         />
@@ -119,18 +119,23 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
             className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white shadow-[0_14px_34px_-26px_rgba(28,27,27,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 hover:shadow-[0_24px_45px_-25px_rgba(96,0,202,0.45)]">
             <Link
                 href={productHref}
-                className="relative block aspect-[4/3] overflow-hidden bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                className="relative block aspect-square overflow-hidden bg-white focus-visible:outline-none md:aspect-[4/3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
                 aria-label={`Ver ${producto.titulo}`}
             >
+                {/* Mobile: la categoría va como etiqueta sobre la imagen para ahorrar espacio. */}
+                <span className="absolute left-2.5 top-2.5 z-10 max-w-[62%] truncate rounded-full border border-[#6000ca]/15 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#6000ca] shadow-sm backdrop-blur-sm md:hidden">
+                    {producto.categorias?.[0]?.nombre ?? 'Chisperío'}
+                </span>
+
                 {agotado && (
-                    <span className="absolute left-3 top-3 z-10 rounded-full bg-[#ba1a1a] px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
+                    <span className="absolute right-3 top-3 z-10 rounded-full bg-[#ba1a1a] md:left-3 md:right-auto px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
                         Sin stock
                     </span>
                 )}
 
                 {!agotado && !hasOffer && producto.is_featured && (
                     <span
-                        className="absolute left-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center text-[#6000ca] drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]"
+                        className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 md:left-3 md:right-auto md:top-3 items-center justify-center text-[#6000ca] drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]"
                         aria-label="Producto destacado"
                     >
                         <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -162,8 +167,8 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 </div>
             </Link>
 
-            <div className="flex min-w-0 flex-1 flex-col p-3.5 xl:p-4">
-                <p className="mb-2 min-h-4 truncate text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#6000ca] xl:text-[10px]">
+            <div className="flex min-w-0 flex-1 flex-col p-3 md:p-3.5 xl:p-4">
+                <p className="mb-2 hidden min-h-4 truncate text-[9px] md:block font-extrabold uppercase tracking-[0.12em] text-[#6000ca] xl:text-[10px]">
                     {producto.categorias?.[0]?.nombre ?? 'Selección Chisperío'}
                 </p>
 
@@ -198,7 +203,9 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                     </div>
                 ) : (
                     <>
-                        <PillsCantidad producto={producto} qty={qty} onChange={onQtyChange} size="sm" className="mt-2.5" />
+                        <div className="hidden md:block">
+                            <PillsCantidad producto={producto} qty={qty} onChange={onQtyChange} size="sm" className="mt-2.5" />
+                        </div>
 
                         <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-2">
                             <div className="grid h-10 flex-shrink-0 grid-cols-[2rem_1.5rem_2rem] items-center overflow-hidden rounded-full border border-black/[0.08] bg-[#fcf9f8]">
@@ -255,7 +262,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
 
                 <Link
                     href={productHref}
-                    className="mt-2 inline-flex h-9 w-full items-center justify-center rounded-full border border-[#6000ca]/25 bg-white px-3 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#6000ca] transition-all hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
+                    className="mt-2 hidden h-9 w-full md:inline-flex items-center justify-center rounded-full border border-[#6000ca]/25 bg-white px-3 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#6000ca] transition-all hover:border-[#6000ca] hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
                 >
                     Ver producto
                 </Link>

@@ -262,7 +262,9 @@ export default function HeroSection() {
                                 alt={slide.imageAlt}
                                 className={`block h-full w-full object-cover ${slide.imagePosition}`}
                                 loading={index === 0 ? 'eager' : 'lazy'}
-                                fetchPriority={index === 0 ? 'high' : 'auto'}
+                                // React 18 no reconoce `fetchPriority` en camelCase (recién lo soporta
+                                // React 19); en minúscula pasa directo como atributo HTML.
+                                fetchpriority={index === 0 ? 'high' : 'auto'}
                                 draggable={false}
                             />
                         </picture>

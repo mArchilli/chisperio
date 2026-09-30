@@ -66,7 +66,7 @@ const SUCURSALES_INSTAGRAM = WHATSAPP_SUCURSALES.map((sucursal) => ({
 }));
 
 function FooterLink({ item, onWhatsApp }) {
-    const className = 'group inline-flex w-fit items-center gap-2 text-sm font-semibold text-white/65 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#1c1b1b]';
+    const className = 'group inline-flex w-fit items-center gap-2 text-left text-sm font-semibold text-white/65 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#1c1b1b]';
     const bullet = <span className="h-1.5 w-1.5 rounded-full bg-[#8f32ff] transition-transform group-hover:scale-150" aria-hidden="true" />;
 
     if (item.whatsapp) {

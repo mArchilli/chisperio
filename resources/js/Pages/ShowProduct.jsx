@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import BackToCatalog from '@/Components/BackToCatalog';
 import LandingFooter from '@/Components/Landing/LandingFooter';
@@ -141,12 +141,14 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
 function ProductGallery({ imagenes, videos, titulo }) {
     const [activeIdx, setActiveIdx] = useState(0);
     const [lightboxOpen, setLightboxOpen] = useState(false);
+    const stripRef = useRef(null);
 
     // Al cambiar de color el set de imágenes/video puede ser otro (ver
     // resolverMediaParaVariante en ShowProduct); sin este reset, activeIdx podía
     // quedar apuntando a un índice de la selección anterior que ya no corresponde.
     useEffect(() => {
         setActiveIdx(0);
+        stripRef.current?.scrollTo({ left: 0, behavior: 'auto' });
     }, [imagenes, videos]);
 
     const items = useMemo(
@@ -156,6 +158,29 @@ function ProductGallery({ imagenes, videos, titulo }) {
         ],
         [imagenes, videos]
     );
+
+    // La galería es un carrusel con scroll-snap (mismo enfoque que el hero de la home): en mobile
+    // se desliza con el dedo. activeIdx se deriva del scroll; goTo (miniaturas, puntos,
+    // lightbox) hace el camino inverso, llevando el carrusel hasta esa posición.
+    const goTo = useCallback((i) => {
+        setActiveIdx(i);
+        const strip = stripRef.current;
+        if (strip) strip.scrollTo({ left: strip.clientWidth * i, behavior: 'smooth' });
+    }, []);
+
+    const handleScroll = () => {
+        const strip = stripRef.current;
+        if (!strip || !strip.clientWidth) return;
+        const i = Math.round(strip.scrollLeft / strip.clientWidth);
+        setActiveIdx((prev) => (prev === i ? prev : i));
+    };
+
+    // Al deslizar a otra slide, un video que estaba reproduciéndose se pausa.
+    useEffect(() => {
+        stripRef.current?.querySelectorAll('video').forEach((video) => {
+            if (Number(video.dataset.idx) !== activeIdx) video.pause();
+        });
+    }, [activeIdx]);
 
     if (items.length === 0) {
         return (
@@ -167,7 +192,6 @@ function ProductGallery({ imagenes, videos, titulo }) {
         );
     }
 
-    const current = items[activeIdx];
     // Las imágenes ocupan siempre los primeros índices de `items` (se arman antes que
     // los videos), así que mientras el activo sea una imagen, su índice acá es
     // directamente el mismo que necesita el lightbox (que solo conoce imágenes).
@@ -177,28 +201,41 @@ function ProductGallery({ imagenes, videos, titulo }) {
         <div className="space-y-3 lg:space-y-4">
             <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
 
-                {current.kind === 'video' ? (
-                    <video
-                        key={current.id}
-                        src={`/${current.ruta}`}
-                        controls
-                        playsInline
-                        className="relative h-full w-full object-contain p-3 sm:p-5"
-                    />
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => setLightboxOpen(true)}
-                        aria-label="Ver imagen ampliada"
-                        className="relative block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
-                    >
-                        <img
-                            src={`/${current.ruta}`}
-                            alt={titulo}
-                            className="relative h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
-                        />
-                    </button>
-                )}
+                <div
+                    ref={stripRef}
+                    onScroll={handleScroll}
+                    className="no-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-auto md:overflow-x-hidden"
+                >
+                    {items.map((item, i) => (
+                        <div key={`${item.kind}-${item.id ?? i}`} className="h-full w-full flex-shrink-0 snap-center snap-always">
+                            {item.kind === 'video' ? (
+                                <video
+                                    data-idx={i}
+                                    src={`/${item.ruta}`}
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    className="relative h-full w-full object-contain p-3 sm:p-5"
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setLightboxOpen(true)}
+                                    aria-label="Ver imagen ampliada"
+                                    className="relative block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                                >
+                                    <img
+                                        src={`/${item.ruta}`}
+                                        alt={titulo}
+                                        loading={i === 0 ? 'eager' : 'lazy'}
+                                        draggable={false}
+                                        className="relative h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
+                                    />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
 
                 {items.length > 1 && (
                     <div className="absolute inset-x-0 bottom-3 flex justify-center sm:bottom-4 md:hidden">
@@ -207,7 +244,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
                                 <button
                                     key={i}
                                     type="button"
-                                    onClick={() => setActiveIdx(i)}
+                                    onClick={() => goTo(i)}
                                     aria-label={`Ver ${items[i].kind === 'video' ? 'video' : 'imagen'} ${i + 1} de ${items.length}`}
                                     aria-pressed={i === activeIdx}
                                     className="flex h-10 w-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
@@ -235,7 +272,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
                             i={i}
                             total={items.length}
                             activeIdx={activeIdx}
-                            onSelect={setActiveIdx}
+                            onSelect={goTo}
                         />
                     ))}
                 </div>
@@ -245,7 +282,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
                 <ProductImageLightbox
                     images={imagenesSolas}
                     index={activeIdx}
-                    onIndexChange={setActiveIdx}
+                    onIndexChange={goTo}
                     onClose={() => setLightboxOpen(false)}
                 />
             )}
