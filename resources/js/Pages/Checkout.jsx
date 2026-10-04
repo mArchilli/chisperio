@@ -276,12 +276,15 @@ export default function Checkout({ canLogin }) {
 
     // Meta Pixel: una vez al entrar al checkout con el carrito cargado (el carrito se
     // lee sincrónico de localStorage, así que `items` ya está completo en el primer render).
+    // `value` = subtotal menos descuento (totalConDescuento), SIN el recargo por cuotas con
+    // tarjeta, a propósito: es el mismo criterio que el Purchase de ConfirmacionPedido (que
+    // usa el `total` del pedido en el servidor, también sin recargo), para que ambos coincidan.
     useEffect(() => {
         if (items.length === 0) return;
         track('InitiateCheckout', {
             content_ids: [...new Set(items.map(cartItemContentId))],
             content_type: 'product',
-            value: Number(totalFinal),
+            value: Number(totalConDescuento),
             currency: CURRENCY,
             num_items: items.reduce((acc, item) => acc + item.cantidad, 0),
         });

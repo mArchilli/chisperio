@@ -50,6 +50,8 @@ export default function ConfirmacionPedido({ canLogin }) {
     // Meta Pixel: Purchase una sola vez por pedido. Solo corre al montar la página (el
     // botón de reenvío no lo dispara). La marca en localStorage se chequea ANTES de
     // disparar y se escribe inmediatamente DESPUÉS, así una recarga no lo repite.
+    // `value` = `total` del pedido en el servidor (subtotal menos descuento), SIN el recargo
+    // por cuotas con tarjeta, a propósito: coincide con el InitiateCheckout de Checkout.jsx.
     useEffect(() => {
         try {
             const ref = JSON.parse(sessionStorage.getItem('chisperio_last_order_ref'));
