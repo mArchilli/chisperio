@@ -4,6 +4,7 @@ import LandingHeader from '@/Components/Landing/LandingHeader';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import { useWhatsAppSucursal } from '@/Context/WhatsAppSucursalContext';
 import { buildOrderMessage, abrirWhatsApp, getSucursal } from '@/lib/whatsapp';
+import { track, productContentId, comboContentId, CURRENCY } from '@/lib/pixel';
 
 const STEPS = [
     {
@@ -43,6 +44,42 @@ export default function ConfirmacionPedido({ canLogin }) {
             // Formato viejo (texto plano guardado por una versión anterior de Checkout.jsx)
             // o JSON corrupto: no hay pedido estructurado para reconstruir el mensaje, se
             // omite el botón de reenvío en vez de mostrar algo roto.
+        }
+    }, []);
+
+    // Meta Pixel: Purchase una sola vez por pedido. Solo corre al montar la página (el
+    // botón de reenvío no lo dispara). La marca en localStorage se chequea ANTES de
+    // disparar y se escribe inmediatamente DESPUÉS, así una recarga no lo repite.
+    useEffect(() => {
+        try {
+            const ref = JSON.parse(sessionStorage.getItem('chisperio_last_order_ref'));
+            const pedido = JSON.parse(sessionStorage.getItem('chisperio_last_order'));
+            const total = Number(ref?.total);
+            if (!ref?.id || ref.total == null || ref.total === '' || !Number.isFinite(total) || !pedido) return;
+
+            const marca = `chisperio_pixel_purchase_${ref.id}`;
+            if (localStorage.getItem(marca)) return;
+
+            const items = pedido.items ?? [];
+            const contentIds = items
+                .map((item) => (item.combo_id ? comboContentId(item.combo_id) : item.producto_id ? productContentId(item.producto_id) : null))
+                .filter(Boolean);
+
+            track(
+                'Purchase',
+                {
+                    content_ids: [...new Set(contentIds)],
+                    content_type: 'product',
+                    value: total,
+                    currency: CURRENCY,
+                    num_items: items.reduce((acc, item) => acc + (Number(item.cantidad) || 0), 0),
+                },
+                { eventID: `order_${ref.id}` }
+            );
+            localStorage.setItem(marca, '1');
+        } catch {
+            // Sin storage utilizable (o JSON corrupto) no se puede garantizar el "una sola
+            // vez": se omite el evento antes que arriesgar duplicados.
         }
     }, []);
 

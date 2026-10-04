@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
@@ -9,8 +9,22 @@ import { CartProvider } from './Context/CartContext';
 import { WhatsAppSucursalProvider } from './Context/WhatsAppSucursalContext';
 import WhatsAppButton from './Components/WhatsAppButton';
 import CartButton from './Components/CartButton';
+import { isTrackablePath } from './lib/pixel';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Chisperío';
+
+// Meta Pixel: el base code del <head> ya dispara el PageView de la primera carga;
+// acá solo se cuentan las navegaciones posteriores de Inertia (no hay recarga).
+// isTrackablePath excluye el panel y el auth: mantener sincronizada su lista con
+// resources/views/partials/meta-pixel.blade.php.
+let lastUrl = window.location.pathname + window.location.search;
+router.on('navigate', (event) => {
+    const url = event.detail.page.url;
+    if (url !== lastUrl) {
+        lastUrl = url;
+        if (isTrackablePath(url)) window.fbq?.('track', 'PageView');
+    }
+});
 
 createInertiaApp({
     // Cada página pasa solo su nombre en <Head title="…">; acá se le agrega la

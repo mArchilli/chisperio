@@ -13,6 +13,7 @@ import { redondear2, resolverPrecio } from '@/lib/pricing';
 import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
 import { resolverMediaParaVariante } from '@/lib/media';
 import { cantidadMaxima, cantidadMaximaTotalVariantes, capearCantidad, sinStock, tieneStockBajo } from '@/lib/stock';
+import { track, itemEventParams } from '@/lib/pixel';
 
 /**
  * Cantidad inicial: toma `?qty=` de la URL si vino de un pill tocado en una card
@@ -412,6 +413,16 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     const [planPagoId, setPlanPagoId] = useState(null);
     const { addToCart: addToCartContext, setFormaPago } = useCart();
 
+    // Meta Pixel: una vez por producto visto (Inertia reusa este componente al ir de
+    // una ficha a otra, por eso depende del id). Precio de lista unitario, sin opciones.
+    useEffect(() => {
+        track('ViewContent', itemEventParams({
+            id: producto.id,
+            titulo: producto.titulo,
+            value: resolverPrecio(producto, 1).precioFinal,
+        }));
+    }, [producto.id]);
+
     const variantes = producto.variantes ?? [];
     const addons = producto.addons ?? [];
     const tieneVariantes = variantes.length > 0;
@@ -695,8 +706,16 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                     variante: snapshotVariante(v),
                     addons: addonsSeleccionados,
                     colorPersonalizadoTexto: v.es_color_personalizado ? construirColorPersonalizadoTexto() : null,
+                    skipTrack: true,
                 });
             });
+            // Un solo AddToCart por click con el total repartido (en vez de uno por color).
+            track('AddToCart', itemEventParams({
+                id: producto.id,
+                titulo: producto.titulo,
+                value: totalProductoActual,
+                cantidad: sumAsignado,
+            }));
         } else {
             addToCartContext(producto, qty, {
                 varianteId: varianteSeleccionada?.id ?? null,

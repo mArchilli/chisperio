@@ -1,3 +1,5 @@
+import { track } from './pixel';
+
 /**
  * Arma el texto del mensaje de WhatsApp para un pedido. Única fuente de verdad del
  * formato: antes se armaba a mano en Checkout.jsx y se replicaba tal cual (como
@@ -116,8 +118,15 @@ export const WHATSAPP_MENSAJE_POR_DEFECTO = '¡Hola! Necesito asesoramiento 😊
  * prellenado. En mobile usa el deep link nativo; en desktop, wa.me en una
  * pestaña nueva. Mismo criterio que usaban Checkout.jsx / ConfirmacionPedido.jsx
  * antes de centralizarse acá.
+ *
+ * `evento`: evento del Meta Pixel a disparar al abrir (ver lib/pixel.js). Solo lo
+ * pasa el modal de contacto ('Contact'); el envío del pedido desde Checkout y el
+ * reenvío desde ConfirmacionPedido NO lo pasan, para no contar contactos falsos.
  */
-export function abrirWhatsApp(numero, mensaje = WHATSAPP_MENSAJE_POR_DEFECTO) {
+export function abrirWhatsApp(numero, mensaje = WHATSAPP_MENSAJE_POR_DEFECTO, { evento } = {}) {
+    // Antes de abrir: en mobile el deep link puede descargar la página.
+    if (evento) track(evento);
+
     const esMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
     );

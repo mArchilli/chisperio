@@ -23,7 +23,7 @@ function WhatsAppIcon({ className = '' }) {
  */
 export default function WhatsAppSucursalModal({ abierto, mensaje, onClose }) {
     const elegirSucursal = (sucursal) => {
-        abrirWhatsApp(sucursal.numero, mensaje);
+        abrirWhatsApp(sucursal.numero, mensaje, { evento: 'Contact' });
         onClose();
     };
 

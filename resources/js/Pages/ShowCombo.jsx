@@ -8,6 +8,7 @@ import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
 import { stockDisponibleCombo } from '@/lib/combo';
+import { track, itemEventParams } from '@/lib/pixel';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
@@ -132,6 +133,16 @@ export default function ShowCombo({ combo, canLogin }) {
     });
     const [qty, setQty] = useState(1);
     const [toast, setToast] = useState(null);
+
+    // Meta Pixel: una vez por combo visto (depende del id: Inertia reusa el componente).
+    useEffect(() => {
+        track('ViewContent', itemEventParams({
+            tipo: 'combo',
+            id: combo.id,
+            titulo: combo.titulo,
+            value: resolverPrecio(combo, 1).precioFinalConOpciones,
+        }));
+    }, [combo.id]);
 
     const seleccionParaStock = useMemo(() => selecciones, [selecciones]);
     const topeCantidad = stockDisponibleCombo(combo, seleccionParaStock);

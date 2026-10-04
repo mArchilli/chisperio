@@ -4,6 +4,7 @@ import { resolverPrecio, redondear2 } from '@/lib/pricing';
 import { cantidadMaxima } from '@/lib/stock';
 import { stockDisponibleCombo } from '@/lib/combo';
 import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
+import { track, itemEventParams } from '@/lib/pixel';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'chisperio_cart';
@@ -338,12 +339,32 @@ export function CartProvider({ children }) {
     // línea queda identificada por producto + variante + combinación de add-ons
     // (ver generarLineKey) — agregar el mismo producto con otra variante u otros
     // add-ons crea una línea nueva en vez de sumarse a una existente.
+    //
+    // `opciones.skipTrack`: no dispara el AddToCart del Meta Pixel. Lo usa quien agrega
+    // varias líneas de una sola vez (reparto por colores de ShowProduct) y dispara un
+    // único evento agrupado por su cuenta.
     const addToCart = useCallback((producto, qty = 1, opciones = {}) => {
-        const { varianteId = null, variante = null, addons = [], colorPersonalizadoTexto = null } = opciones;
+        const { varianteId = null, variante = null, addons = [], colorPersonalizadoTexto = null, skipTrack = false } = opciones;
         const productoSnapshot = snapshotProducto(producto);
         const max = cantidadMaxima(productoSnapshot, varianteId);
         const capear = (cantidad) => (max === null ? cantidad : Math.min(cantidad, max));
         const lineKey = generarLineKey(producto.id, varianteId, addons, colorPersonalizadoTexto);
+
+        if (!skipTrack) {
+            const cantidad = capear(qty);
+            const { precioFinalConOpciones } = resolverPrecio(
+                productoSnapshot,
+                cantidad,
+                varianteId,
+                addons.map((a) => a.addon_id)
+            );
+            track('AddToCart', itemEventParams({
+                id: producto.id,
+                titulo: producto.titulo,
+                value: precioFinalConOpciones * cantidad,
+                cantidad,
+            }));
+        }
 
         setItems((prev) => {
             const existing = prev.find((item) => item.lineKey === lineKey);
@@ -377,11 +398,23 @@ export function CartProvider({ children }) {
     // uno por cada item del combo que ComboProducto::requiereSeleccionVariante() —
     // arma ShowCombo.jsx. Dos combos iguales con distinta combinación de colores
     // elegidos quedan en líneas separadas (ver generarComboLineKey).
-    const addComboToCart = useCallback((combo, qty = 1, selecciones = []) => {
+    const addComboToCart = useCallback((combo, qty = 1, selecciones = [], { skipTrack = false } = {}) => {
         const comboSnapshot = snapshotCombo(combo);
         const max = stockDisponibleCombo(comboSnapshot, seleccionPorItem(selecciones));
         const capear = (cantidad) => (max === null ? cantidad : Math.min(cantidad, max));
         const lineKey = generarComboLineKey(combo.id, selecciones);
+
+        if (!skipTrack) {
+            const cantidad = capear(qty);
+            const { precioFinalConOpciones } = resolverPrecio(comboSnapshot, cantidad);
+            track('AddToCart', itemEventParams({
+                tipo: 'combo',
+                id: combo.id,
+                titulo: combo.titulo,
+                value: precioFinalConOpciones * cantidad,
+                cantidad,
+            }));
+        }
 
         setItems((prev) => {
             const existing = prev.find((item) => item.lineKey === lineKey);

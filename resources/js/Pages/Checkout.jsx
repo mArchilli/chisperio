@@ -16,6 +16,7 @@ import {
     WHATSAPP_SUCURSALES,
 } from '@/lib/whatsapp';
 import { itemsIncluidosCombo } from '@/lib/combo';
+import { track, cartItemContentId, CURRENCY } from '@/lib/pixel';
 
 const PROVINCIAS = [
     'Buenos Aires',
@@ -273,6 +274,19 @@ export default function Checkout({ canLogin }) {
         observaciones: '',
     });
 
+    // Meta Pixel: una vez al entrar al checkout con el carrito cargado (el carrito se
+    // lee sincrónico de localStorage, así que `items` ya está completo en el primer render).
+    useEffect(() => {
+        if (items.length === 0) return;
+        track('InitiateCheckout', {
+            content_ids: [...new Set(items.map(cartItemContentId))],
+            content_type: 'product',
+            value: Number(totalFinal),
+            currency: CURRENCY,
+            num_items: items.reduce((acc, item) => acc + item.cantidad, 0),
+        });
+    }, []);
+
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -333,6 +347,7 @@ export default function Checkout({ canLogin }) {
         items: items.map((item) =>
             item.tipo === 'combo'
                 ? {
+                      combo_id: item.combo_id,
                       titulo: item.titulo,
                       cantidad: item.cantidad,
                       subtotalItem: item.subtotalItem,
@@ -340,6 +355,7 @@ export default function Checkout({ canLogin }) {
                       envioGratis: item.combo?.envio_gratis ?? false,
                   }
                 : {
+                      producto_id: item.producto_id,
                       titulo: item.titulo,
                       cantidad: item.cantidad,
                       subtotalItem: item.subtotalItem,
@@ -386,8 +402,9 @@ export default function Checkout({ canLogin }) {
         const message = buildOrderMessage(pedido);
 
         setIsSubmitting(true);
+        let respuesta;
         try {
-            await axios.post(route('checkout.store'), {
+            respuesta = await axios.post(route('checkout.store'), {
                 cliente_nombre: `${form.nombre} ${form.apellido}`.trim(),
                 cliente_dni: form.dni,
                 cliente_telefono: form.telefono,
@@ -456,6 +473,12 @@ export default function Checkout({ canLogin }) {
 
         const sucursal = getSucursal(sucursalId);
         sessionStorage.setItem('chisperio_last_order', JSON.stringify(pedido));
+        // id y total confirmados por el servidor: ConfirmacionPedido los usa para el
+        // Purchase del Meta Pixel (una sola vez por pedido).
+        sessionStorage.setItem(
+            'chisperio_last_order_ref',
+            JSON.stringify({ id: respuesta.data.id, total: respuesta.data.total })
+        );
         // La sucursal elegida viaja a la pantalla de confirmación para que su
         // botón "Enviar por WhatsApp" abra el mismo número sin volver a preguntar.
         sessionStorage.setItem('chisperio_last_sucursal', sucursal.id);
