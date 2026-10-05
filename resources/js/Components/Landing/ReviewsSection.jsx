@@ -1,99 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { tiempoRelativo } from '@/lib/tiempoRelativo';
 
-const GOOGLE_REVIEWS_URL = 'https://www.google.com/search?q=chisperio&oq=chisperio&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg8MgYIAhBFGDwyBwgDEAAYgAQyBggEEAAYHjIGCAUQRRg8MgYIBhBFGDwyBggHEEUYPNIBCDQ4ODlqMGo3qAIAsAIA&sourceid=chrome&source=chrome.ob&ie=UTF-8#lrd=0x8f7e9e5929cf69c9:0xd23641ad42e2ddaf,1,,,,';
-
-const REVIEWS = [
-    {
-        id: 1,
-        name: 'daniel Morales',
-        initials: 'DM',
-        meta: '2 opiniones · 6 fotos',
-        date: 'Hace un mes',
-        avatarClass: 'bg-[#1a73e8]',
-        text: 'Excelente atención pedido llego a tiempo y forma ,pactado..recomendables siempre!!.gracias',
-    },
-    {
-        id: 2,
-        name: 'Sonitus Sonido',
-        initials: 'SS',
-        meta: '1 opinión',
-        date: 'Hace un mes',
-        avatarClass: 'bg-[#d93025]',
-        text: 'Excelente atención, te brindan asesoramiento para hacer la compra correcta, y en 5 día ya tenía el producto.\nRecomiendo al 100%.',
-    },
-    {
-        id: 3,
-        name: 'ale Gutiérrez',
-        initials: 'AG',
-        meta: 'Local Guide · 28 opiniones · 12 fotos',
-        date: 'Hace un mes',
-        avatarClass: 'bg-[#188038]',
-        text: 'Muy lindo muy recomendable no dejen que su fiesta le falte chisperio,\nhablar con Julián que te aconseja de la mejor manera',
-    },
-    {
-        id: 4,
-        name: 'omar grecco',
-        initials: 'OG',
-        meta: '4 opiniones',
-        date: 'Hace un mes',
-        avatarClass: 'bg-[#f29900]',
-        text: 'compre una consola de 6 bases .... todo perfecto atencion y tiempo de entrega , todo impecable. omar de deep blue pirotecnia',
-    },
-    {
-        id: 5,
-        name: 'Hernan Kohan',
-        initials: 'HK',
-        meta: '2 opiniones',
-        date: 'Hace un mes',
-        avatarClass: 'bg-[#9334e6]',
-        text: 'Excelente todo,buena atencion telefonica y personalmente tambien.',
-    },
-    {
-        id: 6,
-        name: 'Alejandra Ramacciotti',
-        initials: 'AR',
-        meta: '3 opiniones · 1 foto',
-        date: 'Hace un mes',
-        avatarClass: 'bg-[#007b83]',
-        text: 'Excelente las chispas . Resalta la entrada de la quinceañera . Cumplen con todo .Excelente los recomiendo 100%',
-    },
-    {
-        id: 7,
-        name: 'Marcelo Alonso',
-        initials: 'MA',
-        meta: 'Local Guide · 135 opiniones · 340 fotos',
-        date: 'Hace 2 meses',
-        avatarClass: 'bg-[#185abc]',
-        text: '10 puntos llego todo bien y rapido . Muchas Gracias 🫂',
-    },
-    {
-        id: 8,
-        name: 'Daiana Rocha',
-        initials: 'DR',
-        meta: '1 opinión',
-        date: 'Hace 2 meses',
-        avatarClass: 'bg-[#c2185b]',
-        text: 'Llego a tiempo mi pedido ! Y la atencion excelente! Gracias! Voy a volver a comprar',
-    },
-    {
-        id: 9,
-        name: 'EDUARDO MARTIN PAIGES',
-        initials: 'EP',
-        meta: '1 foto',
-        date: 'Hace 2 meses',
-        avatarClass: 'bg-[#e37400]',
-        text: 'Excelente atención y muy buen asesoramiento. El pedido llegó rápido, en perfectas condiciones y todo funcionó impecable. Muy recomendables.',
-    },
-    {
-        id: 10,
-        name: 'Marcos Buet',
-        initials: 'MB',
-        meta: '10 opiniones · 6 fotos',
-        date: 'Hace 3 meses',
-        avatarClass: 'bg-[#3f51b5]',
-        text: 'Exelente atención, muy conformes con todo, desde las consultas hasta la entrega del producto!\nSuper recomendable!!!',
-    },
-];
+export const GOOGLE_REVIEWS_URL = 'https://www.google.com/search?q=chisperio&oq=chisperio&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg8MgYIAhBFGDwyBwgDEAAYgAQyBggEEAAYHjIGCAUQRRg8MgYIBhBFGDwyBggHEEUYPNIBCDQ4ODlqMGo3qAIAsAIA&sourceid=chrome&source=chrome.ob&ie=UTF-8#lrd=0x8f7e9e5929cf69c9:0xd23641ad42e2ddaf,1,,,,';
 
 function getReviewsPerPage() {
     if (typeof window === 'undefined') return 1;
@@ -102,7 +10,7 @@ function getReviewsPerPage() {
     return 1;
 }
 
-function GoogleIcon({ className = 'h-5 w-5' }) {
+export function GoogleIcon({ className = 'h-5 w-5' }) {
     return (
         <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -113,50 +21,60 @@ function GoogleIcon({ className = 'h-5 w-5' }) {
     );
 }
 
-function Star() {
+function Star({ filled = true }) {
     return (
-        <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+        <svg className={`h-4 w-4 fill-current ${filled ? '' : 'text-[#dadce0]'}`} viewBox="0 0 20 20" aria-hidden="true">
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
         </svg>
     );
 }
 
-function StarRating({ compact = false }) {
+export function StarRating({ compact = false, value = 5 }) {
     return (
-        <div className={`flex text-[#fbbc04] ${compact ? 'gap-px' : 'gap-0.5'}`} aria-label="5 de 5 estrellas">
-            {Array.from({ length: 5 }, (_, index) => <Star key={index} />)}
+        <div className={`flex text-[#fbbc04] ${compact ? 'gap-px' : 'gap-0.5'}`} aria-label={`${value} de 5 estrellas`}>
+            {Array.from({ length: 5 }, (_, index) => <Star key={index} filled={index < value} />)}
         </div>
     );
 }
 
-function ReviewCard({ review, className = '' }) {
+/**
+ * Card de una reseña. `review` es una fila de `resenas` (nombre, iniciales, meta, texto,
+ * puntuacion, fecha, color_avatar). Exportada para reusarla en la vista previa del
+ * formulario del admin, que así muestra exactamente lo que va a ver el cliente.
+ */
+export function ReviewCard({ review, className = '' }) {
     return (
         <article className={`flex flex-col rounded-xl border border-[#dadce0] bg-white p-5 ${className}`}>
             <div className="flex items-start gap-3">
-                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${review.avatarClass}`}>
-                    {review.initials}
+                <div
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+                    style={{ backgroundColor: review.color_avatar || '#1a73e8' }}
+                >
+                    {review.iniciales}
                 </div>
 
                 <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold leading-snug text-[#202124]">
-                        {review.name}
+                        {review.nombre}
                     </h3>
-                    <p className="mt-0.5 text-xs leading-snug text-[#70757a]">
-                        {review.meta}
-                    </p>
+                    {review.meta && (
+                        <p className="mt-0.5 text-xs leading-snug text-[#70757a]">
+                            {review.meta}
+                        </p>
+                    )}
                 </div>
 
                 <GoogleIcon className="h-5 w-5 flex-shrink-0" />
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <StarRating compact />
-                <span className="text-xs text-[#70757a]">{review.date}</span>
+                <StarRating compact value={review.puntuacion} />
+                <span className="text-xs text-[#70757a]">{tiempoRelativo(review.fecha)}</span>
             </div>
 
-            {review.text && (
+            {review.texto && (
                 <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-[#3c4043]">
-                    {review.text}
+                    {review.texto}
                 </p>
             )}
         </article>
@@ -180,7 +98,7 @@ function NavArrow({ direction, onClick }) {
     );
 }
 
-export default function ReviewsSection() {
+export default function ReviewsSection({ resenas = [] }) {
     const [reviewsPerPage, setReviewsPerPage] = useState(getReviewsPerPage);
     const [page, setPage] = useState(0);
     const stripRef = useRef(null);
@@ -220,14 +138,14 @@ export default function ReviewsSection() {
         return () => window.removeEventListener('resize', updateReviewsPerPage);
     }, []);
 
-    const totalPages = Math.ceil(REVIEWS.length / reviewsPerPage);
+    const totalPages = Math.ceil(resenas.length / reviewsPerPage);
 
     useEffect(() => {
-        setPage((currentPage) => Math.min(currentPage, totalPages - 1));
+        setPage((currentPage) => Math.max(0, Math.min(currentPage, totalPages - 1)));
     }, [totalPages]);
 
     const startIndex = page * reviewsPerPage;
-    const visibleReviews = REVIEWS.slice(startIndex, startIndex + reviewsPerPage);
+    const visibleReviews = resenas.slice(startIndex, startIndex + reviewsPerPage);
     const goToPage = (offset) => {
         const next = (page + offset + totalPages) % totalPages;
         setPage(next);
@@ -239,6 +157,8 @@ export default function ReviewsSection() {
         if (isCarousel) scrollToReview(page, 'auto');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isCarousel]);
+
+    if (resenas.length === 0) return null;
 
     return (
         <section id="resenas" className="bg-[#f8f9fa] px-6 pb-12 pt-6 md:px-10 md:pb-16 md:pt-8 lg:px-12 xl:px-16" aria-labelledby="reviews-title">
@@ -265,7 +185,7 @@ export default function ReviewsSection() {
                         aria-roledescription="carrusel"
                         aria-label="Reseñas de clientes"
                     >
-                        {REVIEWS.map((review, index) => (
+                        {resenas.map((review, index) => (
                             <div
                                 key={review.id}
                                 className={`flex w-[82%] flex-shrink-0 snap-center snap-always transition-all duration-300 motion-reduce:transition-none ${
@@ -288,7 +208,7 @@ export default function ReviewsSection() {
                 )}
 
                 <p className="sr-only" aria-live="polite">
-                    Mostrando reseñas {startIndex + 1} a {startIndex + visibleReviews.length} de {REVIEWS.length}
+                    Mostrando reseñas {startIndex + 1} a {startIndex + visibleReviews.length} de {resenas.length}
                 </p>
 
                 <div className="mt-7 flex flex-col items-center justify-between gap-5 sm:flex-row">

@@ -14,6 +14,7 @@ use App\Http\Controllers\PlanPagoTarjetaController;
 use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ResenaController;
 use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\TiendaController;
 use App\Http\Controllers\UsuarioController;
@@ -71,10 +72,16 @@ Route::get('/', function () {
 
     $categorias = \App\Models\Categoria::all();
 
+    // Reseñas visibles, de la más nueva a la más vieja (se gestionan desde admin/resenas).
+    $resenas = \App\Models\Resena::activas()
+        ->recientesPrimero()
+        ->get(['id', 'nombre', 'meta', 'texto', 'puntuacion', 'fecha', 'color_avatar']);
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'productosDestacados' => $productosDestacados,
         'categorias' => $categorias,
+        'resenas' => $resenas,
     ]);
 });
 
@@ -95,6 +102,15 @@ Route::middleware('auth')->group(function () {
     // controller filtra a solo activos para quien no sea admin); crear/editar/
     // eliminar/activar quedan en el grupo role:admin de más abajo.
     Route::get('admin/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
+
+    // Reseñas de la landing — admin y vendedor pueden ver, crear, editar y mostrar/ocultar.
+    // Eliminar NO está acá: es solo del admin (ver el grupo role:admin más abajo).
+    Route::get('admin/resenas', [ResenaController::class, 'index'])->name('resenas.index');
+    Route::get('admin/resenas/create', [ResenaController::class, 'create'])->name('resenas.create');
+    Route::post('admin/resenas', [ResenaController::class, 'store'])->name('resenas.store');
+    Route::get('admin/resenas/{resena}/edit', [ResenaController::class, 'edit'])->name('resenas.edit');
+    Route::put('admin/resenas/{resena}', [ResenaController::class, 'update'])->name('resenas.update');
+    Route::patch('admin/resenas/{resena}/toggle-active', [ResenaController::class, 'toggleActive'])->name('resenas.toggle-active');
 
     // Rutas de Pedidos
     Route::get('admin/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
@@ -197,6 +213,9 @@ Route::middleware('auth')->group(function () {
             'destroy' => 'planes-pago.destroy',
         ]);
         Route::patch('admin/planes-pago/{planes_pago}/toggle-active', [PlanPagoTarjetaController::class, 'toggleActive'])->name('planes-pago.toggle-active');
+
+        // Reseñas: eliminar es exclusivo del admin (el resto de la gestión la comparte el vendedor, ver arriba).
+        Route::delete('admin/resenas/{resena}', [ResenaController::class, 'destroy'])->name('resenas.destroy');
 
         // Documentación — alta/edición/borrado reservados a admin (ver admin/documentos GET arriba).
         Route::get('admin/documentos/create', [DocumentoController::class, 'create'])->name('documentos.create');

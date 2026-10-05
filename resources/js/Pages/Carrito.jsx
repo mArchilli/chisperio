@@ -6,7 +6,7 @@ import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 import FormaPagoBlock from '@/Components/FormaPagoBlock';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
-import { itemsIncluidosCombo } from '@/lib/combo';
+import ComboLineaDetalle from '@/Components/ComboLineaDetalle';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -47,10 +47,9 @@ function BagIcon({ className = 'h-5 w-5' }) {
     );
 }
 
-function CartItem({ item, onUpdateQty, onRemove }) {
+function CartItem({ item, onUpdateQty, onRemove, envioGratisPorCombo }) {
     const enElTope = item.stockDisponible !== null && item.cantidad >= item.stockDisponible;
     const esCombo = item.tipo === 'combo';
-    const itemsIncluidos = esCombo ? itemsIncluidosCombo(item) : [];
 
     return (
         <article
@@ -89,23 +88,7 @@ function CartItem({ item, onUpdateQty, onRemove }) {
                             </h2>
 
                             {esCombo ? (
-                                <ul className="mt-1.5 space-y-1">
-                                    {itemsIncluidos.map((comboItem) => (
-                                        <li key={comboItem.id} className="flex items-center gap-1.5 text-[11px] font-medium leading-snug text-[#81788a]">
-                                            <span>{comboItem.cantidad} × {comboItem.titulo}</span>
-                                            {comboItem.varianteNombre && (
-                                                <span className="inline-flex items-center gap-1 rounded-full border border-black/[0.06] bg-[#f7f6f9] px-2 py-0.5 text-[10px] font-bold text-[#4b4356]">
-                                                    <span
-                                                        className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-black/10"
-                                                        style={{ backgroundColor: comboItem.varianteColorHex || '#e5e5e5' }}
-                                                        aria-hidden="true"
-                                                    />
-                                                    {comboItem.varianteNombre}
-                                                </span>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <ComboLineaDetalle item={item} envioGratisAplica={envioGratisPorCombo} className="mt-1.5" />
                             ) : (
                                 <>
                                     {item.variante && (
@@ -285,6 +268,8 @@ function OrderSummary({
     cartCount,
     hayItemsSinStock,
     envioGratisAlcanzado,
+    envioGratisPorCombo,
+    hayComboConEnvioGratis,
     codigoAplicado,
     descuentoInfo,
     montoDescuento,
@@ -316,7 +301,7 @@ function OrderSummary({
                 <div className="mt-5">
                     {/* OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre
                         el total con descuento — ver Fase 3 del plan de códigos de descuento. */}
-                    <BarraEnvioGratis subtotal={subtotal} />
+                    <BarraEnvioGratis subtotal={subtotal} porCombo={envioGratisPorCombo} avisoCombo={hayComboConEnvioGratis} />
                 </div>
 
                 <div className="mt-5">
@@ -463,6 +448,8 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
         subtotal,
         cartCount,
         hayItemsSinStock,
+        envioGratisPorCombo,
+        hayComboConEnvioGratis,
         codigoAplicado,
         descuentoInfo,
         montoDescuento,
@@ -478,7 +465,8 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
     const montoMinimoEnvio = configuracionEnvio?.montoMinimo ?? 0;
     // OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre el total
     // con descuento — ver Fase 3 del plan de códigos de descuento.
-    const envioGratisAlcanzado = montoMinimoEnvio > 0 && subtotal >= montoMinimoEnvio;
+    // Y también si lo único que lleva es un combo con envío gratis propio (ver lib/envioGratis).
+    const envioGratisAlcanzado = (montoMinimoEnvio > 0 && subtotal >= montoMinimoEnvio) || envioGratisPorCombo;
 
     return (
         <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
@@ -533,6 +521,7 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
                                         item={item}
                                         onUpdateQty={updateQty}
                                         onRemove={removeFromCart}
+                                        envioGratisPorCombo={envioGratisPorCombo}
                                     />
                                 ))}
                             </section>
@@ -544,6 +533,8 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
                                         cartCount={cartCount}
                                         hayItemsSinStock={hayItemsSinStock}
                                         envioGratisAlcanzado={envioGratisAlcanzado}
+                                        envioGratisPorCombo={envioGratisPorCombo}
+                                        hayComboConEnvioGratis={hayComboConEnvioGratis}
                                         codigoAplicado={codigoAplicado}
                                         descuentoInfo={descuentoInfo}
                                         montoDescuento={montoDescuento}

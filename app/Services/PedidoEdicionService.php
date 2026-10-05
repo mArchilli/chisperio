@@ -309,9 +309,20 @@ class PedidoEdicionService
             $pedido->total_con_recargo = $recargo['total_con_recargo'];
         }
 
-        // Pedidos anteriores a la columna (monto mínimo null) no tienen con qué comparar.
-        if ($pedido->envio_gratis_monto_minimo !== null && (float) $pedido->envio_gratis_monto_minimo > 0) {
-            $pedido->envio_gratis = $subtotal >= (float) $pedido->envio_gratis_monto_minimo;
+        // Envío gratis = superar el monto (snapshot) O llevar únicamente combos con envío gratis
+        // propio (la línea guarda su flag). Quitar o dejar solo líneas cambia la segunda condición.
+        $items = $pedido->items()->get();
+        $soloCombosConEnvioGratis = $items->isNotEmpty()
+            && $items->every(fn (PedidoItem $item) => $item->combo_id !== null && $item->envio_gratis);
+
+        // Pedidos anteriores a la columna (monto mínimo null) no tienen con qué comparar el monto:
+        // solo se marca si cumple por combo, y nunca se desmarca.
+        if ($pedido->envio_gratis_monto_minimo !== null) {
+            $porMonto = (float) $pedido->envio_gratis_monto_minimo > 0
+                && $subtotal >= (float) $pedido->envio_gratis_monto_minimo;
+            $pedido->envio_gratis = $porMonto || $soloCombosConEnvioGratis;
+        } elseif ($soloCombosConEnvioGratis) {
+            $pedido->envio_gratis = true;
         }
     }
 }

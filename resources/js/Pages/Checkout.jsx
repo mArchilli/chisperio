@@ -16,6 +16,7 @@ import {
     WHATSAPP_SUCURSALES,
 } from '@/lib/whatsapp';
 import { itemsIncluidosCombo } from '@/lib/combo';
+import ComboLineaDetalle from '@/Components/ComboLineaDetalle';
 import { track, cartItemContentId, CURRENCY } from '@/lib/pixel';
 
 const PROVINCIAS = [
@@ -93,6 +94,8 @@ function FormField({ label, required, error, children }) {
 function CheckoutSummary({
     items,
     subtotal,
+    envioGratisPorCombo,
+    hayComboConEnvioGratis,
     codigoAplicado,
     descuentoInfo,
     montoDescuento,
@@ -120,7 +123,7 @@ function CheckoutSummary({
             {/* OJO: el envío gratis se evalúa sobre el subtotal bruto, nunca sobre el
                 total con descuento — mismo criterio que Carrito.jsx. */}
             <div className="relative mb-6">
-                <BarraEnvioGratis subtotal={subtotal} />
+                <BarraEnvioGratis subtotal={subtotal} porCombo={envioGratisPorCombo} avisoCombo={hayComboConEnvioGratis} />
             </div>
 
             <div className="relative">
@@ -163,7 +166,13 @@ function CheckoutSummary({
                         <div className="min-w-0 flex-1">
                             <p className="line-clamp-2 text-xs font-extrabold leading-snug text-[#1c1b1b]">
                                 {item.titulo}
+                                {item.tipo === 'combo' && (
+                                    <span className="ml-1.5 inline-flex items-center rounded-full bg-[#6000ca]/10 px-1.5 py-0.5 align-middle text-[9px] font-extrabold uppercase tracking-wide text-[#6000ca]">
+                                        Combo
+                                    </span>
+                                )}
                             </p>
+                            {item.tipo === 'combo' && <ComboLineaDetalle item={item} compact envioGratisAplica={envioGratisPorCombo} className="mt-1" />}
                             <p className="mt-1 text-[10px] font-medium text-[#81788a]">
                                 {item.cantidad} × {formatPrice(item.precioUnitario)}
                             </p>
@@ -242,6 +251,8 @@ export default function Checkout({ canLogin }) {
         subtotal,
         clearCart,
         hayItemsSinStock,
+        envioGratisPorCombo,
+        hayComboConEnvioGratis,
         codigoAplicado,
         descuentoInfo,
         montoDescuento,
@@ -260,7 +271,9 @@ export default function Checkout({ canLogin }) {
     // bruto (nunca sobre el total con descuento).
     const { configuracionEnvio, planesPagoTarjeta } = usePage().props;
     const montoMinimoEnvioGratis = configuracionEnvio?.montoMinimo ?? 0;
-    const envioGratisAlcanzado = montoMinimoEnvioGratis > 0 && subtotal >= montoMinimoEnvioGratis;
+    // Por monto (lo configura el admin). El envío gratis de un combo es aparte: vale solo si el
+    // carrito es únicamente ese combo (envioGratisPorCombo, ver lib/envioGratis).
+    const envioGratisPorMonto = montoMinimoEnvioGratis > 0 && subtotal >= montoMinimoEnvioGratis;
 
     const [form, setForm] = useState({
         nombre: '',
@@ -355,7 +368,7 @@ export default function Checkout({ canLogin }) {
                       cantidad: item.cantidad,
                       subtotalItem: item.subtotalItem,
                       componentes: itemsIncluidosCombo(item),
-                      envioGratis: item.combo?.envio_gratis ?? false,
+                      envioGratis: envioGratisPorCombo && Boolean(item.combo?.envio_gratis),
                   }
                 : {
                       producto_id: item.producto_id,
@@ -384,7 +397,7 @@ export default function Checkout({ canLogin }) {
               }
             : null,
         total: totalFinal,
-        envioGratis: { alcanzado: envioGratisAlcanzado, montoMinimo: montoMinimoEnvioGratis },
+        envioGratis: { alcanzado: envioGratisPorMonto, porCombo: envioGratisPorCombo, montoMinimo: montoMinimoEnvioGratis },
     });
 
     const handleSubmit = async (e) => {
@@ -814,6 +827,8 @@ export default function Checkout({ canLogin }) {
                         <div className="lg:sticky lg:top-28">
                             <CheckoutSummary
                                 items={items}
+                                envioGratisPorCombo={envioGratisPorCombo}
+                                hayComboConEnvioGratis={hayComboConEnvioGratis}
                                 subtotal={subtotal}
                                 codigoAplicado={codigoAplicado}
                                 descuentoInfo={descuentoInfo}

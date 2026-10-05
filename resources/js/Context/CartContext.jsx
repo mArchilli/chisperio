@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { resolverPrecio, redondear2 } from '@/lib/pricing';
 import { cantidadMaxima } from '@/lib/stock';
 import { stockDisponibleCombo } from '@/lib/combo';
+import { envioGratisPorCombo as calcularEnvioGratisPorCombo, hayComboConEnvioGratis as calcularHayComboConEnvioGratis } from '@/lib/envioGratis';
 import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
 import { track, itemEventParams } from '@/lib/pixel';
 
@@ -624,6 +625,9 @@ export function CartProvider({ children }) {
     // Última foto de stock conocida para cada item (ver snapshotProducto): si algún item
     // quedó en 0, no tiene sentido dejar avanzar al checkout con ese carrito tal cual.
     const hayItemsSinStock = itemsConPrecio.some((item) => item.sinStock);
+    // Envío gratis del combo: solo si el carrito es únicamente combos con envío gratis (ver lib/envioGratis).
+    const envioGratisPorCombo = calcularEnvioGratisPorCombo(itemsConPrecio);
+    const hayComboConEnvioGratis = calcularHayComboConEnvioGratis(itemsConPrecio);
 
     // --- Código de descuento ---
     // `codigoAplicado` persiste igual que `items` (localStorage), para que sobreviva
@@ -767,6 +771,8 @@ export function CartProvider({ children }) {
         <CartContext.Provider
             value={{
                 items: itemsConPrecio,
+                envioGratisPorCombo,
+                hayComboConEnvioGratis,
                 addToCart,
                 addComboToCart,
                 removeFromCart,

@@ -10,7 +10,7 @@ import FAQSection from '@/Components/Landing/FAQSection';
 import LocationSection from '@/Components/Landing/LocationSection';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 
-export default function Welcome({ canLogin, productosDestacados = [], categorias = [] }) {
+export default function Welcome({ canLogin, productosDestacados = [], categorias = [], resenas = [] }) {
     return (
         <div className="bg-[#fcf9f8] min-h-screen text-[#1c1b1b] antialiased">
             <Head title="Chispas frías, fuegos artificiales y efectos para eventos" />
@@ -21,7 +21,7 @@ export default function Welcome({ canLogin, productosDestacados = [], categorias
                 <CategoriesSection categorias={categorias} />
                 <OutstandingProducts productos={productosDestacados} />
                 <RentalMachine />
-                <ReviewsSection />
+                <ReviewsSection resenas={resenas} />
                 <FAQSection />
                 <LocationSection />
             </main>

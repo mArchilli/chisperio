@@ -4,8 +4,10 @@ import { ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '@/Context/CartContext';
 import { useNotificacionEnvioGratis } from '@/hooks/useNotificacionEnvioGratis';
+import { useAvisoEnvioGratisCombo } from '@/hooks/useAvisoEnvioGratisCombo';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
+import ComboLineaDetalle from '@/Components/ComboLineaDetalle';
 
 const EXCLUDED_PREFIXES = [
     '/carrito', '/checkout', '/login',
@@ -25,7 +27,11 @@ const formatPrice = (n) =>
         maximumFractionDigits: 0,
     }).format(n);
 
-function MiniCartItem({ item, onUpdateQty, onRemove }) {
+function MiniCartItem({ item, onUpdateQty, onRemove, envioGratisPorCombo }) {
+    // Una línea de combo no tiene variante ni add-ons propios (ver CartContext.addComboToCart):
+    // en vez de eso lista lo que incluye y si trae envío gratis.
+    const esCombo = item.tipo === 'combo';
+
     return (
         <div className="flex gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
             <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-purple-50 border border-gray-100">
@@ -41,9 +47,18 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
             </div>
 
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#1c1b1b] leading-snug line-clamp-1">{item.titulo}</p>
+                <p className="text-sm font-semibold text-[#1c1b1b] leading-snug line-clamp-1">
+                    {item.titulo}
+                    {esCombo && (
+                        <span className="ml-1.5 inline-flex items-center rounded-full bg-[#6000ca]/10 px-1.5 py-0.5 align-middle text-[9px] font-extrabold uppercase tracking-wide text-[#6000ca]">
+                            Combo
+                        </span>
+                    )}
+                </p>
 
-                {item.variante && (
+                {esCombo && <ComboLineaDetalle item={item} compact envioGratisAplica={envioGratisPorCombo} className="mt-1" />}
+
+                {!esCombo && item.variante && (
                     <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-[#4b4356]">
                         <span
                             className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-black/10"
@@ -58,7 +73,7 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
                     </span>
                 )}
 
-                {item.addons.length > 0 && (
+                {!esCombo && item.addons?.length > 0 && (
                     <ul className="mt-1 space-y-0.5">
                         {item.addons.map((addon) => (
                             <li key={addon.addon_id} className="text-[10px] font-medium leading-snug text-[#7c7388]">
@@ -115,13 +130,21 @@ function MiniCartItem({ item, onUpdateQty, onRemove }) {
 
 export default function CartButton() {
     const [pageVisible, setPageVisible] = useState(() => shouldShow(window.location.pathname));
-    const { items, removeFromCart, updateQty, cartCount, subtotal, cartDrawerOpen, closeCartDrawer, toggleCartDrawer } = useCart();
+    const { items, removeFromCart, updateQty, cartCount, subtotal, envioGratisPorCombo, hayComboConEnvioGratis, cartDrawerOpen, closeCartDrawer, toggleCartDrawer } = useCart();
     const { configuracionEnvio } = usePage().props;
     // En mobile el botón flotante queda oculto (el ícono del navbar dispara este mismo
     // drawer — ver LandingHeader); en desktop está siempre visible.
 
     useNotificacionEnvioGratis(subtotal, configuracionEnvio?.montoMinimo, () => {
         toast.success('¡Desbloqueaste envío gratis! 🎉');
+    }, envioGratisPorCombo);
+
+    // Si sumaron otro producto y el combo pierde su envío gratis, se explica por qué (solo con combos que lo tengan).
+    useAvisoEnvioGratisCombo({
+        envioGratisPorCombo,
+        hayComboConEnvioGratis,
+        subtotal,
+        montoMinimo: configuracionEnvio?.montoMinimo ?? 0,
     });
 
     useEffect(() => {
@@ -220,6 +243,7 @@ export default function CartButton() {
                                 item={item}
                                 onUpdateQty={updateQty}
                                 onRemove={removeFromCart}
+                                envioGratisPorCombo={envioGratisPorCombo}
                             />
                         ))}
                     </div>
@@ -229,7 +253,7 @@ export default function CartButton() {
                 {items.length > 0 && (
                     <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/80 flex-shrink-0">
                         <div className="mb-3">
-                            <BarraEnvioGratis subtotal={subtotal} />
+                            <BarraEnvioGratis subtotal={subtotal} porCombo={envioGratisPorCombo} avisoCombo={hayComboConEnvioGratis} />
                         </div>
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-sm text-[#7c7388]">Total</span>

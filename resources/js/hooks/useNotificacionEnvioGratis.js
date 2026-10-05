@@ -7,15 +7,14 @@ const STORAGE_KEY = 'envioGratisNotificado';
  * hacia arriba. Si el carrito vuelve a bajar del monto (sacaron productos) y luego lo
  * re-alcanza en la misma sesión, vuelve a notificar.
  */
-export function useNotificacionEnvioGratis(subtotal, montoMinimo, notificar) {
+export function useNotificacionEnvioGratis(subtotal, montoMinimo, notificar, porCombo = false) {
     const yaNotificado = useRef(
         typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEY) === 'true'
     );
 
     useEffect(() => {
-        if (!montoMinimo || montoMinimo <= 0) return;
-
-        const alcanzado = subtotal >= montoMinimo;
+        // Envío gratis por monto o por llevar únicamente un combo con envío gratis.
+        const alcanzado = porCombo || (montoMinimo > 0 && subtotal >= montoMinimo);
 
         if (alcanzado && !yaNotificado.current) {
             notificar();
@@ -27,5 +26,5 @@ export function useNotificacionEnvioGratis(subtotal, montoMinimo, notificar) {
             yaNotificado.current = false;
             sessionStorage.removeItem(STORAGE_KEY);
         }
-    }, [subtotal, montoMinimo, notificar]);
+    }, [subtotal, montoMinimo, notificar, porCombo]);
 }

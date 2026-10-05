@@ -109,8 +109,12 @@ export default function Edit({ pedido, variantesPorProducto }) {
     const conTarjeta = Boolean(pedido.plan_pago_tarjeta_id);
     const recargo = conTarjeta ? redondear(total * (Number(pedido.recargo_porcentaje) / 100)) : 0;
     const montoMinimoEnvio = Number(pedido.envio_gratis_monto_minimo || 0);
-    const envioGratis = montoMinimoEnvio > 0 ? subtotal >= montoMinimoEnvio : null;
-
+    // Igual que PedidoEdicionService: por monto, o porque lo que queda son solo combos con envío gratis.
+    const lineasGuardadas = data.items.map((item, i) => ({ item, guardado: pedido.items[i] })).filter(({ item }) => !item.quitado);
+    const envioGratisPorCombo =
+        lineasGuardadas.length > 0 && lineasGuardadas.every(({ guardado }) => guardado.combo_id !== null && guardado.envio_gratis);
+    const hayEnvioGratisConfigurado = montoMinimoEnvio > 0 || envioGratisPorCombo;
+    const envioGratis = hayEnvioGratisConfigurado ? (montoMinimoEnvio > 0 && subtotal >= montoMinimoEnvio) || envioGratisPorCombo : null;
     const enviar = (e) => {
         e.preventDefault();
         put(route('pedidos.update', pedido.id), { preserveScroll: true });
@@ -379,7 +383,10 @@ export default function Edit({ pedido, variantesPorProducto }) {
                                 )}
                                 {envioGratis !== null && (
                                     <div className="flex justify-between">
-                                        <dt className="text-gray-600">Envío gratis (mínimo {formatearPrecio(montoMinimoEnvio)})</dt>
+                                        <dt className="text-gray-600">
+                                            Envío gratis{montoMinimoEnvio > 0 ? ` (mínimo ${formatearPrecio(montoMinimoEnvio)})` : ''}
+                                            {envioGratisPorCombo && <span className="block text-xs text-gray-400">Por llevar solo combo(s) con envío gratis</span>}
+                                        </dt>
                                         <dd className={`font-semibold ${envioGratis ? 'text-green-700' : 'text-gray-500'}`}>
                                             {envioGratis ? 'Sí' : 'No alcanza'}
                                         </dd>

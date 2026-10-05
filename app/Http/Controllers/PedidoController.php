@@ -57,8 +57,7 @@ class PedidoController extends Controller
 
         $sucursalScope = $filtroSucursal === 'todas' ? null : $filtroSucursal;
 
-        // items.combo: solo para saber si algún combo del pedido trae envío gratis propio.
-        $pedidos = Pedido::with(['items', 'items.combo:id,envio_gratis'])
+        $pedidos = Pedido::with('items')
             ->deSucursal($sucursalScope)
             ->when($filtroEstado !== 'todos', fn ($query) => $query->where('estado', $filtroEstado))
             ->latest()
@@ -93,8 +92,6 @@ class PedidoController extends Controller
         $pedido->load([
             'items.producto.imagenPrincipal',
             'items.producto.categorias',
-            // Solo para saber si el combo trae envío gratis propio (se aclara en el detalle).
-            'items.combo:id,envio_gratis',
             // Solo relevante para pedidos cancelados (se muestra la reposición en el detalle),
             // pero cargarlo siempre es barato y evita una segunda ida y vuelta si en el futuro
             // se necesita en otro estado.
@@ -122,7 +119,7 @@ class PedidoController extends Controller
                 ->with('error', 'Solo se pueden editar pedidos pendientes.');
         }
 
-        $pedido->load(['items.producto.imagenPrincipal', 'items.combo:id,envio_gratis']);
+        $pedido->load('items.producto.imagenPrincipal');
 
         // Variantes entre las que se puede elegir, por producto: las activas más la que el
         // item ya tiene aunque se haya desactivado después (para que el select la muestre).
@@ -504,6 +501,8 @@ class PedidoController extends Controller
                         'cantidad' => $cantidadCombo,
                         'subtotal' => $comboSubtotal,
                         'precio_base_unitario' => $precioCombo->precio_lista,
+                        // Snapshot: el detalle del pedido no debe cambiar si después se edita el combo.
+                        'envio_gratis' => (bool) $combo->envio_gratis,
                     ];
                 }
 
@@ -557,7 +556,15 @@ class PedidoController extends Controller
                 // pedido tiene que seguir diciendo si calificó con el que regía al comprar.
                 // Igual criterio que el front (Checkout.jsx): sobre el subtotal, antes de
                 // descuento/recargo; mínimo <= 0 = feature desactivada.
+                //
+                // Además, un combo con envío gratis propio lo da SOLO si es lo único que se
+                // compra: con cualquier otro ítem (producto suelto u otro combo sin envío
+                // gratis) ese beneficio no cuenta y rige únicamente el monto. Ver
+                // resources/js/lib/envioGratis.js, que espeja esta regla en el carrito.
                 $montoMinimoEnvio = (float) ConfiguracionEnvio::obtener()->monto_minimo;
+                $envioGratisPorCombo = $itemsData !== [] && collect($itemsData)->every(
+                    fn (array $item) => ! empty($item['combo_id']) && ($item['envio_gratis'] ?? false)
+                );
 
                 $pedido = Pedido::create([
                     'cliente_nombre' => $validated['cliente_nombre'],
@@ -577,7 +584,7 @@ class PedidoController extends Controller
                     'codigo_descuento_tipo' => $datosDescuento['codigo_descuento_tipo'],
                     'codigo_descuento_valor' => $datosDescuento['codigo_descuento_valor'],
                     'descuento_monto' => $datosDescuento['descuento_monto'],
-                    'envio_gratis' => $montoMinimoEnvio > 0 && $subtotal >= $montoMinimoEnvio,
+                    'envio_gratis' => ($montoMinimoEnvio > 0 && $subtotal >= $montoMinimoEnvio) || $envioGratisPorCombo,
                     'envio_gratis_monto_minimo' => $montoMinimoEnvio,
                     ...$datosPlanPago,
                 ]);

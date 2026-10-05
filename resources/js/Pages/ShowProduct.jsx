@@ -5,6 +5,8 @@ import BackToCatalog from '@/Components/BackToCatalog';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import PillsCantidad from '@/Components/PillsCantidad';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
+import StickyGallery from '@/Components/StickyGallery';
+import ResenasConfianza from '@/Components/ResenasConfianza';
 import VarianteColorSwatches, { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 import RepartoVariantes from '@/Components/RepartoVariantes';
 import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
@@ -391,7 +393,7 @@ function RelatedCard({ producto }) {
     );
 }
 
-export default function ShowProduct({ producto, relacionados, canLogin }) {
+export default function ShowProduct({ producto, relacionados, resenas = [], canLogin }) {
     const { planesPagoTarjeta } = usePage().props;
     const [qty, setQty] = useState(() => qtyInicialDesdeUrl(producto));
     const [expandDesc, setExpandDesc] = useState(false);
@@ -731,7 +733,7 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
     };
 
     return (
-        <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
+        <div className="min-h-screen overflow-x-clip bg-[#fcf9f8] text-[#1c1b1b] antialiased">
             <Head title={producto.titulo} />
             <LandingHeader canLogin={canLogin} />
 
@@ -775,7 +777,9 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
 
                 <section className="relative w-full px-3 pt-3 sm:px-4 md:pt-0">
                     <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
-                        <ProductGallery imagenes={galeriaImagenes} videos={galeriaVideos} titulo={producto.titulo} />
+                        <StickyGallery>
+                            <ProductGallery imagenes={galeriaImagenes} videos={galeriaVideos} titulo={producto.titulo} />
+                        </StickyGallery>
 
                         {/* Mobile/tablet: el selector de color va pegado a la galería para ver el
                             cambio de foto al instante, sin tener que bajar y subir. En desktop
@@ -1110,6 +1114,8 @@ export default function ShowProduct({ producto, relacionados, canLogin }) {
                         </div>
                     </div>
                 </section>
+
+                <ResenasConfianza resenas={resenas} />
 
                 {relacionados?.length > 0 && (
                     <section className="relative mt-16 w-full md:mt-24 md:px-4">

@@ -1,9 +1,11 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import BackToCatalog from '@/Components/BackToCatalog';
 import LandingFooter from '@/Components/Landing/LandingFooter';
 import ProductImageLightbox from '@/Components/ProductImageLightbox';
+import StickyGallery from '@/Components/StickyGallery';
+import ResenasConfianza from '@/Components/ResenasConfianza';
 import VarianteColorSwatches from '@/Components/VarianteColorSwatches';
 import { useCart } from '@/Context/CartContext';
 import { resolverPrecio } from '@/lib/pricing';
@@ -120,8 +122,9 @@ function itemsConSeleccionRequerida(combo) {
     );
 }
 
-export default function ShowCombo({ combo, canLogin }) {
+export default function ShowCombo({ combo, resenas = [], canLogin }) {
     const { addComboToCart } = useCart();
+    const montoMinimoEnvio = usePage().props.configuracionEnvio?.montoMinimo ?? 0;
     const itemsRequeridos = useMemo(() => itemsConSeleccionRequerida(combo), [combo]);
 
     const [selecciones, setSelecciones] = useState(() => {
@@ -187,7 +190,7 @@ export default function ShowCombo({ combo, canLogin }) {
     };
 
     return (
-        <div className="min-h-screen overflow-hidden bg-[#fcf9f8] text-[#1c1b1b] antialiased">
+        <div className="min-h-screen overflow-x-clip bg-[#fcf9f8] text-[#1c1b1b] antialiased">
             <Head title={combo.titulo} />
             <LandingHeader canLogin={canLogin} />
 
@@ -204,7 +207,9 @@ export default function ShowCombo({ combo, canLogin }) {
 
                 <section className="relative w-full px-3 pt-3 sm:px-4 md:pt-0">
                     <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
-                        <ComboGallery imagenes={combo.imagenes} videos={combo.videos} titulo={combo.titulo} />
+                        <StickyGallery>
+                            <ComboGallery imagenes={combo.imagenes} videos={combo.videos} titulo={combo.titulo} />
+                        </StickyGallery>
 
                         <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
                             <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">Combo</p>
@@ -220,7 +225,7 @@ export default function ShowCombo({ combo, canLogin }) {
                                 )}
                                 {combo.envio_gratis && (
                                     <span className="rounded-full bg-[#40B0C2] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg">
-                                        🚚 Envío gratis
+                                        🚚 Envío gratis comprando solo el combo
                                     </span>
                                 )}
                             </div>
@@ -261,6 +266,25 @@ export default function ShowCombo({ combo, canLogin }) {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Solo si el combo tiene envío gratis: explica la condición. Sin envío gratis propio
+                                no hay nada que aclarar, rige directamente el monto de envío gratis de la tienda. */}
+                            {combo.envio_gratis && (
+                                <div className="mt-4 rounded-2xl border border-[#40B0C2]/25 bg-[#40B0C2]/[0.07] px-4 py-3 text-xs font-medium leading-relaxed text-[#2f5f69]">
+                                    <p className="font-extrabold text-[#2f8a99]">🚚 Envío gratis comprando solo este combo</p>
+                                    <p className="mt-1">
+                                        Si sumás otros productos al pedido, este beneficio deja de aplicar
+                                        {montoMinimoEnvio > 0 ? (
+                                            <>
+                                                {' '}y rige el envío gratis desde{' '}
+                                                <strong className="font-extrabold">{formatPrice(montoMinimoEnvio)}</strong> de compra.
+                                            </>
+                                        ) : (
+                                            '.'
+                                        )}
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="mt-6">
                                 <h2 className="mb-3 text-sm font-extrabold uppercase tracking-[0.1em] text-[#1c1b1b]">Este combo incluye</h2>
@@ -313,6 +337,8 @@ export default function ShowCombo({ combo, canLogin }) {
                         </div>
                     </div>
                 </section>
+
+                <ResenasConfianza resenas={resenas} />
             </main>
 
             {toast && (

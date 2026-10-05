@@ -32,7 +32,9 @@ import { track } from './pixel';
  *     recargoMonto: number, montoPorCuota: number, totalConRecargo: number,
  *   } | null,
  *   total: number,
- *   envioGratis: { alcanzado: boolean, montoMinimo: number } | null,
+ *   // alcanzado = superó el monto mínimo del admin; porCombo = lleva únicamente un combo con
+ *   // envío gratis propio (ver lib/envioGratis.js). Son motivos independientes.
+ *   envioGratis: { alcanzado: boolean, porCombo?: boolean, montoMinimo: number } | null,
  * }
  */
 
@@ -202,10 +204,12 @@ export function buildOrderMessage(pedido) {
         '',
         '📦 *Productos:*',
         ...pedido.items.flatMap(lineasItem),
-        envioGratis?.alcanzado ? '' : null,
+        envioGratis?.alcanzado || envioGratis?.porCombo ? '' : null,
         envioGratis?.alcanzado
             ? `🚚 Envío gratis por superar el monto de ${formatPrice(envioGratis.montoMinimo)}`
-            : null,
+            : envioGratis?.porCombo
+              ? '🚚 Envío gratis por comprar el combo'
+              : null,
         '',
         `Subtotal: ${formatPrice(pedido.subtotal)}`,
         pedido.codigoDescuento ? `Descuento (${pedido.codigoDescuento}): -${formatPrice(pedido.montoDescuento)}` : null,
@@ -300,7 +304,8 @@ export function buildPedidoClienteMessage(pedido) {
                       cantidad: componente.cantidad_total,
                       varianteNombre: componente.variante_nombre,
                   })),
-                  envioGratis: Boolean(item.combo?.envio_gratis),
+                  // El motivo va una sola vez abajo (por monto o por combo), no por línea.
+                  envioGratis: false,
               }
             : {
                   titulo: item.titulo,
@@ -322,7 +327,9 @@ export function buildPedidoClienteMessage(pedido) {
         ...items.flatMap(lineasItem),
         pedido.envio_gratis ? '' : null,
         pedido.envio_gratis
-            ? `🚚 Envío gratis por superar el monto de ${formatPrice(pedido.envio_gratis_monto_minimo)}`
+            ? Number(pedido.envio_gratis_monto_minimo) > 0 && Number(pedido.subtotal) >= Number(pedido.envio_gratis_monto_minimo)
+                ? `🚚 Envío gratis por superar el monto de ${formatPrice(pedido.envio_gratis_monto_minimo)}`
+                : '🚚 Envío gratis por comprar el combo'
             : null,
         '',
         `Subtotal: ${formatPrice(pedido.subtotal)}`,

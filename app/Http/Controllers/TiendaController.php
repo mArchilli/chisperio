@@ -9,6 +9,7 @@ use App\Models\Combo;
 use App\Models\ComboProducto;
 use App\Models\EscalaPrecio;
 use App\Models\Producto;
+use App\Models\Resena;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -76,8 +77,22 @@ class TiendaController extends Controller
         return Inertia::render('ShowProduct', [
             'producto'    => $producto,
             'relacionados' => $relacionados,
+            'resenas'     => $this->resenasAleatorias(),
             'canLogin'    => Route::has('login'),
         ]);
+    }
+
+    /**
+     * Reseñas visibles elegidas al azar (y en orden aleatorio) para las fichas de producto y
+     * de combo: cada visita muestra otras, así el cliente ve distintas opiniones y ninguna
+     * queda fija. Son pocas filas, el ORDER BY RAND() es barato.
+     */
+    private function resenasAleatorias(int $cantidad = 3)
+    {
+        return Resena::activas()
+            ->inRandomOrder()
+            ->limit($cantidad)
+            ->get(['id', 'nombre', 'meta', 'texto', 'puntuacion', 'fecha', 'color_avatar']);
     }
 
     /**
@@ -110,6 +125,7 @@ class TiendaController extends Controller
 
         return Inertia::render('ShowCombo', [
             'combo' => $combo,
+            'resenas' => $this->resenasAleatorias(),
             'canLogin' => Route::has('login'),
         ]);
     }
@@ -440,6 +456,26 @@ class TiendaController extends Controller
             'categorias' => [],
             'oferta_vigente' => $this->ofertaVigenteComboArray($combo),
             'envio_gratis' => $combo->envio_gratis,
+            // Receta mínima para que el "Agregar" rápido de la card arme una línea de carrito
+            // completa: sin esto el carrito no sabía qué incluye el combo ni cuántos se pueden
+            // comprar (stockDisponibleCombo se deriva de estos items). Mismo shape que showCombo().
+            'items' => $combo->items->map(fn (ComboProducto $item) => [
+                'id' => $item->id,
+                'producto_id' => $item->producto_id,
+                'cantidad' => $item->cantidad,
+                'producto_variante_id' => $item->producto_variante_id,
+                'producto_variante' => $item->productoVariante?->only(['id', 'nombre', 'color_hex', 'stock']),
+                'producto' => $item->producto ? [
+                    'id' => $item->producto->id,
+                    'titulo' => $item->producto->titulo,
+                    'is_active' => $item->producto->is_active,
+                    'stock' => $item->producto->stock,
+                    'variantes_activas' => $item->producto->variantesActivas
+                        ->map(fn ($variante) => $variante->only(['id', 'nombre', 'color_hex', 'es_color_personalizado', 'stock']))
+                        ->values()
+                        ->all(),
+                ] : null,
+            ])->values()->all(),
         ];
     }
 

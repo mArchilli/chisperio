@@ -24,6 +24,7 @@ class PedidoItem extends Model
         'precio_base_unitario',
         'combo_id',
         'combo_items_seleccionados',
+        'envio_gratis',
     ];
 
     protected $casts = [
@@ -34,6 +35,7 @@ class PedidoItem extends Model
         'addons_total_unitario' => 'decimal:2',
         'precio_base_unitario' => 'decimal:2',
         'combo_items_seleccionados' => 'array',
+        'envio_gratis' => 'boolean',
     ];
 
     public function pedido(): BelongsTo

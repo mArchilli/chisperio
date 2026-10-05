@@ -58,6 +58,14 @@ export default function Show({ pedido }) {
 
     const telefonoWhatsApp = normalizarTelefonoWhatsApp(pedido.cliente_telefono);
 
+    // `pedido.envio_gratis` ya es el resultado final guardado al comprar: por superar el monto
+    // y/o por llevar únicamente combos con envío gratis propio (si hay cualquier otro ítem, el
+    // envío gratis del combo no cuenta). Acá solo se explica el motivo.
+    const combos = pedido.items.filter((item) => item.combo_id);
+    const tieneEnvioGratis = Boolean(pedido.envio_gratis);
+    const envioGratisPorMonto =
+        Number(pedido.envio_gratis_monto_minimo) > 0 && Number(pedido.subtotal) >= Number(pedido.envio_gratis_monto_minimo);
+    const envioGratisPorCombo = pedido.items.length > 0 && pedido.items.every((item) => item.combo_id && item.envio_gratis);
     const contactarPorWhatsApp = () =>
         abrirWhatsApp(telefonoWhatsApp, buildPedidoClienteMessage(pedido));
 
@@ -90,6 +98,16 @@ export default function Show({ pedido }) {
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${estadoInfo.badge}`}>
                                 {estadoInfo.label}
                             </span>
+                            {combos.length > 0 && (
+                                <span className="inline-flex items-center rounded-full border border-purple-300 bg-purple-100 px-3 py-1 text-xs font-bold text-purple-800">
+                                    {combos.length === 1 ? 'Incluye combo' : `Incluye ${combos.length} combos`}
+                                </span>
+                            )}
+                            {tieneEnvioGratis && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-100 px-3 py-1 text-xs font-bold text-green-800">
+                                    🚚 Envío gratis
+                                </span>
+                            )}
                             {pedido.editado_at && (
                                 <span
                                     className="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600"
@@ -228,8 +246,14 @@ export default function Show({ pedido }) {
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                {item.combo?.envio_gratis && (
-                                                                    <div className="mt-1 text-xs font-semibold text-green-700">🚚 Este combo incluye envío gratis</div>
+                                                                {item.combo_id && item.envio_gratis && (
+                                                                    envioGratisPorCombo ? (
+                                                                        <div className="mt-1 text-xs font-semibold text-green-700">🚚 Este combo incluye envío gratis</div>
+                                                                    ) : (
+                                                                        <div className="mt-1 text-xs text-gray-400">
+                                                                            Combo con envío gratis solo si se compra solo (acá hay otros ítems)
+                                                                        </div>
+                                                                    )
                                                                 )}
                                                                 {!item.producto && !item.combo_id && (
                                                                     <div className="text-xs text-gray-400 italic">Producto eliminado del catálogo</div>
@@ -292,13 +316,21 @@ export default function Show({ pedido }) {
                                                 {formatearPrecio(pedido.subtotal)}
                                             </td>
                                         </tr>
-                                        {pedido.envio_gratis && (
+                                        {tieneEnvioGratis && (
                                             <tr className="bg-green-50">
                                                 <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-green-800 text-right">
                                                     🚚 Envío gratis
-                                                    <span className="block text-xs font-normal text-green-700">
-                                                        El subtotal superó el monto de {formatearPrecio(pedido.envio_gratis_monto_minimo)}
-                                                    </span>
+                                                    {envioGratisPorMonto && (
+                                                        <span className="block text-xs font-normal text-green-700">
+                                                            El subtotal superó el monto de {formatearPrecio(pedido.envio_gratis_monto_minimo)}
+                                                        </span>
+                                                    )}
+                                                    {envioGratisPorCombo && (
+                                                        <span className="block text-xs font-normal text-green-700">
+                                                            El pedido lleva únicamente {combos.length === 1 ? 'un combo' : 'combos'} con envío gratis:{' '}
+                                                            {combos.map((combo) => combo.titulo).join(', ')}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-3 text-sm font-bold text-green-700 text-right whitespace-nowrap">
                                                     Sin cargo

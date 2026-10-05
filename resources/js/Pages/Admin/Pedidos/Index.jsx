@@ -267,7 +267,9 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {pedidos.data.map((pedido, index) => {
                                     const estadoInfo = ESTADOS[pedido.estado];
-
+                                    const combos = pedido.items.filter((item) => item.combo_id);
+                                    // Resultado final guardado al comprar (por monto, o por llevar solo un combo con envío gratis).
+                                    const tieneEnvioGratis = Boolean(pedido.envio_gratis);
                                     return (
                                         <div
                                             key={pedido.id}
@@ -296,6 +298,13 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                     {pedido.cliente_telefono || <span className="italic text-gray-400">Sin teléfono</span>}
                                                 </p>
 
+                                                {combos.length > 0 && (
+                                                    <p className="mb-3 text-xs text-gray-500 line-clamp-2">
+                                                        <span className="font-semibold text-purple-700">{combos.length === 1 ? 'Combo' : 'Combos'}:</span>{' '}
+                                                        {combos.map((combo) => combo.titulo).join(', ')}
+                                                    </p>
+                                                )}
+
                                                 {puedeFiltrarSucursal && SUCURSAL_LABELS[pedido.sucursal] && (
                                                     <div className="mb-4">
                                                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${SUCURSAL_BADGE[pedido.sucursal] ?? 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
@@ -308,9 +317,14 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                     </div>
                                                 )}
 
-                                                {(pedido.envio_gratis || pedido.items.some((item) => item.combo?.envio_gratis) || pedido.codigo_descuento_texto) && (
+                                                {(tieneEnvioGratis || combos.length > 0 || pedido.codigo_descuento_texto) && (
                                                     <div className="mb-2 flex flex-wrap justify-end gap-2">
-                                                        {(pedido.envio_gratis || pedido.items.some((item) => item.combo?.envio_gratis)) && (
+                                                        {combos.length > 0 && (
+                                                            <span className="inline-flex items-center gap-1 rounded-full border border-purple-300 bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-800">
+                                                                {combos.length === 1 ? 'Combo' : `${combos.length} combos`}
+                                                            </span>
+                                                        )}
+                                                        {tieneEnvioGratis && (
                                                             <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-bold text-green-800">
                                                                 🚚 Envío gratis
                                                             </span>
