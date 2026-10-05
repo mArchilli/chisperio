@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AlcanceOferta;
+use App\Enums\TipoDescuento;
 use App\Models\Addon;
 use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
 use App\Models\Subcategoria;
+use App\Services\AumentoPreciosService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -23,10 +25,45 @@ class ProductoController extends Controller
     public function index()
     {
         $productos = Producto::with(['categorias', 'subcategorias', 'imagenPrincipal', 'ofertaVigente', 'escalasPrecio'])->get();
-        
+
         return Inertia::render('Admin/Productos/Index', [
             'productos' => $productos,
+            // Para los filtros del modal de aumento de precios (mismos que el catálogo).
+            'categorias' => Categoria::with('subcategorias')->orderBy('nombre')->get(),
         ]);
+    }
+
+    /**
+     * Aumento masivo de precios sobre los productos elegidos en el modal del listado.
+     * Ver AumentoPreciosService para qué precios se tocan.
+     */
+    public function aumentarPrecios(Request $request, AumentoPreciosService $aumentoPrecios)
+    {
+        $validated = $request->validate([
+            'producto_ids' => 'required|array|min:1|max:5000',
+            'producto_ids.*' => 'integer|distinct|exists:productos,id',
+            'tipo' => ['required', Rule::enum(TipoDescuento::class)],
+            'valor' => 'required|numeric|gt:0|max:99999999.99',
+        ], [
+            'producto_ids.required' => 'Elegí al menos un producto.',
+            'producto_ids.min' => 'Elegí al menos un producto.',
+            'valor.required' => 'Ingresá el valor del aumento.',
+            'valor.gt' => 'El aumento tiene que ser mayor a 0.',
+            'valor.numeric' => 'El valor del aumento debe ser un número.',
+        ]);
+
+        $tipo = TipoDescuento::from($validated['tipo']);
+
+        // Un porcentaje de más de 1000% es casi seguro un error de tipeo (ej. 100 → 1000).
+        if ($tipo === TipoDescuento::Porcentaje && (float) $validated['valor'] > 1000) {
+            throw ValidationException::withMessages(['valor' => 'El porcentaje no puede superar el 1000%.']);
+        }
+
+        $cantidad = $aumentoPrecios->aplicar($validated['producto_ids'], $tipo, (float) $validated['valor']);
+
+        return back()->with('success', $cantidad === 1
+            ? 'Se actualizó el precio de 1 producto.'
+            : "Se actualizaron los precios de {$cantidad} productos.");
     }
 
     /**

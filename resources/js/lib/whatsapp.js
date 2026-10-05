@@ -247,3 +247,104 @@ export function buildOrderMessage(pedido) {
         .filter((linea) => linea !== null)
         .join('\n');
 }
+
+/**
+ * Normaliza un teléfono cargado a mano por el cliente (ej. "11 2345-6789",
+ * "011 15 2345-6789", "+54 9 351 676-6208") al formato internacional sin `+` que
+ * esperan wa.me/whatsapp:// para celulares argentinos (549 + área + número, sin
+ * el 0 ni el 15). Si no se reconoce como un número argentino de 10 dígitos, se
+ * devuelve el número tal cual (solo dígitos), asumiendo que ya trae su código de
+ * país. `null` si no hay dígitos suficientes para armar un número.
+ */
+export function normalizarTelefonoWhatsApp(telefono) {
+    let digitos = String(telefono ?? '').replace(/\D/g, '').replace(/^00/, '');
+
+    if (digitos.length < 8) return null;
+
+    if (digitos.startsWith('54')) {
+        // 54 + 10 dígitos (fijo/sin 9) → falta el 9 de celular; 549 + 10 ya está bien.
+        if (digitos.length === 12) digitos = `549${digitos.slice(2)}`;
+        return digitos;
+    }
+
+    digitos = digitos.replace(/^0/, '');
+
+    // "15" entre el código de área (2 a 4 dígitos) y el número: 12 dígitos → 10.
+    if (digitos.length === 12) {
+        for (const largoArea of [2, 3, 4]) {
+            if (digitos.slice(largoArea, largoArea + 2) === '15') {
+                digitos = digitos.slice(0, largoArea) + digitos.slice(largoArea + 2);
+                break;
+            }
+        }
+    }
+
+    return digitos.length === 10 ? `549${digitos}` : digitos;
+}
+
+/**
+ * Mensaje de WhatsApp con el resumen de un pedido ya guardado, para que admin/vendedor
+ * se lo mande al cliente desde el detalle del pedido. `pedido` es el que llega del
+ * servidor (snake_case, items con combo_items_seleccionados / addons_seleccionados).
+ * Reusa lineasItem para que cada producto se vea igual que en el mensaje del checkout.
+ */
+export function buildPedidoClienteMessage(pedido) {
+    const items = pedido.items.map((item) =>
+        item.combo_id
+            ? {
+                  titulo: item.titulo,
+                  cantidad: item.cantidad,
+                  subtotalItem: Number(item.subtotal),
+                  componentes: (item.combo_items_seleccionados || []).map((componente) => ({
+                      titulo: componente.titulo,
+                      cantidad: componente.cantidad_total,
+                      varianteNombre: componente.variante_nombre,
+                  })),
+                  envioGratis: Boolean(item.combo?.envio_gratis),
+              }
+            : {
+                  titulo: item.titulo,
+                  cantidad: item.cantidad,
+                  subtotalItem: Number(item.subtotal),
+                  variante: item.variante_nombre ? { nombre: item.variante_nombre } : null,
+                  colorPersonalizadoTexto: item.color_personalizado_texto,
+                  addons: item.addons_seleccionados || [],
+              }
+    );
+
+    const conTarjeta = Boolean(pedido.plan_pago_tarjeta_id);
+    const totalFinal = Number(conTarjeta ? pedido.total_con_recargo : pedido.total);
+
+    return [
+        `¡Hola ${pedido.cliente_nombre}! 👋 Te escribimos de *Chisperío* por tu pedido #${pedido.id}.`,
+        '',
+        '📦 *Resumen de tu pedido:*',
+        ...items.flatMap(lineasItem),
+        pedido.envio_gratis ? '' : null,
+        pedido.envio_gratis
+            ? `🚚 Envío gratis por superar el monto de ${formatPrice(pedido.envio_gratis_monto_minimo)}`
+            : null,
+        '',
+        `Subtotal: ${formatPrice(pedido.subtotal)}`,
+        pedido.codigo_descuento_texto
+            ? `Descuento (${pedido.codigo_descuento_texto}): -${formatPrice(pedido.descuento_monto)}`
+            : null,
+        conTarjeta
+            ? `Recargo (${pedido.plan_pago_nombre}): +${formatPrice(pedido.recargo_monto)}`
+            : null,
+        `*Total: ${formatPrice(totalFinal)} ARS*`,
+        conTarjeta
+            ? `💳 Forma de pago: Tarjeta de crédito — ${
+                  pedido.plan_pago_cuotas === 1
+                      ? `1 cuota de ${formatPrice(totalFinal)}`
+                      : `${pedido.plan_pago_cuotas} cuotas de ${formatPrice(totalFinal / pedido.plan_pago_cuotas)} c/u`
+              }`
+            : '💵 Forma de pago: Efectivo / Transferencia',
+        pedido.observaciones ? '' : null,
+        pedido.observaciones ? `📝 *Observaciones:* ${pedido.observaciones}` : null,
+        '',
+        '¿Está todo correcto? 😊',
+    ]
+        .filter((linea) => linea !== null)
+        .join('\n');
+}

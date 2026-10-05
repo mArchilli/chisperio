@@ -1,6 +1,15 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
+import InputPesos from '@/Components/InputPesos';
 import { Head, useForm } from '@inertiajs/react';
+
+const formatearPesos = (monto) =>
+    new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(Number(monto));
 
 export default function Edit({ configuracion }) {
     const { data, setData, patch, processing, errors } = useForm({
@@ -37,16 +46,18 @@ export default function Edit({ configuracion }) {
                                     <p className="mb-2 text-xs text-gray-400">
                                         0 = la barra de envío gratis queda desactivada en el carrito.
                                     </p>
-                                    <input
-                                        type="number"
+                                    <InputPesos
                                         id="monto_minimo"
-                                        step="0.01"
-                                        min="0"
                                         value={data.monto_minimo}
-                                        onChange={(e) => setData('monto_minimo', e.target.value)}
+                                        onChange={(valor) => setData('monto_minimo', valor)}
                                         className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
                                         required
                                     />
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        {Number(data.monto_minimo) > 0
+                                            ? `Los pedidos desde ${formatearPesos(data.monto_minimo)} tienen envío gratis.`
+                                            : 'Envío gratis desactivado.'}
+                                    </p>
                                     <InputError message={errors.monto_minimo} className="mt-2" />
                                 </div>
 

@@ -20,11 +20,12 @@ class ConfiguracionEnvioController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'monto_minimo' => 'required|numeric|min:0',
+            'monto_minimo' => 'required|numeric|min:0|max:99999999.99',
         ], [
             'monto_minimo.required' => 'Ingresá un monto.',
             'monto_minimo.numeric' => 'El monto debe ser un número.',
             'monto_minimo.min' => 'El monto no puede ser negativo.',
+            'monto_minimo.max' => 'El monto es demasiado alto.',
         ]);
 
         ConfiguracionEnvio::obtener()->update(['monto_minimo' => $validated['monto_minimo']]);

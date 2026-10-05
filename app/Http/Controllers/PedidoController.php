@@ -9,11 +9,14 @@ use App\Exceptions\StockInsuficienteException;
 use App\Exceptions\VarianteRequeridaException;
 use App\Models\Addon;
 use App\Models\Combo;
+use App\Models\ConfiguracionEnvio;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\PlanPagoTarjeta;
 use App\Models\Producto;
+use App\Models\ProductoVariante;
 use App\Services\CodigoDescuentoService;
+use App\Services\PedidoEdicionService;
 use App\Services\PricingService;
 use App\Services\RecargoPagoService;
 use App\Services\StockService;
@@ -54,7 +57,8 @@ class PedidoController extends Controller
 
         $sucursalScope = $filtroSucursal === 'todas' ? null : $filtroSucursal;
 
-        $pedidos = Pedido::with('items')
+        // items.combo: solo para saber si algún combo del pedido trae envío gratis propio.
+        $pedidos = Pedido::with(['items', 'items.combo:id,envio_gratis'])
             ->deSucursal($sucursalScope)
             ->when($filtroEstado !== 'todos', fn ($query) => $query->where('estado', $filtroEstado))
             ->latest()
@@ -89,6 +93,8 @@ class PedidoController extends Controller
         $pedido->load([
             'items.producto.imagenPrincipal',
             'items.producto.categorias',
+            // Solo para saber si el combo trae envío gratis propio (se aclara en el detalle).
+            'items.combo:id,envio_gratis',
             // Solo relevante para pedidos cancelados (se muestra la reposición en el detalle),
             // pero cargarlo siempre es barato y evita una segunda ida y vuelta si en el futuro
             // se necesita en otro estado.
@@ -99,6 +105,92 @@ class PedidoController extends Controller
         return Inertia::render('Admin/Pedidos/Show', [
             'pedido' => $pedido,
         ]);
+    }
+
+    /**
+     * Pantalla de edición de un pedido (admin y vendedor de la sucursal). Solo los
+     * pedidos pendientes son editables: uno despachado ya salió con lo que decía, y
+     * uno cancelado ya repuso su stock.
+     */
+    public function edit(Request $request, Pedido $pedido)
+    {
+        $this->autorizarSucursal($request, $pedido);
+
+        if ($pedido->estado !== EstadoPedido::Pendiente) {
+            return redirect()
+                ->route('pedidos.show', $pedido)
+                ->with('error', 'Solo se pueden editar pedidos pendientes.');
+        }
+
+        $pedido->load(['items.producto.imagenPrincipal', 'items.combo:id,envio_gratis']);
+
+        // Variantes entre las que se puede elegir, por producto: las activas más la que el
+        // item ya tiene aunque se haya desactivado después (para que el select la muestre).
+        $productoIds = $pedido->items
+            ->flatMap(fn ($item) => $item->combo_id !== null
+                ? collect($item->combo_items_seleccionados ?? [])->pluck('producto_id')
+                : [$item->producto_id])
+            ->filter()
+            ->unique()
+            ->values();
+
+        $varianteIdsEnUso = $pedido->items
+            ->flatMap(fn ($item) => $item->combo_id !== null
+                ? collect($item->combo_items_seleccionados ?? [])->pluck('producto_variante_id')
+                : [$item->producto_variante_id])
+            ->filter()
+            ->unique()
+            ->values();
+
+        $variantesPorProducto = ProductoVariante::whereIn('producto_id', $productoIds)
+            ->where(fn ($query) => $query->where('is_active', true)->orWhereIn('id', $varianteIdsEnUso))
+            ->orderBy('orden')
+            ->get(['id', 'producto_id', 'nombre', 'color_hex', 'es_color_personalizado', 'precio_adicional', 'stock'])
+            ->groupBy('producto_id');
+
+        return Inertia::render('Admin/Pedidos/Edit', [
+            'pedido' => $pedido,
+            'variantesPorProducto' => $variantesPorProducto,
+        ]);
+    }
+
+    /**
+     * Guarda la edición de un pedido pendiente. La lógica de items/totales/stock vive en
+     * PedidoEdicionService; acá solo se autoriza y valida la forma del request.
+     */
+    public function actualizar(Request $request, Pedido $pedido, PedidoEdicionService $edicionService)
+    {
+        $this->autorizarSucursal($request, $pedido);
+
+        $validated = $request->validate([
+            'cliente_nombre' => 'required|string|max:255',
+            'cliente_dni' => 'nullable|string|max:50',
+            'cliente_telefono' => 'nullable|string|max:50',
+            'cliente_email' => 'nullable|email|max:255',
+            'cliente_provincia' => 'nullable|string|max:255',
+            'cliente_ciudad' => 'nullable|string|max:255',
+            'cliente_codigo_postal' => 'nullable|string|max:20',
+            'observaciones' => 'nullable|string|max:5000',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer|distinct',
+            'items.*.cantidad' => 'required|integer|min:1|max:100000',
+            'items.*.precio_unitario' => 'required|numeric|min:0|max:99999999',
+            'items.*.variante_id' => 'nullable|integer',
+            'items.*.color_personalizado_texto' => 'nullable|string|max:255',
+            'items.*.addons_textos' => 'nullable|array',
+            'items.*.addons_textos.*' => 'nullable|string|max:1000',
+            'items.*.componentes_variantes' => 'nullable|array',
+            'items.*.componentes_variantes.*' => 'nullable|integer',
+        ], [
+            'items.required' => 'El pedido necesita al menos un producto.',
+            'items.min' => 'El pedido necesita al menos un producto.',
+        ]);
+
+        $edicionService->actualizar($pedido, $validated);
+
+        return redirect()
+            ->route('pedidos.show', $pedido)
+            ->with('success', 'Pedido actualizado.');
     }
 
     /**
@@ -461,6 +553,12 @@ class PedidoController extends Controller
                     ];
                 }
 
+                // Snapshot de envío gratis: el monto mínimo es global y puede cambiar, pero el
+                // pedido tiene que seguir diciendo si calificó con el que regía al comprar.
+                // Igual criterio que el front (Checkout.jsx): sobre el subtotal, antes de
+                // descuento/recargo; mínimo <= 0 = feature desactivada.
+                $montoMinimoEnvio = (float) ConfiguracionEnvio::obtener()->monto_minimo;
+
                 $pedido = Pedido::create([
                     'cliente_nombre' => $validated['cliente_nombre'],
                     'cliente_dni' => $validated['cliente_dni'] ?? null,
@@ -479,6 +577,8 @@ class PedidoController extends Controller
                     'codigo_descuento_tipo' => $datosDescuento['codigo_descuento_tipo'],
                     'codigo_descuento_valor' => $datosDescuento['codigo_descuento_valor'],
                     'descuento_monto' => $datosDescuento['descuento_monto'],
+                    'envio_gratis' => $montoMinimoEnvio > 0 && $subtotal >= $montoMinimoEnvio,
+                    'envio_gratis_monto_minimo' => $montoMinimoEnvio,
                     ...$datosPlanPago,
                 ]);
 

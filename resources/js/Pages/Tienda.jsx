@@ -7,6 +7,8 @@ import { resolverPrecio } from '@/lib/pricing';
 import { TIENDA_PAGE_SIZE, cardDomId, cardKey, saveTiendaReturn } from '@/lib/tiendaReturn';
 import { cantidadMaxima, sinStock, tieneStockBajo } from '@/lib/stock';
 import PillsCantidad from '@/Components/PillsCantidad';
+import Chip from '@/Components/FilterChip';
+import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -32,8 +34,9 @@ function BagIcon({ className = 'h-4 w-4' }) {
     );
 }
 
-function ProductImage({ producto }) {
-    const imagePath = producto.imagen_principal?.ruta;
+function ProductImage({ producto, ruta }) {
+    // `ruta` pisa la imagen principal cuando hay un color elegido con foto propia.
+    const imagePath = ruta ?? producto.imagen_principal?.ruta;
     const [imageFailed, setImageFailed] = useState(false);
 
     useEffect(() => {
@@ -61,42 +64,19 @@ function ProductImage({ producto }) {
     );
 }
 
-function Chip({ active, onClick, children, sub = false }) {
-    if (sub) {
-        return (
-            <button
-                type="button"
-                onClick={onClick}
-                className={`flex-shrink-0 whitespace-nowrap rounded-full border px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 ${
-                    active
-                        ? 'border-[#6000ca] bg-[#6000ca]/10 text-[#6000ca]'
-                        : 'border-black/[0.08] bg-[#fcf9f8] text-[#4b4356] hover:border-[#6000ca]/35 hover:text-[#6000ca]'
-                }`}
-            >
-                {children}
-            </button>
-        );
-    }
-
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`flex-shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.07em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 ${
-                active
-                    ? 'border-[#6000ca] bg-[#6000ca] text-white shadow-md shadow-[#6000ca]/20'
-                    : 'border-black/[0.08] bg-white text-[#4b4356] hover:border-[#6000ca]/35 hover:text-[#6000ca]'
-            }`}
-        >
-            {children}
-        </button>
-    );
-}
-
 function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
+    // Color elegido en la card (null = ninguno todavía). Los combos no tienen swatches.
+    const variantes = producto.tipo === 'combo' ? [] : (producto.variantes_activas ?? []);
+    const [varianteId, setVarianteId] = useState(null);
+    const variante = variantes.find((v) => v.id === varianteId) ?? null;
+    // El recargo de la variante se suma DESPUÉS de la oferta (igual que PricingService::calcularPrecio).
+    const recargoVariante = Number(variante?.precio_adicional ?? 0);
+
     const precioInfo = resolverPrecio(producto, qty);
     const hasOffer = precioInfo.precioFinal < precioInfo.precioBase;
-    const displayPrice = precioInfo.precioFinal;
+    const displayPrice = precioInfo.precioFinal + recargoVariante;
+    const precioBaseMostrado = precioInfo.precioBase + recargoVariante;
+    const imagenVariante = variante?.media_especifica?.[0]?.ruta ?? null;
     const totalPrice = displayPrice * qty;
     const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
     const maxQty = cantidadMaxima(producto);
@@ -108,9 +88,14 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     // propagamos esa cantidad como ?qty= en los links a la ficha, para no resetear a 1
     // si el usuario prefiere seguir eligiendo ahí (ShowProduct la toma como qty inicial).
     const esCombo = producto.tipo === 'combo';
+    // Con un color elegido, la ficha se abre con ese color ya seleccionado (?variante=).
     const productHref = esCombo
         ? route('combos.show', producto.id)
-        : route('tienda.show', qty > 1 ? { producto: producto.id, qty } : producto.id);
+        : route('tienda.show', {
+              producto: producto.id,
+              ...(qty > 1 ? { qty } : {}),
+              ...(variante ? { variante: variante.id } : {}),
+          });
 
     return (
         <article
@@ -163,7 +148,7 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                 )}
 
                 <div className={`h-full w-full ${agotado ? 'opacity-50 grayscale' : ''}`}>
-                    <ProductImage producto={producto} />
+                    <ProductImage producto={producto} ruta={imagenVariante} />
                 </div>
             </Link>
 
@@ -179,10 +164,39 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                     {producto.titulo}
                 </Link>
 
+                {variantes.length > 0 && (
+                    <div className="mb-3 mt-2.5 flex flex-wrap items-center gap-2" role="group" aria-label="Colores disponibles">
+                        {variantes.map((v) => {
+                            const activa = v.id === varianteId;
+                            const agotada = v.stock !== null && v.stock !== undefined && v.stock <= 0;
+
+                            return (
+                                <button
+                                    key={v.id}
+                                    type="button"
+                                    onClick={() => setVarianteId(activa ? null : v.id)}
+                                    aria-label={`${v.nombre}${agotada ? ' (sin stock)' : ''}`}
+                                    aria-pressed={activa}
+                                    title={agotada ? `${v.nombre} — sin stock` : v.nombre}
+                                    className={`relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border-2 border-white shadow-sm ring-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] ${
+                                        activa ? 'scale-110 ring-2 ring-[#6000ca]' : 'ring-black/15 hover:ring-[#6000ca]/50'
+                                    } ${agotada ? 'opacity-45' : ''}`}
+                                    style={v.es_color_personalizado ? { background: GRADIENTE_PERSONALIZADO } : { backgroundColor: v.color_hex || '#e5e5e5' }}
+                                >
+                                    {agotada && <span className="absolute left-0 top-1/2 h-[1.5px] w-full -rotate-45 bg-[#ba1a1a]/80" aria-hidden="true" />}
+                                </button>
+                            );
+                        })}
+                        {variante && (
+                            <span className="min-w-0 truncate text-[11px] font-bold text-[#4b4356]">{variante.nombre}</span>
+                        )}
+                    </div>
+                )}
+
                 <div className="mt-auto border-t border-black/[0.06] pt-3.5">
                     {hasOffer && (
                         <span className="block text-[10px] font-medium leading-none text-[#81788a] line-through">
-                            {formatPrice(precioInfo.precioBase * qty)}
+                            {formatPrice(precioBaseMostrado * qty)}
                         </span>
                     )}
                     <span className={`block whitespace-nowrap text-lg font-black leading-none text-[#6000ca] ${hasOffer ? 'mt-1.5' : ''}`}>
@@ -240,10 +254,10 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
                                 <Link
                                     href={productHref}
                                     className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[#6000ca] px-3 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white shadow-md shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95"
-                                    aria-label={`Elegir color de ${producto.titulo}`}
+                                    aria-label={variante ? `Continuar con ${producto.titulo} en ${variante.nombre}` : `Elegir color de ${producto.titulo}`}
                                 >
                                     <BagIcon className="h-4 w-4 flex-shrink-0" />
-                                    <span className="hidden truncate sm:inline">Elegir color</span>
+                                    <span className="hidden truncate sm:inline">{variante ? 'Continuar' : 'Elegir color'}</span>
                                 </Link>
                             ) : (
                                 <button
@@ -322,6 +336,24 @@ function CloseIcon({ className = 'h-3.5 w-3.5' }) {
     );
 }
 
+// Órdenes del catálogo. Espeja TiendaController::ORDENES; 'az' es el default y no viaja en la URL.
+const ORDENES = [
+    { key: 'az', label: 'A → Z' },
+    { key: 'za', label: 'Z → A' },
+    { key: 'precio-asc', label: 'Menor precio' },
+    { key: 'precio-desc', label: 'Mayor precio' },
+];
+const ORDEN_POR_DEFECTO = 'az';
+
+/** Saca de los params de navegación lo que es "sin valor" o el default (todos, vacío, orden A → Z). */
+const limpiarParams = (params) =>
+    Object.fromEntries(
+        Object.entries(params).filter(
+            ([key, value]) =>
+                value != null && value !== '' && value !== 'todos' && !(key === 'orden' && value === ORDEN_POR_DEFECTO)
+        )
+    );
+
 function SheetSection({ title, children }) {
     return (
         <section className="border-b border-black/[0.06] px-5 py-4 last:border-b-0">
@@ -358,7 +390,8 @@ function FiltersSheet({ open, onClose, categorias, tipos, initial, onApply }) {
     if (!open) return null;
 
     const draftCat = categorias.find((category) => category.id === draft.categoria) ?? null;
-    const isPristine = draft.filter === 'todos' && !draft.categoria && !draft.subcategoria;
+    const isPristine =
+        draft.filter === 'todos' && !draft.categoria && !draft.subcategoria && draft.orden === ORDEN_POR_DEFECTO;
 
     return (
         <div className="fixed inset-0 z-[90] md:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
@@ -382,6 +415,18 @@ function FiltersSheet({ open, onClose, categorias, tipos, initial, onApply }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto overscroll-contain border-t border-black/[0.06]">
+                    <SheetSection title="Ordenar por">
+                        {ORDENES.map(({ key, label }) => (
+                            <Chip
+                                key={key}
+                                active={draft.orden === key}
+                                onClick={() => setDraft((d) => ({ ...d, orden: key }))}
+                            >
+                                {label}
+                            </Chip>
+                        ))}
+                    </SheetSection>
+
                     <SheetSection title="Tipo">
                         {tipos.map(({ key, label }) => (
                             <Chip
@@ -438,7 +483,7 @@ function FiltersSheet({ open, onClose, categorias, tipos, initial, onApply }) {
                 <div className="flex gap-3 border-t border-black/[0.06] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                     <button
                         type="button"
-                        onClick={() => setDraft({ filter: 'todos', categoria: null, subcategoria: null })}
+                        onClick={() => setDraft({ filter: 'todos', categoria: null, subcategoria: null, orden: ORDEN_POR_DEFECTO })}
                         disabled={isPristine}
                         className="rounded-full border border-black/[0.08] px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.07em] text-[#4b4356] transition-all active:scale-95 disabled:opacity-40"
                     >
@@ -457,7 +502,7 @@ function FiltersSheet({ open, onClose, categorias, tipos, initial, onApply }) {
     );
 }
 
-export default function Tienda({ productos, categorias, filters, disponibles, canLogin }) {
+export default function Tienda({ combos = [], productos, categorias, filters, disponibles, canLogin }) {
     const [quantities, setQuantities] = useState({});
     const [toast, setToast] = useState(null);
     const { addToCart: addToCartContext, addComboToCart: addComboToCartContext } = useCart();
@@ -465,6 +510,7 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
     const activeFilter = filters.filter || 'todos';
     const activeCategoriaId = filters.categoria ? Number(filters.categoria) : null;
     const activeSubcategoriaId = filters.subcategoria ? Number(filters.subcategoria) : null;
+    const activeOrden = filters.orden || ORDEN_POR_DEFECTO;
     const activeCat = categorias.find((category) => category.id === activeCategoriaId) ?? null;
     const activeSubcat = activeCat?.subcategorias?.find((s) => s.id === activeSubcategoriaId) ?? null;
     const [searchTerm, setSearchTerm] = useState(filters.q || '');
@@ -482,12 +528,16 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
     ];
 
     const activeFiltersCount =
-        (activeFilter !== 'todos' ? 1 : 0) + (activeCategoriaId ? 1 : 0) + (activeSubcategoriaId ? 1 : 0);
+        (activeFilter !== 'todos' ? 1 : 0) +
+        (activeCategoriaId ? 1 : 0) +
+        (activeSubcategoriaId ? 1 : 0) +
+        (activeOrden !== ORDEN_POR_DEFECTO ? 1 : 0);
 
     const appliedLabels = [
         activeFilter !== 'todos' ? tipos.find((t) => t.key === activeFilter)?.label : null,
         activeCat?.nombre,
         activeSubcat?.nombre,
+        activeOrden !== ORDEN_POR_DEFECTO ? ORDENES.find((o) => o.key === activeOrden)?.label : null,
     ].filter(Boolean);
 
     // Sincroniza el input cuando el término cambia desde afuera (navegación, "ver todos"),
@@ -512,9 +562,7 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
     }, [activeCategoriaId, activeFilter, activeSubcategoriaId]);
 
     const navigate = (params) => {
-        const clean = Object.fromEntries(
-            Object.entries(params).filter(([, value]) => value != null && value !== '' && value !== 'todos')
-        );
+        const clean = limpiarParams(params);
         router.get(route('tienda.index'), clean, {
             preserveState: true,
             replace: true,
@@ -528,6 +576,7 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
             categoria: activeCategoriaId,
             subcategoria: activeSubcategoriaId,
             q: filters.q,
+            orden: activeOrden,
         });
 
     const handleCategory = (categoryId) =>
@@ -535,6 +584,7 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
             filter: activeFilter,
             categoria: activeCategoriaId === categoryId ? null : categoryId,
             q: filters.q,
+            orden: activeOrden,
         });
 
     const handleSubcategory = (subcategoryId) =>
@@ -543,6 +593,16 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
             categoria: activeCategoriaId,
             subcategoria: activeSubcategoriaId === subcategoryId ? null : subcategoryId,
             q: filters.q,
+            orden: activeOrden,
+        });
+
+    const handleOrden = (orden) =>
+        navigate({
+            filter: activeFilter,
+            categoria: activeCategoriaId,
+            subcategoria: activeSubcategoriaId,
+            q: filters.q,
+            orden,
         });
 
     // "Cargar más": el servidor sigue paginando (24 por tanda), pero el cliente va sumando
@@ -571,6 +631,7 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
         if (filters.categoria) params.categoria = filters.categoria;
         if (filters.subcategoria) params.subcategoria = filters.subcategoria;
         if (filters.q) params.q = filters.q;
+        if (activeOrden !== ORDEN_POR_DEFECTO) params.orden = activeOrden;
         return params;
     };
 
@@ -612,9 +673,9 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
         });
     };
 
-    const applySheetFilters = ({ filter, categoria, subcategoria }) => {
+    const applySheetFilters = ({ filter, categoria, subcategoria, orden }) => {
         setSheetOpen(false);
-        navigate({ filter, categoria, subcategoria, q: filters.q });
+        navigate({ filter, categoria, subcategoria, q: filters.q, orden });
     };
 
     // Búsqueda mientras se escribe: espera a que el usuario deje de teclear, no consulta
@@ -627,15 +688,14 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
             categoria: activeCategoriaId,
             subcategoria: activeSubcategoriaId,
             q: term,
+            orden: activeOrden,
         };
-        const clean = Object.fromEntries(
-            Object.entries(params).filter(([, value]) => value != null && value !== '' && value !== 'todos')
-        );
+        const clean = limpiarParams(params);
         router.get(route('tienda.index'), clean, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
-            only: ['productos', 'filters'],
+            only: ['combos', 'productos', 'filters'],
             onStart: () => setSearching(true),
             onFinish: () => setSearching(false),
         });
@@ -661,12 +721,14 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
         if (trimmed !== (filters.q || '')) runSearch(trimmed);
     };
 
-    const getQty = (id) => quantities[id] ?? 1;
-    const setQty = (id, value) =>
-        setQuantities((previous) => ({ ...previous, [id]: Math.max(1, value) }));
+    // Las cantidades se guardan por cardKey (p-1 / c-1): ahora que los combos conviven con los
+    // productos en la misma página, un combo y un producto pueden tener el mismo id.
+    const getQty = (producto) => quantities[cardKey(producto)] ?? 1;
+    const setQty = (producto, value) =>
+        setQuantities((previous) => ({ ...previous, [cardKey(producto)]: Math.max(1, value) }));
 
     const addToCart = (producto) => {
-        const qty = getQty(producto.id);
+        const qty = getQty(producto);
         // El quick-add solo llega acá cuando !producto.tiene_variantes (ver ProductCard):
         // para un combo eso significa que ningún item exige elegir color, así que se
         // agrega sin selecciones — igual que un producto sin variantes.
@@ -849,6 +911,19 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
                             </div>
                         </div>
 
+                        <div className="hidden min-w-0 flex-row items-center gap-3 border-t border-black/[0.06] px-4 py-3 md:flex">
+                            <span className="flex-shrink-0 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#4b4356]">
+                                Ordenar por
+                            </span>
+                            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+                                {ORDENES.map(({ key, label }) => (
+                                    <Chip key={key} sub active={activeOrden === key} onClick={() => handleOrden(key)}>
+                                        {label}
+                                    </Chip>
+                                ))}
+                            </div>
+                        </div>
+
                         {activeCat?.subcategorias?.length > 0 && (
                             <div className="hidden min-w-0 flex-row items-center gap-3 border-t border-black/[0.06] bg-[#fcf9f8] px-4 py-3 md:flex">
                                 <span className="flex-shrink-0 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#4b4356]">
@@ -873,36 +948,70 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
                     </div>
                 </section>
 
-                <section id="productos" className="scroll-mt-36 px-3 sm:px-4">
-                    <div className="mb-3 flex items-center justify-between gap-4 border-b border-[#6000ca]/10 pb-3">
-                        <h2 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#1c1b1b]">
-                            Resultados
-                        </h2>
-                        <p className="text-right text-xs font-semibold text-[#4b4356]">
-                            <span className="font-black text-[#6000ca]">{productos.total}</span>{' '}
-                            producto{productos.total !== 1 ? 's' : ''} encontrado{productos.total !== 1 ? 's' : ''}
-                        </p>
-                    </div>
+                {/* Combos: sección propia, primero, solo en la vista general (ver TiendaController::combosParaListado). */}
+                {combos.length > 0 && (
+                    <section id="combos" className="scroll-mt-36 px-3 pb-2 sm:px-4">
+                        <div className="mb-3 flex items-center justify-between gap-4 border-b border-[#6000ca]/10 pb-3">
+                            <h2 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#1c1b1b]">
+                                Combos
+                            </h2>
+                            <p className="text-right text-xs font-semibold text-[#4b4356]">
+                                <span className="font-black text-[#6000ca]">{combos.length}</span>{' '}
+                                combo{combos.length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
 
-                    {items.length === 0 ? (
-                        <EmptyState onReset={() => navigate({})} />
-                    ) : (
                         <div
                             className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5"
                             onClickCapture={rememberReturnPoint}
                         >
-                            {items.map((producto) => (
+                            {combos.map((combo) => (
                                 <ProductCard
-                                    key={producto.id}
-                                    producto={producto}
-                                    qty={getQty(producto.id)}
-                                    onQtyChange={(value) => setQty(producto.id, value)}
-                                    onAddToCart={() => addToCart(producto)}
+                                    key={cardKey(combo)}
+                                    producto={combo}
+                                    qty={getQty(combo)}
+                                    onQtyChange={(value) => setQty(combo, value)}
+                                    onAddToCart={() => addToCart(combo)}
                                 />
                             ))}
                         </div>
-                    )}
-                </section>
+                    </section>
+                )}
+
+                {/* Con combos arriba y sin productos que coincidan, no se muestra el vacío: ya hay resultados. */}
+                {(items.length > 0 || combos.length === 0) && (
+                    <section id="productos" className="scroll-mt-36 px-3 pt-3 sm:px-4">
+                        <div className="mb-3 flex items-center justify-between gap-4 border-b border-[#6000ca]/10 pb-3">
+                            <h2 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#1c1b1b]">
+                                {combos.length > 0 ? 'Productos' : 'Resultados'}
+                            </h2>
+                            <p className="text-right text-xs font-semibold text-[#4b4356]">
+                                <span className="font-black text-[#6000ca]">{productos.total}</span>{' '}
+                                {activeFilter === 'combos' ? 'combo' : 'producto'}
+                                {productos.total !== 1 ? 's' : ''} encontrado{productos.total !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+
+                        {items.length === 0 ? (
+                            <EmptyState onReset={() => navigate({})} />
+                        ) : (
+                            <div
+                                className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+                                onClickCapture={rememberReturnPoint}
+                            >
+                                {items.map((producto) => (
+                                    <ProductCard
+                                        key={cardKey(producto)}
+                                        producto={producto}
+                                        qty={getQty(producto)}
+                                        onQtyChange={(value) => setQty(producto, value)}
+                                        onAddToCart={() => addToCart(producto)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
 
                 {items.length > 0 && (
                     <div className="flex flex-col items-center gap-2 px-3 py-9 sm:px-4">
@@ -933,7 +1042,7 @@ export default function Tienda({ productos, categorias, filters, disponibles, ca
                 onClose={() => setSheetOpen(false)}
                 categorias={categorias}
                 tipos={tipos}
-                initial={{ filter: activeFilter, categoria: activeCategoriaId, subcategoria: activeSubcategoriaId }}
+                initial={{ filter: activeFilter, categoria: activeCategoriaId, subcategoria: activeSubcategoriaId, orden: activeOrden }}
                 onApply={applySheetFilters}
             />
 

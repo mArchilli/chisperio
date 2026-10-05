@@ -116,8 +116,9 @@ class TiendaController extends Controller
 
     public function index(Request $request)
     {
-        // Los combos viven en su propia pestaña/filtro de la vidriera (no se mezclan con
-        // productos en la misma página) — ver la decisión de diseño en el plan de combos.
+        // Los combos tienen su propia pestaña/filtro ("Combos", paginada). Además, en la
+        // vista general (sin filtros) se listan primero, en una sección aparte arriba de
+        // los productos — ver combosDestacadosEnListado().
         if ($request->filter === 'combos') {
             return $this->indexCombos($request);
         }
@@ -132,12 +133,16 @@ class TiendaController extends Controller
             'categorias',
             'subcategorias',
             'escalasPrecio',
+            // Colores activos para los swatches de la card, con su(s) foto(s) propia(s): al
+            // elegir un color la card muestra la imagen de esa variante (misma idea que las
+            // cards de "relacionados" de la ficha). El resto de la ficha (add-ons, etc.) no
+            // se carga: esto es un listado.
+            'variantesActivas.mediaEspecifica' => fn ($q) => $q->where('tipo', 'imagen')->orderBy('orden'),
         ])
-            // No se cargan las variantes completas acá (esto es un listado, no la ficha):
-            // solo hace falta saber si existe al menos una activa, para que el "Agregar"
-            // rápido de la card (Tienda.jsx) sepa que tiene que mandar al cliente a elegir
-            // color en la ficha en vez de agregar directo sin variante — ver
-            // PedidoController::store, que rechaza justamente ese caso.
+            // Además de los colores, se cuenta cuántos hay activos: el "Agregar" rápido de la
+            // card (Tienda.jsx) sabe así que tiene que mandar al cliente a elegir color en la
+            // ficha en vez de agregar directo sin variante — ver PedidoController::store,
+            // que rechaza justamente ese caso.
             ->withCount('variantesActivas')
             ->where('is_active', true);
 
@@ -168,10 +173,12 @@ class TiendaController extends Controller
         }
 
         // Productos sin stock al final del listado (stock NULL = ilimitado siempre
-        // cuenta como "con stock" acá, igual que Producto::scopeConStock).
+        // cuenta como "con stock" acá, igual que Producto::scopeConStock), y dentro de cada
+        // grupo el orden elegido (por defecto A → Z).
+        $query->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END');
+        $this->aplicarOrden($query, $request);
+
         $productos = $query
-            ->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END')
-            ->latest()
             ->paginate($this->porPagina($request))
             ->withQueryString();
 
@@ -180,12 +187,102 @@ class TiendaController extends Controller
         );
 
         return Inertia::render('Tienda', [
+            'combos'     => $this->combosParaListado($request),
             'productos'  => $productos,
             'categorias' => Categoria::with('subcategorias')->get(),
-            'filters'    => $request->only(['categoria', 'subcategoria', 'filter', 'q']),
+            'filters'    => $this->filtrosActivos($request),
             'disponibles' => $this->filtrosDisponibles(),
             'canLogin'   => Route::has('login'),
         ]);
+    }
+
+    /**
+     * Combos que van en la sección "Combos" arriba de los productos, en la vista general
+     * del catálogo. Solo cuando no hay ningún filtro de producto activo: un combo no tiene
+     * categorías ni es "destacado/oferta" como un producto, así que filtrar por eso los
+     * dejaría sin sentido. La búsqueda y el orden sí aplican. No se pagina: son pocos y
+     * se muestran todos.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function combosParaListado(Request $request): array
+    {
+        $hayFiltroDeProducto = $request->filled('categoria')
+            || $request->filled('subcategoria')
+            || in_array($request->query('filter'), ['destacados', 'ofertas'], true);
+
+        if ($hayFiltroDeProducto) {
+            return [];
+        }
+
+        return $this->queryCombos($request)
+            ->get()
+            ->map(fn (Combo $combo) => $this->serializarComboParaVidriera($combo))
+            ->all();
+    }
+
+    /** Combos activos, con la búsqueda (?q=) y el orden elegido ya aplicados. */
+    private function queryCombos(Request $request)
+    {
+        $query = Combo::with(['imagenPrincipal', 'items.producto.variantesActivas', 'items.productoVariante'])
+            ->where('is_active', true);
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                    ->orWhere('descripcion', 'like', "%{$search}%");
+            });
+        }
+
+        $this->aplicarOrden($query, $request);
+
+        return $query;
+    }
+
+    /**
+     * Órdenes disponibles en la vidriera (clave de `?orden=` → columna y sentido).
+     * `az` es el default y no viaja en la URL.
+     */
+    private const ORDENES = [
+        'az' => ['titulo', 'asc'],
+        'za' => ['titulo', 'desc'],
+        'precio-asc' => ['precio', 'asc'],
+        'precio-desc' => ['precio', 'desc'],
+    ];
+
+    private function ordenActivo(Request $request): string
+    {
+        $orden = $request->query('orden');
+
+        return is_string($orden) && isset(self::ORDENES[$orden]) ? $orden : 'az';
+    }
+
+    /**
+     * Aplica el orden elegido. El desempate por id es lo que mantiene estable la
+     * paginación ("Cargar más"): sin él, productos con el mismo título/precio podrían
+     * repetirse o saltearse entre tandas. El orden por precio es sobre el precio de lista
+     * (precio base), no sobre el precio con oferta/escala aplicada.
+     */
+    private function aplicarOrden($query, Request $request): void
+    {
+        [$columna, $sentido] = self::ORDENES[$this->ordenActivo($request)];
+
+        // El título se ordena en minúsculas para que "bengala" no quede después de "Pistola"
+        // en motores con orden sensible a mayúsculas (SQLite); en MySQL ya es insensible.
+        if ($columna === 'titulo') {
+            $query->orderByRaw("LOWER(titulo) {$sentido}");
+        } else {
+            $query->orderBy($columna, $sentido)->orderByRaw('LOWER(titulo)');
+        }
+
+        $query->orderBy('id');
+    }
+
+    /** Filtros que vuelven al front; `orden` siempre presente para que la UI sepa cuál está activo. */
+    private function filtrosActivos(Request $request): array
+    {
+        return [...$request->only(['categoria', 'subcategoria', 'filter', 'q']), 'orden' => $this->ordenActivo($request)];
     }
 
     /**
@@ -304,25 +401,14 @@ class TiendaController extends Controller
      */
     private function indexCombos(Request $request)
     {
-        $query = Combo::with(['imagenPrincipal', 'items.producto.variantesActivas', 'items.productoVariante'])
-            ->where('is_active', true);
-
-        if ($request->filled('q')) {
-            $search = $request->q;
-            $query->where(function ($q) use ($search) {
-                $q->where('titulo', 'like', "%{$search}%")
-                    ->orWhere('descripcion', 'like', "%{$search}%");
-            });
-        }
-
-        $combos = $query->latest()->paginate($this->porPagina($request))->withQueryString();
+        $combos = $this->queryCombos($request)->paginate($this->porPagina($request))->withQueryString();
 
         $combos->getCollection()->transform(fn (Combo $combo) => $this->serializarComboParaVidriera($combo));
 
         return Inertia::render('Tienda', [
             'productos' => $combos,
             'categorias' => Categoria::with('subcategorias')->get(),
-            'filters' => $request->only(['categoria', 'subcategoria', 'filter', 'q']),
+            'filters' => $this->filtrosActivos($request),
             'disponibles' => $this->filtrosDisponibles(),
             'canLogin' => Route::has('login'),
         ]);

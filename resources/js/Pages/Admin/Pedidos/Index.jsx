@@ -308,11 +308,18 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                     </div>
                                                 )}
 
-                                                {pedido.codigo_descuento_texto && (
-                                                    <div className="mb-2 flex justify-end">
-                                                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">
-                                                            {pedido.codigo_descuento_texto}
-                                                        </span>
+                                                {(pedido.envio_gratis || pedido.items.some((item) => item.combo?.envio_gratis) || pedido.codigo_descuento_texto) && (
+                                                    <div className="mb-2 flex flex-wrap justify-end gap-2">
+                                                        {(pedido.envio_gratis || pedido.items.some((item) => item.combo?.envio_gratis)) && (
+                                                            <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-bold text-green-800">
+                                                                🚚 Envío gratis
+                                                            </span>
+                                                        )}
+                                                        {pedido.codigo_descuento_texto && (
+                                                            <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">
+                                                                {pedido.codigo_descuento_texto}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 )}
                                                 <div className="flex items-center justify-between py-3 px-4 mb-4 bg-gradient-to-r from-[#40B0C2]/10 to-[#A72DAB]/10 rounded-xl">

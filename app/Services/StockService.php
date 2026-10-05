@@ -133,6 +133,99 @@ class StockService
     }
 
     /**
+     * Ajusta el stock cuando se edita un pedido ya descontado: compara las operaciones
+     * de antes y después de la edición (ver operacionesDe()), y por cada producto/variante
+     * descuenta el aumento o repone la reducción — solo la diferencia, no todo de nuevo.
+     * Los movimientos quedan como `ajuste_manual` ligados al pedido, así no se mezclan
+     * con la reposición por cancelación (que el detalle del pedido lista aparte).
+     *
+     * Debe correr dentro de la transacción de la edición: si el aumento no tiene stock
+     * suficiente lanza StockInsuficienteException y el rollback deshace toda la edición.
+     *
+     * @param  array<int, array{producto_id: int, producto_variante_id: ?int, cantidad: int}>  $antes
+     * @param  array<int, array{producto_id: int, producto_variante_id: ?int, cantidad: int}>  $despues
+     *
+     * @throws StockInsuficienteException
+     */
+    public function ajustarPorEdicion(Pedido $pedido, array $antes, array $despues): void
+    {
+        $totalizar = function (array $operaciones): array {
+            $totales = [];
+
+            foreach ($operaciones as $operacion) {
+                // Producto borrado del catálogo: no hay stock que mover.
+                if ($operacion['producto_id'] === null) {
+                    continue;
+                }
+
+                $clave = $operacion['producto_id'].':'.($operacion['producto_variante_id'] ?? 'null');
+
+                $totales[$clave] ??= [
+                    'producto_id' => $operacion['producto_id'],
+                    'producto_variante_id' => $operacion['producto_variante_id'],
+                    'cantidad' => 0,
+                ];
+                $totales[$clave]['cantidad'] += (int) $operacion['cantidad'];
+            }
+
+            return $totales;
+        };
+
+        $totalesAntes = $totalizar($antes);
+        $totalesDespues = $totalizar($despues);
+
+        $diferencias = collect(array_keys($totalesAntes + $totalesDespues))
+            ->map(function (string $clave) use ($totalesAntes, $totalesDespues) {
+                $base = $totalesDespues[$clave] ?? $totalesAntes[$clave];
+
+                return [
+                    'producto_id' => $base['producto_id'],
+                    'producto_variante_id' => $base['producto_variante_id'],
+                    'delta' => ($totalesDespues[$clave]['cantidad'] ?? 0) - ($totalesAntes[$clave]['cantidad'] ?? 0),
+                ];
+            })
+            ->filter(fn (array $diferencia) => $diferencia['delta'] !== 0)
+            // Mismo orden estable que operacionesOrdenadasParaLock() para no deadlockear.
+            ->sortBy([['producto_id', 'asc'], ['producto_variante_id', 'asc']])
+            ->values();
+
+        if ($diferencias->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(function () use ($pedido, $diferencias) {
+            foreach ($diferencias as $diferencia) {
+                $varianteId = $diferencia['producto_variante_id'];
+                $cantidad = abs($diferencia['delta']);
+
+                if ($diferencia['delta'] > 0) {
+                    $varianteId !== null
+                        ? $this->descontarVariante($pedido, $diferencia['producto_id'], $varianteId, $cantidad, MotivoMovimientoStock::AjusteManual)
+                        : $this->descontarProducto($pedido, $diferencia['producto_id'], $cantidad, MotivoMovimientoStock::AjusteManual);
+
+                    continue;
+                }
+
+                $varianteId !== null
+                    ? $this->reponerVariante($pedido, $diferencia['producto_id'], $varianteId, $cantidad, MotivoMovimientoStock::AjusteManual)
+                    : $this->reponerProducto($pedido, $diferencia['producto_id'], $cantidad, MotivoMovimientoStock::AjusteManual);
+            }
+        });
+    }
+
+    /**
+     * Operaciones de stock {producto_id, producto_variante_id, cantidad} del pedido tal
+     * como está ahora (combos expandidos en sus componentes). Es la "foto" que se toma
+     * antes y después de editarlo para pasarle a ajustarPorEdicion().
+     *
+     * @return array<int, array{producto_id: int, producto_variante_id: ?int, cantidad: int}>
+     */
+    public function operacionesDe(Pedido $pedido): array
+    {
+        return $this->operacionesOrdenadasParaLock($pedido)->all();
+    }
+
+    /**
      * Aplana los items del pedido en operaciones de stock {producto_id,
      * producto_variante_id, cantidad} y las ordena de forma estable (producto_id,
      * luego producto_variante_id) para que dos transacciones concurrentes que tocan
@@ -176,7 +269,7 @@ class StockService
         ])->values();
     }
 
-    private function descontarProducto(Pedido $pedido, int $productoId, int $cantidad): void
+    private function descontarProducto(Pedido $pedido, int $productoId, int $cantidad, MotivoMovimientoStock $motivo = MotivoMovimientoStock::PedidoCreado): void
     {
         $producto = Producto::where('id', $productoId)->lockForUpdate()->first();
 
@@ -195,12 +288,12 @@ class StockService
             'producto_id' => $producto->id,
             'pedido_id' => $pedido->id,
             'cantidad' => -$cantidad,
-            'motivo' => MotivoMovimientoStock::PedidoCreado,
+            'motivo' => $motivo,
             'stock_resultante' => $producto->stock,
         ]);
     }
 
-    private function descontarVariante(Pedido $pedido, int $productoId, int $varianteId, int $cantidad): void
+    private function descontarVariante(Pedido $pedido, int $productoId, int $varianteId, int $cantidad, MotivoMovimientoStock $motivo = MotivoMovimientoStock::PedidoCreado): void
     {
         $variante = ProductoVariante::where('id', $varianteId)->lockForUpdate()->first();
 
@@ -225,12 +318,12 @@ class StockService
             'producto_variante_id' => $variante->id,
             'pedido_id' => $pedido->id,
             'cantidad' => -$cantidad,
-            'motivo' => MotivoMovimientoStock::PedidoCreado,
+            'motivo' => $motivo,
             'stock_resultante' => $variante->stock,
         ]);
     }
 
-    private function reponerProducto(Pedido $pedido, int $productoId, int $cantidad): void
+    private function reponerProducto(Pedido $pedido, int $productoId, int $cantidad, MotivoMovimientoStock $motivo = MotivoMovimientoStock::PedidoCancelado): void
     {
         $producto = Producto::where('id', $productoId)->lockForUpdate()->first();
 
@@ -245,12 +338,12 @@ class StockService
             'producto_id' => $producto->id,
             'pedido_id' => $pedido->id,
             'cantidad' => $cantidad,
-            'motivo' => MotivoMovimientoStock::PedidoCancelado,
+            'motivo' => $motivo,
             'stock_resultante' => $producto->stock,
         ]);
     }
 
-    private function reponerVariante(Pedido $pedido, int $productoId, int $varianteId, int $cantidad): void
+    private function reponerVariante(Pedido $pedido, int $productoId, int $varianteId, int $cantidad, MotivoMovimientoStock $motivo = MotivoMovimientoStock::PedidoCancelado): void
     {
         $variante = ProductoVariante::where('id', $varianteId)->lockForUpdate()->first();
 
@@ -266,7 +359,7 @@ class StockService
             'producto_variante_id' => $variante->id,
             'pedido_id' => $pedido->id,
             'cantidad' => $cantidad,
-            'motivo' => MotivoMovimientoStock::PedidoCancelado,
+            'motivo' => $motivo,
             'stock_resultante' => $variante->stock,
         ]);
     }

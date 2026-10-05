@@ -178,9 +178,23 @@ class CodigoDescuentoService
      */
     public function calcularMontoDescuento(CodigoDescuento $codigoDescuento, float $subtotal): float
     {
-        $valor = (float) $codigoDescuento->valor_descuento;
+        return $this->calcularMonto($codigoDescuento->tipo_descuento, (float) $codigoDescuento->valor_descuento, $subtotal);
+    }
 
-        $monto = match ($codigoDescuento->tipo_descuento) {
+    /**
+     * Misma fórmula que calcularMontoDescuento() pero desde el snapshot que guarda el
+     * pedido (tipo + valor), sin necesitar el código vivo. Lo usa la edición de un
+     * pedido: el descuento se recalcula con las condiciones con las que se compró,
+     * aunque el código ya haya vencido o se haya desactivado.
+     */
+    public function calcularMontoDesdeSnapshot(TipoDescuento $tipo, float $valor, float $subtotal): float
+    {
+        return $this->calcularMonto($tipo, $valor, $subtotal);
+    }
+
+    private function calcularMonto(TipoDescuento $tipo, float $valor, float $subtotal): float
+    {
+        $monto = match ($tipo) {
             TipoDescuento::Porcentaje => $subtotal * ($valor / 100),
             TipoDescuento::Fijo => min($valor, $subtotal),
         };

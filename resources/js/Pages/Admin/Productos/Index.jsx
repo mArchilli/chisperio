@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify';
 import { Pencil, Trash2, Tag } from 'lucide-react';
 import { resolverPrecio } from '@/lib/pricing';
 import { UMBRAL_STOCK_BAJO } from '@/lib/stock';
+import AumentoPreciosModal from '@/Components/AumentoPreciosModal';
 
 // Si venimos de un link con ?stock=sin-stock (ej. la alerta del dashboard), arrancamos con
 // el filtro rápido ya activado en vez de resetear a "todos".
@@ -13,8 +14,9 @@ function soloSinStockInicialDesdeUrl() {
     return new URLSearchParams(window.location.search).get('stock') === 'sin-stock';
 }
 
-export default function Index({ productos }) {
-    const { auth } = usePage().props;
+export default function Index({ productos, categorias: categoriasCatalogo }) {
+    const { auth, flash } = usePage().props;
+    const [showAumentoModal, setShowAumentoModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [productoToDelete, setProductoToDelete] = useState(null);
     const [deleteError, setDeleteError] = useState(null);
@@ -221,15 +223,27 @@ export default function Index({ productos }) {
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">Gestiona el catálogo de productos</p>
                     </div>
-                    <Link
-                        href={route('productos.create')}
-                        className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
-                    >
-                        <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Nuevo Producto
-                    </Link>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={() => setShowAumentoModal(true)}
+                            className="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-[#A72DAB] rounded-xl font-semibold text-sm text-[#A72DAB] hover:bg-[#A72DAB] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                        >
+                            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            Aumentar precios
+                        </button>
+                        <Link
+                            href={route('productos.create')}
+                            className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                        >
+                            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Nuevo Producto
+                        </Link>
+                    </div>
                 </div>
             }
         >
@@ -237,6 +251,12 @@ export default function Index({ productos }) {
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    {flash?.success && (
+                        <div className="mb-6 mx-4 sm:mx-0 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+                            {flash.success}
+                        </div>
+                    )}
+
                     {/* Barra de búsqueda y filtros */}
                     <div className="mb-6 px-4 sm:px-0">
                         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
@@ -794,6 +814,13 @@ export default function Index({ productos }) {
                     </div>
                 </div>
             )}
+
+            <AumentoPreciosModal
+                show={showAumentoModal}
+                onClose={() => setShowAumentoModal(false)}
+                productos={productos}
+                categorias={categoriasCatalogo ?? []}
+            />
         </AuthenticatedLayout>
     );
 }

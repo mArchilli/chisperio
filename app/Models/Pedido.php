@@ -37,6 +37,9 @@ class Pedido extends Model
         'recargo_porcentaje',
         'recargo_monto',
         'total_con_recargo',
+        'envio_gratis',
+        'envio_gratis_monto_minimo',
+        'editado_at',
     ];
 
     protected $casts = [
@@ -45,6 +48,9 @@ class Pedido extends Model
         'subtotal' => 'decimal:2',
         'total' => 'decimal:2',
         'despachado_at' => 'datetime',
+        'editado_at' => 'datetime',
+        'envio_gratis' => 'boolean',
+        'envio_gratis_monto_minimo' => 'decimal:2',
         // Snapshot histórico del tipo de descuento usado, no el estado actual del código
         // (por eso es un string plano en la tabla, no la misma columna enum de
         // codigos_descuento — ver la migración). El cast a enum es solo para que el

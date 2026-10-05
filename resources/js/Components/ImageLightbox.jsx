@@ -9,6 +9,26 @@ export default function ImageLightbox({ src, alt, onClose }) {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
+    // Bloquea el scroll de la página mientras la foto está abierta. Se compensa el ancho
+    // de la barra de scroll para que el fondo no "salte" al ocultarla, y se restaura el
+    // estilo previo al cerrar.
+    useEffect(() => {
+        if (!src) return undefined;
+
+        const { overflow, paddingRight } = document.body.style;
+        const anchoBarra = window.innerWidth - document.documentElement.clientWidth;
+
+        document.body.style.overflow = 'hidden';
+        if (anchoBarra > 0) {
+            document.body.style.paddingRight = `${anchoBarra}px`;
+        }
+
+        return () => {
+            document.body.style.overflow = overflow;
+            document.body.style.paddingRight = paddingRight;
+        };
+    }, [src]);
+
     if (!src) return null;
 
     return (

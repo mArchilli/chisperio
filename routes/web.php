@@ -96,9 +96,12 @@ Route::middleware('auth')->group(function () {
     // eliminar/activar quedan en el grupo role:admin de más abajo.
     Route::get('admin/documentos', [DocumentoController::class, 'index'])->name('documentos.index');
 
-    // Rutas de Pedidos (sin cambios)
+    // Rutas de Pedidos
     Route::get('admin/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
     Route::get('admin/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    // Edición: admin y vendedor (este último solo de su sucursal, ver autorizarSucursal).
+    Route::get('admin/pedidos/{pedido}/editar', [PedidoController::class, 'edit'])->name('pedidos.edit');
+    Route::put('admin/pedidos/{pedido}', [PedidoController::class, 'actualizar'])->name('pedidos.update');
     Route::patch('admin/pedidos/{pedido}/estado', [PedidoController::class, 'cambiarEstado'])->name('pedidos.cambiar-estado');
 
     // Gestión de catálogo (categorías/subcategorías/productos/ofertas/códigos de
@@ -125,6 +128,7 @@ Route::middleware('auth')->group(function () {
             'destroy' => 'subcategorias.destroy',
         ]);
 
+        Route::post('admin/productos/aumento-precios', [ProductoController::class, 'aumentarPrecios'])->name('productos.aumento-precios');
         Route::resource('admin/productos', ProductoController::class)->names([
             'index' => 'productos.index',
             'create' => 'productos.create',
