@@ -195,7 +195,7 @@ export default function AuthenticatedLayout({ header, children }) {
             {/* Sidebar para desktop */}
             <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'}`}>
                 <div className="flex flex-col flex-grow bg-white shadow-xl overflow-y-auto overflow-x-hidden">
-                    <div className={`flex h-24 items-center bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6'}`}>
+                    <div className={`flex h-16 min-h-[4rem] flex-shrink-0 items-center bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6'}`}>
                         {!sidebarCollapsed && (
                             <Link href="/">
                                 <span className="text-white text-xl font-bold">Chisperio</span>
@@ -232,7 +232,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             </Link>
                         ))}
                     </nav>
-                    <div className={`border-t border-gray-100 ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
+                    <div className={`flex-shrink-0 border-t border-gray-100 ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
                         <a
                             href="/"
                             className={`group flex items-center py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-700 hover:text-[#40B0C2] bg-white/50 hover:bg-white/70 border border-gray-200/50 mb-4 ${sidebarCollapsed ? 'justify-center px-0' : 'px-4'}`}
