@@ -78,6 +78,7 @@ class ProductoController extends Controller
             'categorias' => $categorias,
             'subcategorias' => $subcategorias,
             'addonsDisponibles' => Addon::activos()->get(),
+            'productosCompatibles' => $this->productosCompatibles(),
         ]);
     }
 
@@ -93,12 +94,13 @@ class ProductoController extends Controller
             'stock' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'sugerir_en_carrito' => 'boolean',
             'categorias' => 'array',
             'subcategorias' => 'array',
             'imagenes.*' => 'nullable|image|max:5120', // max 5MB
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200', // max 50MB
             'imagen_principal' => 'nullable|integer',
-        ], $this->escalasPrecioReglas(), $this->variantesReglas(), $this->addonsReglas(), $this->mediaVarianteReglas($request)), array_merge(
+        ], $this->escalasPrecioReglas(), $this->variantesReglas(), $this->addonsReglas(), $this->compatiblesReglas(), $this->mediaVarianteReglas($request)), array_merge(
             $this->escalasPrecioMensajes(),
             $this->variantesMensajes(),
             $this->addonsMensajes(),
@@ -115,6 +117,7 @@ class ProductoController extends Controller
                 'stock' => $validated['stock'] ?? null,
                 'is_active' => $validated['is_active'] ?? true,
                 'is_featured' => $validated['is_featured'] ?? false,
+                'sugerir_en_carrito' => $validated['sugerir_en_carrito'] ?? false,
             ]);
 
             // Asociar categorías y subcategorías
@@ -129,6 +132,7 @@ class ProductoController extends Controller
             $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
             $mapaClaves = $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
             $this->sincronizarAddons($producto, $validated['addons'] ?? []);
+            $producto->sincronizarCompatibles($validated['compatibles'] ?? []);
 
             return [$producto, $mapaClaves];
         });
@@ -217,6 +221,8 @@ class ProductoController extends Controller
             'categorias' => $categorias,
             'subcategorias' => $subcategorias,
             'addonsDisponibles' => Addon::activos()->get(),
+            'productosCompatibles' => $this->productosCompatibles($producto),
+            'compatiblesIds' => $producto->idsCompatibles(),
         ]);
     }
 
@@ -232,12 +238,13 @@ class ProductoController extends Controller
             'stock' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'sugerir_en_carrito' => 'boolean',
             'categorias' => 'array',
             'subcategorias' => 'array',
             'imagenes.*' => 'nullable|image|max:5120',
             'videos.*' => 'nullable|mimes:mp4,mov,avi,wmv|max:51200',
             'media_eliminar' => 'array',
-        ], $this->escalasPrecioReglas($producto), $this->variantesReglas($producto), $this->addonsReglas(), $this->mediaVarianteReglas($request, $producto)), array_merge(
+        ], $this->escalasPrecioReglas($producto), $this->variantesReglas($producto), $this->addonsReglas(), $this->compatiblesReglas($producto), $this->mediaVarianteReglas($request, $producto)), array_merge(
             $this->escalasPrecioMensajes(),
             $this->variantesMensajes(),
             $this->addonsMensajes(),
@@ -254,6 +261,7 @@ class ProductoController extends Controller
                 'stock' => $validated['stock'] ?? null,
                 'is_active' => $validated['is_active'] ?? true,
                 'is_featured' => $validated['is_featured'] ?? false,
+                'sugerir_en_carrito' => $validated['sugerir_en_carrito'] ?? false,
             ]);
 
             // Actualizar categorías y subcategorías
@@ -268,6 +276,7 @@ class ProductoController extends Controller
             $this->sincronizarEscalasPrecio($producto, $validated['escalas_precio'] ?? []);
             $mapaClaves = $this->sincronizarVariantes($producto, $validated['variantes'] ?? []);
             $this->sincronizarAddons($producto, $validated['addons'] ?? []);
+            $producto->sincronizarCompatibles($validated['compatibles'] ?? []);
 
             return $mapaClaves;
         });
@@ -714,6 +723,33 @@ class ProductoController extends Controller
         }
 
         $producto->addons()->sync($sync);
+    }
+
+    /**
+     * Productos activos que el admin puede marcar como compatibles con $producto (todos
+     * menos él mismo), con lo mínimo que necesita ProductoPickerModal.
+     */
+    private function productosCompatibles(?Producto $producto = null)
+    {
+        return Producto::where('is_active', true)
+            ->when($producto, fn ($q) => $q->where('id', '!=', $producto->id))
+            ->with('imagenPrincipal')
+            ->orderBy('titulo')
+            ->get(['id', 'titulo', 'precio']);
+    }
+
+    private function compatiblesReglas(?Producto $producto = null): array
+    {
+        return [
+            'compatibles' => ['array'],
+            'compatibles.*' => array_filter([
+                'integer',
+                'distinct',
+                Rule::exists('productos', 'id'),
+                // Un producto no puede ser compatible consigo mismo.
+                $producto ? Rule::notIn([$producto->id]) : null,
+            ]),
+        ];
     }
 
     /**

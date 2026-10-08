@@ -35,6 +35,8 @@ Route::get('/contacto', function () {
     ]);
 })->name('contacto.index');
 
+Route::get('/carrito/sugerencias', [TiendaController::class, 'sugerenciasCarrito'])->name('carrito.sugerencias');
+
 Route::get('/carrito', function () {
     return Inertia::render('Carrito', [
         'canLogin' => Route::has('login'),

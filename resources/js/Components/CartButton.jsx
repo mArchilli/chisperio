@@ -8,6 +8,7 @@ import { useAvisoEnvioGratisCombo } from '@/hooks/useAvisoEnvioGratisCombo';
 import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 import ComboLineaDetalle from '@/Components/ComboLineaDetalle';
+import SugerenciasCarrito from '@/Components/SugerenciasCarrito';
 
 const EXCLUDED_PREFIXES = [
     '/carrito', '/checkout', '/login',
@@ -246,6 +247,7 @@ export default function CartButton() {
                                 envioGratisPorCombo={envioGratisPorCombo}
                             />
                         ))}
+                        <SugerenciasCarrito variante="drawer" />
                     </div>
                 )}
 

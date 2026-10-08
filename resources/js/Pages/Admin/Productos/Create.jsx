@@ -2,12 +2,13 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar } from '@/Components/EscalasPrecioRepeater';
 import VariantesColorRepeater, { validarVariantes, limpiarVariantesParaEnviar } from '@/Components/VariantesColorRepeater';
 import AddonsProductoSelector, { validarAddonsProducto } from '@/Components/AddonsProductoSelector';
+import ProductosCompatiblesSelector from '@/Components/ProductosCompatiblesSelector';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
-export default function Create({ categorias, subcategorias, addonsDisponibles }) {
+export default function Create({ categorias, subcategorias, addonsDisponibles, productosCompatibles }) {
     const { data, setData, post, transform, processing, errors } = useForm({
         titulo: '',
         descripcion: '',
@@ -17,6 +18,8 @@ export default function Create({ categorias, subcategorias, addonsDisponibles })
         subcategorias: [],
         is_active: true,
         is_featured: false,
+        sugerir_en_carrito: false,
+        compatibles: [],
         imagenes: [],
         videos: [],
         imagen_principal: null,
@@ -261,6 +264,15 @@ export default function Create({ categorias, subcategorias, addonsDisponibles })
                                     addonsDisponibles={addonsDisponibles}
                                     seleccionados={data.addons}
                                     onChange={(nuevos) => setData('addons', nuevos)}
+                                    errors={errors}
+                                />
+
+                                <ProductosCompatiblesSelector
+                                    productos={productosCompatibles}
+                                    seleccionados={data.compatibles}
+                                    onChange={(ids) => setData('compatibles', ids)}
+                                    sugerirSiempre={data.sugerir_en_carrito}
+                                    onSugerirSiempreChange={(valor) => setData('sugerir_en_carrito', valor)}
                                     errors={errors}
                                 />
 

@@ -7,6 +7,7 @@ import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 import FormaPagoBlock from '@/Components/FormaPagoBlock';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 import ComboLineaDetalle from '@/Components/ComboLineaDetalle';
+import SugerenciasCarrito from '@/Components/SugerenciasCarrito';
 
 const formatPrice = (price) =>
     new Intl.NumberFormat('es-AR', {
@@ -524,6 +525,7 @@ export default function Carrito({ canLogin, configuracionEnvio }) {
                                         envioGratisPorCombo={envioGratisPorCombo}
                                     />
                                 ))}
+                                <SugerenciasCarrito />
                             </section>
 
                             <div className="lg:col-span-4">

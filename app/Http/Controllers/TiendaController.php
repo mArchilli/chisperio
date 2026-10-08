@@ -12,6 +12,7 @@ use App\Models\Producto;
 use App\Models\Resena;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -80,6 +81,106 @@ class TiendaController extends Controller
             'resenas'     => $this->resenasAleatorias(),
             'canLogin'    => Route::has('login'),
         ]);
+    }
+
+    /**
+     * Productos que se ofrecen en el carrito y en el modal del carrito (JSON). El carrito
+     * vive en el navegador, así que el cliente manda los ids de producto que tiene
+     * (`?productos[]=`) y acá se arma la lista:
+     *
+     *  1. Compatibles: los productos que el admin marcó como compatibles con alguno del
+     *     carrito (producto_compatible, relación simétrica: una pistola PULY® sugiere su
+     *     chispa fría y esa chispa sugiere la pistola). Si un producto es compatible con
+     *     varios del carrito va primero; a igual cantidad, manda el orden que eligió el admin.
+     *     Cada uno viaja con `compatible_con`: títulos de lo del carrito con lo que sirve.
+     *  2. "Sugerir siempre" (productos.sugerir_en_carrito, p. ej. chispas frías genéricas),
+     *     solo si NINGÚN producto del carrito tiene compatibilidad definida: si el cliente
+     *     lleva algo con compatibilidad (una pistola PULY®), una chispa genérica podría no
+     *     servirle, así que no se mezcla.
+     *
+     * Nunca devuelve un producto que ya está en el carrito, inactivo o sin stock.
+     */
+    public function sugerenciasCarrito(Request $request)
+    {
+        $request->validate([
+            'productos' => 'array|max:50',
+            'productos.*' => 'integer',
+        ]);
+
+        $enCarrito = collect($request->input('productos', []))->map(fn ($id) => (int) $id)->unique()->values();
+
+        if ($enCarrito->isEmpty()) {
+            return response()->json(['productos' => []]);
+        }
+
+        $limite = 4;
+
+        $pares = DB::table('producto_compatible')
+            ->where(fn ($q) => $q->whereIn('producto_id', $enCarrito)->orWhereIn('compatible_id', $enCarrito))
+            ->get(['producto_id', 'compatible_id', 'orden']);
+
+        // candidato => ids del carrito con los que es compatible, y el menor `orden` visto.
+        $compatibilidad = [];
+        foreach ($pares as $par) {
+            foreach ([[$par->producto_id, $par->compatible_id], [$par->compatible_id, $par->producto_id]] as [$delCarrito, $candidato]) {
+                if (! $enCarrito->contains($delCarrito) || $enCarrito->contains($candidato)) {
+                    continue;
+                }
+                $compatibilidad[$candidato]['con'][$delCarrito] = true;
+                $compatibilidad[$candidato]['orden'] = min($compatibilidad[$candidato]['orden'] ?? PHP_INT_MAX, $par->orden);
+            }
+        }
+
+        $candidatos = fn () => Producto::with([
+            'imagenPrincipal',
+            'ofertaVigente',
+            'escalasPrecio',
+        ])
+            ->withCount('variantesActivas')
+            ->where('is_active', true)
+            ->conStock()
+            ->whereNotIn('id', $enCarrito);
+
+        $elegidos = collect();
+
+        if ($compatibilidad !== []) {
+            $titulosCarrito = Producto::whereIn('id', $enCarrito)->pluck('titulo', 'id');
+
+            $elegidos = $candidatos()->whereIn('id', array_keys($compatibilidad))->get()
+                ->sortBy([
+                    fn (Producto $a, Producto $b) => count($compatibilidad[$b->id]['con']) <=> count($compatibilidad[$a->id]['con']),
+                    fn (Producto $a, Producto $b) => $compatibilidad[$a->id]['orden'] <=> $compatibilidad[$b->id]['orden'],
+                    fn (Producto $a, Producto $b) => $a->id <=> $b->id,
+                ])
+                ->take($limite)
+                ->each(fn (Producto $producto) => $producto->setAttribute(
+                    'compatible_con',
+                    collect(array_keys($compatibilidad[$producto->id]['con']))
+                        ->map(fn ($id) => $titulosCarrito[$id] ?? null)
+                        ->filter()
+                        ->values()
+                        ->all()
+                ))
+                ->values();
+        }
+
+        // Productos del carrito con compatibilidad definida, aunque todos sus compatibles
+        // ya estén en el carrito o sin stock: tampoco ahí corresponde ofrecer genéricos.
+        if ($pares->isEmpty() && $elegidos->count() < $limite) {
+            $siempre = $candidatos()
+                ->where('sugerir_en_carrito', true)
+                ->orderBy('titulo')
+                ->limit($limite - $elegidos->count())
+                ->get();
+
+            $elegidos = $elegidos->concat($siempre);
+        }
+
+        $elegidos->each(
+            fn (Producto $producto) => $producto->setAttribute('tiene_variantes', $producto->variantes_activas_count > 0)
+        );
+
+        return response()->json(['productos' => $elegidos->values()]);
     }
 
     /**

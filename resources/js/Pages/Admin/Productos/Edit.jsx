@@ -2,12 +2,13 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar } from '@/Components/EscalasPrecioRepeater';
 import VariantesColorRepeater, { validarVariantes, limpiarVariantesParaEnviar } from '@/Components/VariantesColorRepeater';
 import AddonsProductoSelector, { validarAddonsProducto } from '@/Components/AddonsProductoSelector';
+import ProductosCompatiblesSelector from '@/Components/ProductosCompatiblesSelector';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
-export default function Edit({ producto, categorias, subcategorias, addonsDisponibles }) {
+export default function Edit({ producto, categorias, subcategorias, addonsDisponibles, productosCompatibles, compatiblesIds }) {
     const { data, setData, post, transform, processing, errors } = useForm({
         titulo: producto.titulo || '',
         descripcion: producto.descripcion || '',
@@ -17,6 +18,8 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
         subcategorias: producto.subcategorias?.map(s => s.id) || [],
         is_active: producto.is_active ?? true,
         is_featured: producto.is_featured ?? false,
+        sugerir_en_carrito: producto.sugerir_en_carrito ?? false,
+        compatibles: compatiblesIds || [],
         imagenes: [],
         videos: [],
         imagen_principal: null,
@@ -302,6 +305,15 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                     addonsDisponibles={addonsDisponibles}
                                     seleccionados={data.addons}
                                     onChange={(nuevos) => setData('addons', nuevos)}
+                                    errors={errors}
+                                />
+
+                                <ProductosCompatiblesSelector
+                                    productos={productosCompatibles}
+                                    seleccionados={data.compatibles}
+                                    onChange={(ids) => setData('compatibles', ids)}
+                                    sugerirSiempre={data.sugerir_en_carrito}
+                                    onSugerirSiempreChange={(valor) => setData('sugerir_en_carrito', valor)}
                                     errors={errors}
                                 />
 
