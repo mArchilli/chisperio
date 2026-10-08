@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LandingHeader from '@/Components/Landing/LandingHeader';
 import BackToCatalog from '@/Components/BackToCatalog';
@@ -10,6 +10,13 @@ import ResenasConfianza from '@/Components/ResenasConfianza';
 import VarianteColorSwatches, { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 import RepartoVariantes from '@/Components/RepartoVariantes';
 import ProductoAddonsChecklist from '@/Components/ProductoAddonsChecklist';
+import {
+    ProductAttributes,
+    ProductDeliveryInfo,
+    ProductPaymentOptions,
+    ProductSellerInfo,
+} from '@/Components/ProductDetailSections';
+import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/Context/CartContext';
 import { redondear2, resolverPrecio } from '@/lib/pricing';
 import { calcular as calcularRecargoPago } from '@/lib/recargoPago';
@@ -78,10 +85,6 @@ const formatPrice = (price) =>
         maximumFractionDigits: 0,
     }).format(price);
 
-// Evita "20.00%" cuando el recargo cargado en el admin es un entero (caso más común)
-// y "12.50%" en vez de "12.5%" cuando tiene un solo decimal significativo.
-const formatPercent = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
-
 function ArrowIcon({ className = 'h-4 w-4' }) {
     return (
         <svg
@@ -114,7 +117,7 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
             onClick={() => onSelect(i)}
             aria-label={`Ver ${isVideo ? 'video' : 'imagen'} ${i + 1} de ${total}`}
             aria-pressed={i === activeIdx}
-            className={`group/thumb relative aspect-square w-24 flex-shrink-0 overflow-hidden rounded-2xl border bg-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 lg:w-auto ${
+            className={`group/thumb relative aspect-square w-16 flex-shrink-0 overflow-hidden rounded-md border bg-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 ${
                 i === activeIdx
                     ? 'border-[#6000ca] shadow-[0_10px_25px_-18px_rgba(96,0,202,0.8)]'
                     : 'border-black/[0.06] hover:border-[#6000ca]/35'
@@ -134,9 +137,7 @@ function GalleryThumb({ item, i, total, activeIdx, onSelect }) {
                     className="h-full w-full object-contain p-2.5 transition-transform duration-300 group-hover/thumb:scale-105 motion-reduce:transition-none"
                 />
             )}
-            {i === activeIdx && (
-                <span className="absolute inset-x-3 bottom-1.5 h-0.5 rounded-full bg-[#6000ca]" />
-            )}
+            {i === activeIdx && <span className="absolute inset-x-3 bottom-1.5 h-0.5 rounded-full bg-[#6000ca]" />}
         </button>
     );
 }
@@ -159,7 +160,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
             ...(imagenes ?? []).map((item) => ({ ...item, kind: 'imagen' })),
             ...(videos ?? []).map((item) => ({ ...item, kind: 'video' })),
         ],
-        [imagenes, videos]
+        [imagenes, videos],
     );
 
     // La galería es un carrusel con scroll-snap (mismo enfoque que el hero de la home): en mobile
@@ -187,7 +188,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
 
     if (items.length === 0) {
         return (
-            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
+            <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white">
                 <span className="relative flex h-36 w-36 select-none items-center justify-center rounded-full border border-[#6000ca]/10 bg-white/75 text-7xl font-black text-[#6000ca]/20 shadow-[0_18px_50px_-30px_rgba(96,0,202,0.45)] sm:h-44 sm:w-44 sm:text-8xl">
                     {titulo?.charAt(0).toUpperCase()}
                 </span>
@@ -202,7 +203,14 @@ function ProductGallery({ imagenes, videos, titulo }) {
 
     return (
         <div className="space-y-3 lg:space-y-4">
-            <div className="group relative aspect-square w-full overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-white sm:rounded-[2rem] md:aspect-[4/3] lg:aspect-square">
+            <div className="group relative aspect-square w-full overflow-hidden bg-white">
+                <span
+                    className="pointer-events-none absolute left-4 top-3 z-10 rounded-full bg-[#f5f5f5] px-2.5 py-1 text-xs text-[#1c1b1b]"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >
+                    {activeIdx + 1} / {items.length}
+                </span>
 
                 <div
                     ref={stripRef}
@@ -210,7 +218,10 @@ function ProductGallery({ imagenes, videos, titulo }) {
                     className="no-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-auto md:overflow-x-hidden"
                 >
                     {items.map((item, i) => (
-                        <div key={`${item.kind}-${item.id ?? i}`} className="h-full w-full flex-shrink-0 snap-center snap-always">
+                        <div
+                            key={`${item.kind}-${item.id ?? i}`}
+                            className="h-full w-full flex-shrink-0 snap-center snap-always"
+                        >
                             {item.kind === 'video' ? (
                                 <video
                                     data-idx={i}
@@ -232,7 +243,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
                                         alt={titulo}
                                         loading={i === 0 ? 'eager' : 'lazy'}
                                         draggable={false}
-                                        className="relative h-full w-full object-contain p-5 transition-transform duration-500 group-hover:scale-[1.015] sm:p-8 lg:p-10 motion-reduce:transition-none"
+                                        className="relative h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.015] sm:p-5 lg:p-6 motion-reduce:transition-none"
                                     />
                                 </button>
                             )}
@@ -242,7 +253,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
 
                 {items.length > 1 && (
                     <div className="absolute inset-x-0 bottom-3 flex justify-center sm:bottom-4 md:hidden">
-                        <div className="flex items-center rounded-full border border-white/70 bg-white/85 px-1.5 shadow-lg shadow-[#1c1b1b]/10 backdrop-blur-md">
+                        <div className="flex max-w-full items-center overflow-x-auto rounded-full bg-white/90 px-1.5">
                             {items.map((_, i) => (
                                 <button
                                     key={i}
@@ -254,9 +265,7 @@ function ProductGallery({ imagenes, videos, titulo }) {
                                 >
                                     <span
                                         className={`block rounded-full transition-all duration-200 ${
-                                            i === activeIdx
-                                                ? 'h-2 w-6 bg-[#6000ca]'
-                                                : 'h-2 w-2 bg-[#b9afc3]'
+                                            i === activeIdx ? 'h-2 w-2 bg-[#6000ca]' : 'h-2 w-2 bg-[#b9afc3]'
                                         }`}
                                     />
                                 </button>
@@ -267,8 +276,8 @@ function ProductGallery({ imagenes, videos, titulo }) {
             </div>
 
             {items.length > 1 && (
-                <div className="hidden gap-3 overflow-x-auto md:flex lg:grid lg:grid-cols-4 lg:overflow-visible">
-                    {items.slice(0, 4).map((item, i) => (
+                <div className="hidden gap-3 overflow-x-auto p-1 md:flex">
+                    {items.map((item, i) => (
                         <GalleryThumb
                             key={i}
                             item={item}
@@ -306,11 +315,11 @@ function RelatedCard({ producto }) {
     const href = route('tienda.show', variante ? { producto: producto.id, variante: variante.id } : producto.id);
 
     return (
-        <article className="group block min-w-[78vw] max-w-[310px] flex-shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#6000ca]/20 sm:min-w-[44vw] md:min-w-0 md:max-w-none motion-reduce:transform-none">
+        <article className="group block w-[46vw] max-w-[240px] flex-shrink-0 snap-start overflow-hidden rounded-lg border border-black/10 bg-white transition-colors hover:border-[#6000ca]/30 sm:w-[220px] md:w-auto md:max-w-none">
             <Link
                 href={href}
                 aria-label={`Ver ${producto.titulo}`}
-                className="relative block aspect-[4/3] overflow-hidden bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
+                className="relative block aspect-square overflow-hidden border-b border-black/[0.06] bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6000ca]"
             >
                 {hasOffer && (
                     <span className="absolute right-3 top-3 z-10 rounded-full bg-[#FF00D4] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
@@ -335,13 +344,17 @@ function RelatedCard({ producto }) {
                 )}
             </Link>
 
-            <div className="p-5">
-                <p className="mb-2 min-h-4 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#6000ca]">
+            <div className="p-3 sm:p-4">
+                <p className="mb-2 truncate text-[10px] text-[#737373]">
                     {producto.categorias?.[0]?.nombre ?? 'Selección Chisperío'}
                 </p>
 
                 {variantes.length > 0 && (
-                    <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Colores disponibles">
+                    <div
+                        className="mb-3 flex flex-wrap items-center gap-2"
+                        role="group"
+                        aria-label="Colores disponibles"
+                    >
                         {variantes.map((v) => {
                             const activa = v.id === varianteId;
                             return (
@@ -353,38 +366,51 @@ function RelatedCard({ producto }) {
                                     aria-pressed={activa}
                                     title={v.nombre}
                                     className={`h-6 w-6 flex-shrink-0 rounded-full border-2 border-white shadow-sm ring-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] ${
-                                        activa ? 'scale-110 ring-2 ring-[#6000ca]' : 'ring-black/15 hover:ring-[#6000ca]/50'
+                                        activa
+                                            ? 'scale-110 ring-2 ring-[#6000ca]'
+                                            : 'ring-black/15 hover:ring-[#6000ca]/50'
                                     }`}
-                                    style={v.es_color_personalizado ? { background: GRADIENTE_PERSONALIZADO } : { backgroundColor: v.color_hex || '#e5e5e5' }}
+                                    style={
+                                        v.es_color_personalizado
+                                            ? { background: GRADIENTE_PERSONALIZADO }
+                                            : { backgroundColor: v.color_hex || '#e5e5e5' }
+                                    }
                                 />
                             );
                         })}
                         {variante && (
-                            <span className="min-w-0 truncate text-[11px] font-bold text-[#4b4356]">{variante.nombre}</span>
+                            <span className="min-w-0 truncate text-[11px] font-bold text-[#4b4356]">
+                                {variante.nombre}
+                            </span>
                         )}
                     </div>
                 )}
 
                 <Link
                     href={href}
-                    className="block line-clamp-2 min-h-11 text-base font-extrabold leading-snug text-[#1c1b1b] transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
+                    className="block line-clamp-2 min-h-10 text-[13px] font-medium leading-snug text-[#1c1b1b] transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
                 >
                     {producto.titulo}
                 </Link>
 
-                <Link href={href} tabIndex={-1} aria-hidden="true" className="mt-5 flex items-end justify-between gap-3 border-t border-black/[0.06] pt-4">
+                <Link
+                    href={href}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="mt-3 flex items-end justify-between gap-2"
+                >
                     <div className="min-w-0">
                         {hasOffer && (
                             <p className="text-[11px] font-medium leading-none text-[#81788a] line-through">
                                 {formatPrice(producto.precio)}
                             </p>
                         )}
-                        <p className={`font-black leading-none text-[#6000ca] ${hasOffer ? 'mt-1.5' : ''}`}>
+                        <p className={`text-lg font-semibold leading-none text-[#1c1b1b] ${hasOffer ? 'mt-1.5' : ''}`}>
                             {formatPrice(displayPrice)}
                         </p>
                     </div>
 
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#6000ca]/15 bg-[#6000ca]/[0.04] text-[#6000ca] transition-colors group-hover:border-[#6000ca] group-hover:bg-[#6000ca] group-hover:text-white">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-[#6000ca]">
                         <ArrowIcon />
                     </span>
                 </Link>
@@ -394,23 +420,8 @@ function RelatedCard({ producto }) {
 }
 
 export default function ShowProduct({ producto, relacionados, resenas = [], canLogin }) {
-    const { planesPagoTarjeta } = usePage().props;
+    const { planesPagoTarjeta, configuracionEnvio } = usePage().props;
     const [qty, setQty] = useState(() => qtyInicialDesdeUrl(producto));
-    const [expandDesc, setExpandDesc] = useState(false);
-    // "Ver descripción completa" solo tiene sentido si el texto realmente se corta con el
-    // line-clamp de mobile; con una descripción corta no hay nada más que desplegar.
-    const descRef = useRef(null);
-    const [descRecortada, setDescRecortada] = useState(false);
-
-    useEffect(() => {
-        const medir = () => {
-            const el = descRef.current;
-            if (el) setDescRecortada(el.scrollHeight > el.clientHeight + 1);
-        };
-        medir();
-        window.addEventListener('resize', medir);
-        return () => window.removeEventListener('resize', medir);
-    }, [producto.descripcion, expandDesc]);
     const [toast, setToast] = useState(null);
     const [planPagoId, setPlanPagoId] = useState(null);
     const { addToCart: addToCartContext, setFormaPago } = useCart();
@@ -418,11 +429,14 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
     // Meta Pixel: una vez por producto visto (Inertia reusa este componente al ir de
     // una ficha a otra, por eso depende del id). Precio de lista unitario, sin opciones.
     useEffect(() => {
-        track('ViewContent', itemEventParams({
-            id: producto.id,
-            titulo: producto.titulo,
-            value: resolverPrecio(producto, 1).precioFinal,
-        }));
+        track(
+            'ViewContent',
+            itemEventParams({
+                id: producto.id,
+                titulo: producto.titulo,
+                value: resolverPrecio(producto, 1).precioFinal,
+            }),
+        );
     }, [producto.id]);
 
     const variantes = producto.variantes ?? [];
@@ -440,9 +454,10 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
     // `value === variante.id`, no cómo se llegó ahí.
     // `?variante=<id>` (viene de las cards de productos relacionados) abre la ficha con ese color ya elegido.
     const [varianteId, setVarianteId] = useState(() => {
-        const pedida = typeof window === 'undefined'
-            ? NaN
-            : parseInt(new URLSearchParams(window.location.search).get('variante'), 10);
+        const pedida =
+            typeof window === 'undefined'
+                ? NaN
+                : parseInt(new URLSearchParams(window.location.search).get('variante'), 10);
         return variantes.find((v) => v.id === pedida)?.id ?? variantes[0]?.id ?? null;
     });
     const [addonIds, setAddonIds] = useState([]);
@@ -482,8 +497,11 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
     // a la general si no tiene — nunca se mezcla con la de otro color (ver
     // resolverMediaParaVariante).
     const mediaVariante = useMemo(
-        () => (varianteSeleccionada ? resolverMediaParaVariante(producto.imagenes, producto.videos, varianteSeleccionada.id) : null),
-        [producto.imagenes, producto.videos, varianteSeleccionada]
+        () =>
+            varianteSeleccionada
+                ? resolverMediaParaVariante(producto.imagenes, producto.videos, varianteSeleccionada.id)
+                : null,
+        [producto.imagenes, producto.videos, varianteSeleccionada],
     );
     const galeriaImagenes = mediaVariante ? mediaVariante.imagenes : producto.imagenes;
     const galeriaVideos = mediaVariante ? (mediaVariante.video ? [mediaVariante.video] : []) : producto.videos;
@@ -496,23 +514,25 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
         : sinStock(producto);
     // Badge "¡Última unidad!" / "Quedan pocas": mira el color seleccionado. En modo
     // reparto no aplica (el cliente ve el stock por color en el propio repartidor).
-    const stockBajo = !repartoActivo && (varianteSeleccionada
-        ? tieneStockBajo(producto, varianteSeleccionada.id)
-        : (!tieneVariantes && tieneStockBajo(producto)));
+    const stockBajo =
+        !repartoActivo &&
+        (varianteSeleccionada
+            ? tieneStockBajo(producto, varianteSeleccionada.id)
+            : !tieneVariantes && tieneStockBajo(producto));
     const maxQty = varianteSeleccionada
         ? cantidadMaxima(producto, varianteSeleccionada.id)
-        : (tieneVariantes ? null : cantidadMaxima(producto));
+        : tieneVariantes
+          ? null
+          : cantidadMaxima(producto);
     // Tope real del selector de cantidad: con variantes, la SUMA del stock de todos
     // los colores (el cliente puede repartir la cantidad entre varios), no el de uno.
-    const topeCantidad = tieneVariantes
-        ? cantidadMaximaTotalVariantes(producto)
-        : cantidadMaxima(producto);
+    const topeCantidad = tieneVariantes ? cantidadMaximaTotalVariantes(producto) : cantidadMaxima(producto);
 
     // En modo reparto el recargo de color se muestra por fila (RepartoVariantes), no
     // en el desglose de arriba: por eso acá se resuelve el precio sin variante.
     const precioInfo = useMemo(
         () => resolverPrecio(producto, qty, repartoActivo ? null : varianteId, addonIds),
-        [producto, qty, varianteId, addonIds, repartoActivo]
+        [producto, qty, varianteId, addonIds, repartoActivo],
     );
     const tieneDescuento = precioInfo.precioFinal < precioInfo.precioBase;
     const ahorroPorcentaje = Math.round(precioInfo.ahorroTotalPorcentaje);
@@ -536,14 +556,14 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
                 variantes.reduce((suma, v) => {
                     const count = asignaciones[v.id] ?? 0;
                     return suma + count * (precioBaseUnitario + Number(v.precio_adicional ?? 0));
-                }, 0)
+                }, 0),
             );
         }
         return redondear2(precioInfo.precioFinalConOpciones * qty);
     }, [repartoActivo, variantes, asignaciones, precioBaseUnitario, precioInfo.precioFinalConOpciones, qty]);
     const recargoInfo = useMemo(
         () => (planPagoSeleccionado ? calcularRecargoPago(totalProductoActual, planPagoSeleccionado) : null),
-        [planPagoSeleccionado, totalProductoActual]
+        [planPagoSeleccionado, totalProductoActual],
     );
     // Además de la simulación local (recargoInfo, sobre el total de este producto),
     // deja/quita la forma de pago sugerida para todo el pedido (CartContext) — la
@@ -551,16 +571,9 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
     // puede cambiar después. Un click en otro producto con otro plan reemplaza la
     // sugerencia anterior, no se acumulan planes de productos distintos.
     const togglePlanPago = (id) => {
-        setPlanPagoId((prev) => {
-            const deseleccionando = prev === id;
-            if (deseleccionando) {
-                setFormaPago(null);
-                return null;
-            }
-            const plan = planesPagoActivos.find((p) => p.id === id) ?? null;
-            setFormaPago(plan);
-            return id;
-        });
+        const siguienteId = planPagoId === id ? null : id;
+        setPlanPagoId(siguienteId);
+        setFormaPago(planesPagoActivos.find((plan) => plan.id === siguienteId) ?? null);
     };
 
     // Reclampea qty si no hay stock (entre todos los colores) para la cantidad tildada.
@@ -590,10 +603,7 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
         setAsignaciones((prev) => {
             const variante = variantes.find((v) => v.id === varianteIdColor);
             if (!variante) return prev;
-            const otros = variantes.reduce(
-                (suma, v) => suma + (v.id === varianteIdColor ? 0 : (prev[v.id] ?? 0)),
-                0
-            );
+            const otros = variantes.reduce((suma, v) => suma + (v.id === varianteIdColor ? 0 : (prev[v.id] ?? 0)), 0);
             const nuevo = Math.max(0, Math.min(count, topeStockVariante(variante), qty - otros));
             const next = { ...prev };
             if (nuevo === 0) delete next[varianteIdColor];
@@ -603,9 +613,7 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
     };
 
     const toggleAddon = (addonId) => {
-        setAddonIds((prev) =>
-            prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
-        );
+        setAddonIds((prev) => (prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]));
     };
 
     const cambiarTextoAddon = (addonId, valor) => {
@@ -626,23 +634,22 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
     const faltaElegirVariante = tieneVariantes && varianteSeleccionada === null;
     // La variante "a elección del cliente" necesita al menos el color libre o la
     // descripción cargados (ver VarianteColorSwatches, que muestra el mensaje).
-    const faltaCompletarColorPersonalizado = esColorPersonalizado
-        && colorPersonalizado.trim() === ''
-        && textoPersonalizado.trim() === '';
+    const faltaCompletarColorPersonalizado =
+        esColorPersonalizado && colorPersonalizado.trim() === '' && textoPersonalizado.trim() === '';
     // En modo reparto: la variante "a elección" con unidades asignadas necesita su
     // descripción, igual que en el flujo de un solo color.
-    const personalizadaEnReparto = repartoActivo
-        && variantes.some((v) => v.es_color_personalizado && (asignaciones[v.id] ?? 0) > 0);
-    const faltaColorPersonalizadoReparto = personalizadaEnReparto
-        && colorPersonalizado.trim() === ''
-        && textoPersonalizado.trim() === '';
+    const personalizadaEnReparto =
+        repartoActivo && variantes.some((v) => v.es_color_personalizado && (asignaciones[v.id] ?? 0) > 0);
+    const faltaColorPersonalizadoReparto =
+        personalizadaEnReparto && colorPersonalizado.trim() === '' && textoPersonalizado.trim() === '';
     // topeCantidad === 0 cubre el caso borde de que se haya quedado todo sin stock.
-    const puedeAgregar = !agotado
-        && topeCantidad !== 0
-        && addonsValidos
-        && (repartoActivo
+    const puedeAgregar =
+        !agotado &&
+        topeCantidad !== 0 &&
+        addonsValidos &&
+        (repartoActivo
             ? !repartoIncompleto && !faltaColorPersonalizadoReparto
-            : !faltaElegirVariante && !faltaCompletarColorPersonalizado);
+            : !faltaElegirVariante && !faltaCompletarColorPersonalizado && (maxQty === null || qty <= maxQty));
 
     const cambiarQty = (valor) => {
         const clamped = Math.max(1, valor);
@@ -652,12 +659,12 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
         // frame con "faltan N" antes de que la red de seguridad (useEffect) corrija.
         if (tieneVariantes && variantes.length > 1) {
             setAsignaciones((prev) =>
-                nuevoQty > 1 ? normalizarAsignaciones(prev, nuevoQty, variantes, varianteId) : {}
+                nuevoQty > 1 ? normalizarAsignaciones(prev, nuevoQty, variantes, varianteId) : {},
             );
         }
     };
 
-    const addToCart = () => {
+    const addToCart = (comprarAhora = false) => {
         if (!puedeAgregar) return;
 
         // Shape acordado para la Fase siguiente (CartContext todavía no lo persiste,
@@ -666,9 +673,8 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
         const addonsSeleccionados = addonIds.map((id) => {
             const addon = addons.find((a) => a.id === id);
             const overridePrecio = addon.pivot?.precio_override;
-            const precio = overridePrecio !== null && overridePrecio !== undefined
-                ? Number(overridePrecio)
-                : Number(addon.precio);
+            const precio =
+                overridePrecio !== null && overridePrecio !== undefined ? Number(overridePrecio) : Number(addon.precio);
 
             return {
                 addon_id: addon.id,
@@ -712,12 +718,15 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
                 });
             });
             // Un solo AddToCart por click con el total repartido (en vez de uno por color).
-            track('AddToCart', itemEventParams({
-                id: producto.id,
-                titulo: producto.titulo,
-                value: totalProductoActual,
-                cantidad: sumAsignado,
-            }));
+            track(
+                'AddToCart',
+                itemEventParams({
+                    id: producto.id,
+                    titulo: producto.titulo,
+                    value: totalProductoActual,
+                    cantidad: sumAsignado,
+                }),
+            );
         } else {
             addToCartContext(producto, qty, {
                 varianteId: varianteSeleccionada?.id ?? null,
@@ -727,301 +736,244 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
             });
         }
 
+        if (comprarAhora) {
+            router.visit(route('checkout.index'));
+            return;
+        }
+
         if (toast) clearTimeout(window._toastTimer);
         setToast(`${producto.titulo} agregado al carrito`);
         window._toastTimer = setTimeout(() => setToast(null), 2500);
     };
 
+    const selectorColor = repartoActivo ? (
+        <RepartoVariantes
+            variantes={variantes}
+            qty={qty}
+            asignaciones={asignaciones}
+            onChange={setAsignacionColor}
+            precioBaseUnitario={precioBaseUnitario}
+            colorPersonalizado={colorPersonalizado}
+            textoPersonalizado={textoPersonalizado}
+            onColorPersonalizadoChange={setColorPersonalizado}
+            onTextoPersonalizadoChange={setTextoPersonalizado}
+        />
+    ) : (
+        <VarianteColorSwatches
+            variantes={variantes}
+            value={varianteId}
+            onChange={setVarianteId}
+            colorPersonalizado={colorPersonalizado}
+            textoPersonalizado={textoPersonalizado}
+            onColorPersonalizadoChange={setColorPersonalizado}
+            onTextoPersonalizadoChange={setTextoPersonalizado}
+        />
+    );
+
     return (
-        <div className="min-h-screen overflow-x-clip bg-[#fcf9f8] text-[#1c1b1b] antialiased">
+        <div className="min-h-screen overflow-x-clip bg-white text-[#1c1b1b] antialiased lg:bg-[#f5f5f5]">
             <Head title={producto.titulo} />
             <LandingHeader canLogin={canLogin} />
-
-            <main className="relative mx-auto w-full max-w-[1680px] pb-28 md:pb-20">
-                <div className="pointer-events-none absolute left-[-12rem] top-16 h-[28rem] w-[28rem] rounded-full bg-[#6000ca]/[0.035] blur-3xl" />
-                <div className="pointer-events-none absolute right-[-10rem] top-[32rem] h-[24rem] w-[24rem] rounded-full bg-[#FF00D4]/[0.025] blur-3xl" />
-
+            <main className="mx-auto w-full max-w-[1200px] pb-24 lg:px-6 lg:pb-16">
                 <BackToCatalog cardKey={`p-${producto.id}`} />
-
                 <nav
                     aria-label="Migas de pan"
-                    className="relative hidden w-full flex-wrap items-center gap-2 px-3 py-6 text-xs font-semibold text-[#81788a] sm:px-4 md:flex"
+                    className="hidden items-center gap-2 px-4 py-4 text-xs text-[#737373] lg:flex"
                 >
-                    <Link
-                        href="/"
-                        className="rounded-md transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
-                    >
+                    <Link href="/" className="hover:text-[#6000ca]">
                         Inicio
                     </Link>
-                    <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />
-                    <Link
-                        href={route('tienda.index')}
-                        className="rounded-md transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
-                    >
+                    <ArrowIcon className="h-3 w-3" />
+                    <Link href={route('tienda.index')} className="hover:text-[#6000ca]">
                         Catálogo
                     </Link>
                     {producto.categorias?.[0] && (
                         <>
-                            <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />
+                            <ArrowIcon className="h-3 w-3" />
                             <Link
                                 href={route('tienda.index', { categoria: producto.categorias[0].id })}
-                                className="rounded-md transition-colors hover:text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
+                                className="hover:text-[#6000ca]"
                             >
                                 {producto.categorias[0].nombre}
                             </Link>
                         </>
                     )}
-                    <ArrowIcon className="h-3 w-3 text-[#b8afc0]" />
-                    <span className="max-w-xs truncate font-extrabold text-[#1c1b1b]">{producto.titulo}</span>
                 </nav>
-
-                <section className="relative w-full px-3 pt-3 sm:px-4 md:pt-0">
-                    <div className="grid items-start gap-2 rounded-[2rem] border border-black/[0.06] bg-white p-2 shadow-[0_30px_70px_-48px_rgba(28,27,27,0.5)] sm:gap-4 sm:rounded-[2.5rem] sm:p-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:gap-6 lg:p-4">
-                        <StickyGallery>
-                            <ProductGallery imagenes={galeriaImagenes} videos={galeriaVideos} titulo={producto.titulo} />
-                        </StickyGallery>
-
-                        {/* Mobile/tablet: el selector de color va pegado a la galería para ver el
-                            cambio de foto al instante, sin tener que bajar y subir. En desktop
-                            sigue en la tarjeta de opciones. Con reparto por colores no aplica
-                            (ahí cada color se asigna a una cantidad, ver RepartoVariantes). */}
-                        {!agotado && tieneVariantes && !repartoActivo && (
-                            <div className="rounded-[1.5rem] border border-black/[0.05] bg-white px-4 pb-1 pt-4 lg:hidden">
-                                <VarianteColorSwatches
-                                    className="mb-3"
-                                    variantes={variantes}
-                                    value={varianteId}
-                                    onChange={setVarianteId}
-                                    colorPersonalizado={colorPersonalizado}
-                                    textoPersonalizado={textoPersonalizado}
-                                    onColorPersonalizadoChange={setColorPersonalizado}
-                                    onTextoPersonalizadoChange={setTextoPersonalizado}
-                                />
-                            </div>
-                        )}
-
-                        <div className="px-3 pb-5 pt-4 sm:px-6 sm:pb-7 sm:pt-5 lg:px-5 lg:py-6 xl:px-8 xl:py-8">
-                            {(producto.categorias?.length > 0 || agotado || stockBajo || tieneDescuento || producto.is_featured) && (
-                                <div className="mb-4 flex flex-wrap items-center gap-2">
-                                    {producto.categorias?.map((cat) => (
-                                        <Link
-                                            key={cat.id}
-                                            href={route('tienda.index', { categoria: cat.id })}
-                                            className="rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.05] px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#6000ca] transition-colors hover:border-[#6000ca]/20 hover:bg-[#6000ca]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
-                                        >
-                                            {cat.nombre}
-                                        </Link>
-                                    ))}
-                                    {producto.subcategorias?.map((sub) => (
-                                        <span
-                                            key={sub.id}
-                                            className="rounded-full border border-black/[0.06] bg-white px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#4b4356]"
-                                        >
-                                            {sub.nombre}
-                                        </span>
-                                    ))}
-                                    {agotado && (
-                                        <span className="rounded-full bg-[#ba1a1a] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-red-500/20">
-                                            Sin stock
-                                        </span>
-                                    )}
-                                    {stockBajo && (
-                                        <span className="rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-900 shadow-lg">
-                                            {maxQty === 1 ? '¡Última unidad!' : `Quedan pocas: ${maxQty}`}
-                                        </span>
-                                    )}
-                                    {tieneDescuento && (
-                                        <span className="rounded-full bg-[#FF00D4] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-lg shadow-pink-500/20">
-                                            {ahorroPorcentaje}% off
-                                        </span>
-                                    )}
-                                    {!tieneDescuento && producto.is_featured && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#6000ca]/10 bg-[#6000ca]/[0.06] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#6000ca]">
-                                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.07 3.29a1 1 0 00.95.69h3.46c.97 0 1.37 1.24.59 1.81l-2.8 2.03a1 1 0 00-.36 1.12l1.07 3.29c.3.92-.76 1.69-1.54 1.12l-2.8-2.03a1 1 0 00-1.18 0l-2.8 2.03c-.78.57-1.84-.2-1.54-1.12l1.07-3.29a1 1 0 00-.36-1.12l-2.8-2.03c-.78-.57-.38-1.81.59-1.81h3.46a1 1 0 00.95-.69l1.07-3.29z" />
-                                            </svg>
-                                            Destacado
-                                        </span>
-                                    )}
-                                </div>
+                <div className="mt-4 bg-white lg:mt-0 lg:rounded-xl lg:border lg:border-black/10">
+                    <section
+                        className="grid min-w-0 items-start lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.85fr)] lg:gap-x-8 lg:p-8"
+                        aria-label="Detalle y compra del producto"
+                    >
+                        <div className="order-1 min-w-0 px-4 pt-1 sm:px-6 lg:col-start-2 lg:row-start-1 lg:px-0 lg:pt-0">
+                            {producto.categorias?.[0] && (
+                                <Link
+                                    href={route('tienda.index', { categoria: producto.categorias[0].id })}
+                                    className="mb-3 inline-flex min-h-8 items-center text-xs font-medium text-[#6000ca] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
+                                >
+                                    Ver más productos de {producto.categorias[0].nombre}
+                                </Link>
                             )}
-
-                            <h1 className="text-[clamp(2rem,8vw,3.15rem)] font-black leading-[0.98] tracking-[-0.045em] text-[#1c1b1b] lg:text-[clamp(2.35rem,4vw,3.7rem)]">
+                            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[#737373]">
+                                <span>Tienda Chisperío</span>
+                                {producto.is_featured && (
+                                    <>
+                                        <span aria-hidden="true">·</span>
+                                        <span>Producto destacado</span>
+                                    </>
+                                )}
+                            </div>
+                            <h1 className="text-[19px] font-medium leading-snug tracking-[-0.015em] lg:text-2xl lg:font-semibold">
                                 {producto.titulo}
                             </h1>
-
-                            <div className="mt-6 rounded-[1.5rem] border border-[#6000ca]/[0.08] bg-[#f7f4fa] p-5 sm:p-6">
-                                {planesPagoActivos.length > 0 && (
-                                    <div className="mb-4 border-b border-[#6000ca]/10 pb-4">
-                                        <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
-                                            Simulá el pago con tarjeta
-                                        </p>
-                                        <p className="mb-2 text-[11px] font-semibold text-[#81788a]">
-                                            {repartoIncompleto
-                                                ? `Calculado sobre ${sumAsignado} de ${qty} unidades asignadas: ${formatPrice(totalProductoActual)}`
-                                                : `Calculado sobre tu selección: ${qty} ${qty === 1 ? 'unidad' : 'unidades'} = ${formatPrice(totalProductoActual)}`}
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {planesPagoActivos.map((plan) => {
-                                                const activo = plan.id === planPagoId;
-                                                const conRecargo = Number(plan.recargo_porcentaje) > 0;
-                                                return (
-                                                    <button
-                                                        key={plan.id}
-                                                        type="button"
-                                                        onClick={() => togglePlanPago(plan.id)}
-                                                        aria-pressed={activo}
-                                                        className={`rounded-full border px-3.5 py-2 text-xs font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 ${
-                                                            activo
-                                                                ? 'border-[#6000ca] bg-[#6000ca] text-white'
-                                                                : 'border-[#6000ca]/20 bg-white text-[#6000ca] hover:border-[#6000ca]/40'
-                                                        }`}
-                                                    >
-                                                        {plan.cuotas === 1 ? '1 cuota' : `${plan.cuotas} cuotas`}
-                                                        {conRecargo ? ` (+${formatPercent(plan.recargo_porcentaje)})` : ' (sin recargo)'}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {recargoInfo && planPagoSeleccionado && (
-                                            <div className="mt-3 rounded-xl bg-white px-3.5 py-3 text-xs font-semibold text-[#4b4356]">
-                                                <p className="text-sm font-extrabold text-[#1c1b1b]">
-                                                    {planPagoSeleccionado.cuotas === 1
-                                                        ? `Pagás 1 cuota de ${formatPrice(recargoInfo.monto_por_cuota)}`
-                                                        : `Pagás ${planPagoSeleccionado.cuotas} cuotas de ${formatPrice(recargoInfo.monto_por_cuota)}`}
-                                                </p>
-                                                <p className="mt-0.5">
-                                                    Total a pagar: {formatPrice(recargoInfo.total_con_recargo)}
-                                                    {recargoInfo.recargo_monto > 0
-                                                        ? ` (incluye ${formatPrice(recargoInfo.recargo_monto)} de recargo)`
-                                                        : ' (sin recargo)'}
-                                                </p>
-                                            </div>
+                        </div>
+                        <div className="order-2 min-w-0 pt-3 lg:order-1 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-stretch lg:pt-0">
+                            <StickyGallery offset={128}>
+                                <ProductGallery
+                                    imagenes={galeriaImagenes}
+                                    videos={galeriaVideos}
+                                    titulo={producto.titulo}
+                                />
+                            </StickyGallery>
+                        </div>
+                        <div className="order-3 min-w-0 px-4 pb-7 pt-5 sm:px-6 lg:col-start-2 lg:row-start-2 lg:px-0 lg:pb-0 lg:pt-5">
+                            {!agotado && tieneVariantes && <div className="lg:hidden">{selectorColor}</div>}
+                            <div aria-live="polite" aria-atomic="true">
+                                {tieneDescuento && (
+                                    <p className="mb-1 text-sm text-[#737373] line-through">
+                                        {formatPrice(
+                                            precioInfo.precioBase + precioInfo.recargoVariante + precioInfo.addonsTotal,
                                         )}
-
-                                        <p className="mt-2 text-[11px] font-medium text-[#81788a]">
-                                            Es una simulación con lo que elegiste en este producto. El recargo final se calcula sobre el total de tu compra al momento de pagar.
-                                        </p>
-                                    </div>
+                                    </p>
                                 )}
-
-                                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-                                    <span className="text-[clamp(2.25rem,10vw,3.25rem)] font-black leading-none tracking-[-0.045em] text-[#6000ca]">
-                                        {formatPrice(precioInfo.precioFinal)}
-                                    </span>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <p className="text-[36px] font-medium leading-tight tracking-[-0.04em] lg:text-[40px]">
+                                        {formatPrice(precioInfo.precioFinalConOpciones)}
+                                    </p>
                                     {tieneDescuento && (
-                                        <span className="pb-1 text-sm font-semibold text-[#81788a] line-through">
-                                            {formatPrice(precioInfo.precioBase)}
-                                        </span>
-                                    )}
-                                    {tieneDescuento && (
-                                        <span className="pb-1 text-xs font-extrabold uppercase tracking-wide text-[#6000ca]">
-                                            Ahorrás {ahorroPorcentaje}%
+                                        <span className="text-sm font-semibold text-[#008744]">
+                                            {ahorroPorcentaje}% OFF en el precio base
                                         </span>
                                     )}
                                 </div>
-                                {!agotado && (
-                                    <p className="mt-1 text-xs font-semibold text-[#81788a]">
-                                        {repartoActivo
-                                            ? `Precio base por unidad para ${qty} unidades — el recargo de cada color se suma abajo`
-                                            : `Precio unitario para ${qty} ${qty === 1 ? 'unidad' : 'unidades'}`}
-                                    </p>
-                                )}
-
-                                {tieneOpciones && (
-                                    <div className="mt-4 space-y-1.5 border-t border-[#6000ca]/10 pt-4 text-xs font-semibold text-[#4b4356]">
-                                        <div className="flex items-center justify-between">
-                                            <span>Precio base</span>
-                                            <span>{formatPrice(precioInfo.precioFinal)}</span>
+                                <p className="mt-1 text-xs leading-relaxed text-[#737373]">
+                                    {repartoActivo
+                                        ? 'Base por unidad con personalizaciones. El adicional de cada color se suma en el total.'
+                                        : `Precio por unidad${tieneOpciones ? ', con las opciones elegidas' : ''}.`}
+                                </p>
+                            </div>
+                            <ProductPaymentOptions
+                                planes={planesPagoActivos}
+                                planSeleccionado={planPagoSeleccionado}
+                                recargoInfo={recargoInfo}
+                                total={totalProductoActual}
+                                qty={qty}
+                                incompleto={repartoIncompleto}
+                                onSelect={togglePlanPago}
+                            />
+                            {tieneOpciones && (
+                                <details className="group mt-2 text-xs">
+                                    <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] [&::-webkit-details-marker]:hidden">
+                                        Ver detalle del precio <ArrowIcon className="h-3 w-3" />
+                                    </summary>
+                                    <dl className="space-y-2 rounded-lg bg-[#f5f5f5] p-3">
+                                        <div className="flex justify-between gap-3">
+                                            <dt>Precio base</dt>
+                                            <dd>{formatPrice(precioInfo.precioFinal)}</dd>
                                         </div>
                                         {precioInfo.recargoVariante > 0 && (
-                                            <div className="flex items-center justify-between">
-                                                <span>Color {varianteSeleccionada?.nombre}</span>
-                                                <span>+ {formatPrice(precioInfo.recargoVariante)}</span>
+                                            <div className="flex justify-between gap-3">
+                                                <dt>Color {varianteSeleccionada?.nombre}</dt>
+                                                <dd>+ {formatPrice(precioInfo.recargoVariante)}</dd>
                                             </div>
                                         )}
                                         {precioInfo.addonsTotal > 0 && (
-                                            <div className="flex items-center justify-between">
-                                                <span>Personalizaciones</span>
-                                                <span>+ {formatPrice(precioInfo.addonsTotal)}</span>
+                                            <div className="flex justify-between gap-3">
+                                                <dt>Personalizaciones</dt>
+                                                <dd>+ {formatPrice(precioInfo.addonsTotal)}</dd>
                                             </div>
                                         )}
-                                        <div className="flex items-center justify-between border-t border-[#6000ca]/10 pt-1.5 text-sm font-black text-[#1c1b1b]">
-                                            <span>{repartoActivo ? 'Por unidad (sin color)' : 'Total por unidad'}</span>
-                                            <span>{formatPrice(precioInfo.precioFinalConOpciones)}</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {producto.descripcion && (
-                                <div className="mt-6 border-t border-black/[0.06] pt-5">
-                                    <h2 className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6000ca]">
-                                        Sobre este producto
-                                    </h2>
-                                    <div
-                                        ref={descRef}
-                                        className={`quill-content text-sm font-medium leading-relaxed text-[#4b4356] md:text-[15px] ${!expandDesc ? 'line-clamp-4 md:line-clamp-none' : ''}`}
-                                        dangerouslySetInnerHTML={{ __html: producto.descripcion }}
-                                    />
-                                    {!expandDesc && descRecortada && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setExpandDesc(true)}
-                                            className="mt-3 inline-flex items-center gap-1.5 rounded-md text-sm font-extrabold text-[#6000ca] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 md:hidden"
-                                        >
-                                            Ver descripción completa
-                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25} aria-hidden="true">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                    )}
-                                </div>
+                                    </dl>
+                                </details>
                             )}
-
+                            {!agotado && (
+                                <ProductDeliveryInfo
+                                    montoMinimo={configuracionEnvio?.montoMinimo}
+                                    total={totalProductoActual}
+                                />
+                            )}
                             {agotado ? (
-                                <div className="mt-6 rounded-[1.5rem] border border-red-100 bg-red-50 p-5 text-center sm:p-6">
-                                    <p className="text-sm font-extrabold uppercase tracking-wide text-[#ba1a1a]">
-                                        Sin stock
-                                    </p>
-                                    <p className="mt-1.5 text-sm font-medium text-[#ba1a1a]/80">
+                                <div className="mt-5 rounded-lg bg-[#f5f5f5] p-4">
+                                    <p className="text-sm font-semibold text-[#ba1a1a]">Sin stock</p>
+                                    <p className="mt-2 text-sm leading-relaxed text-[#737373]">
                                         Este producto no tiene unidades disponibles en este momento.
                                     </p>
+                                    <Link
+                                        href={route('tienda.index')}
+                                        className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-[#6000ca]"
+                                    >
+                                        Ver otros productos <ArrowIcon />
+                                    </Link>
                                 </div>
                             ) : (
                                 <>
+                                    <p className={`mt-3 text-sm font-semibold ${stockBajo ? 'text-[#a15c00]' : ''}`}>
+                                        {stockBajo
+                                            ? maxQty === 1
+                                                ? '¡Última unidad disponible!'
+                                                : `Quedan ${maxQty} unidades${tieneVariantes ? ' de este color' : ''}`
+                                            : maxQty === 0 && !repartoActivo
+                                              ? 'Sin stock en este color'
+                                              : 'Stock disponible'}
+                                    </p>
+                                    <div className="mt-3 rounded-lg bg-[#f5f5f5] p-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="text-sm">
+                                                <span className="font-medium">Cantidad: {qty}</span>
+                                                {topeCantidad !== null && (
+                                                    <span className="ml-2 text-xs text-[#737373]">
+                                                        ({topeCantidad} disponibles)
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center rounded-md border border-black/10 bg-white">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => cambiarQty(qty - 1)}
+                                                    disabled={qty <= 1}
+                                                    aria-label="Reducir cantidad"
+                                                    className="flex h-11 w-11 items-center justify-center rounded-l-md text-xl text-[#6000ca] hover:bg-[#6000ca]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] disabled:cursor-not-allowed disabled:text-black/20"
+                                                >
+                                                    −
+                                                </button>
+                                                <span
+                                                    className="min-w-8 text-center text-sm font-semibold"
+                                                    aria-live="polite"
+                                                >
+                                                    {qty}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => cambiarQty(qty + 1)}
+                                                    disabled={topeCantidad !== null && qty >= topeCantidad}
+                                                    aria-label="Aumentar cantidad"
+                                                    className="flex h-11 w-11 items-center justify-center rounded-r-md text-xl text-[#6000ca] hover:bg-[#6000ca]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] disabled:cursor-not-allowed disabled:text-black/20"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {producto.escalas_precio?.length > 0 && (
+                                            <div className="mt-3 border-t border-black/[0.06] pt-3">
+                                                <p className="mb-2 text-xs font-medium text-[#6000ca]">
+                                                    Llevá más unidades y mejorá el precio
+                                                </p>
+                                                <PillsCantidad producto={producto} qty={qty} onChange={cambiarQty} />
+                                            </div>
+                                        )}
+                                    </div>
                                     {(tieneVariantes || tieneAddons) && (
-                                        // En mobile/tablet los colores se eligen bajo la galería: si no hay add-ons ni
-                                        // reparto por colores, esta tarjeta quedaría vacía, así que solo se muestra en desktop.
-                                        <div className={`mt-6 rounded-[1.5rem] border border-black/[0.05] bg-white p-4 sm:p-5 ${tieneAddons || repartoActivo ? '' : 'hidden lg:block'}`}>
-                                            {repartoActivo ? (
-                                                <RepartoVariantes
-                                                    variantes={variantes}
-                                                    qty={qty}
-                                                    asignaciones={asignaciones}
-                                                    onChange={setAsignacionColor}
-                                                    precioBaseUnitario={precioBaseUnitario}
-                                                    colorPersonalizado={colorPersonalizado}
-                                                    textoPersonalizado={textoPersonalizado}
-                                                    onColorPersonalizadoChange={setColorPersonalizado}
-                                                    onTextoPersonalizadoChange={setTextoPersonalizado}
-                                                />
-                                            ) : (
-                                                // En mobile/tablet los colores se eligen justo debajo de la
-                                                // galería (ver más arriba), así que acá solo van en desktop.
-                                                <div className="hidden lg:block">
-                                                    <VarianteColorSwatches
-                                                        variantes={variantes}
-                                                        value={varianteId}
-                                                        onChange={setVarianteId}
-                                                        colorPersonalizado={colorPersonalizado}
-                                                        textoPersonalizado={textoPersonalizado}
-                                                        onColorPersonalizadoChange={setColorPersonalizado}
-                                                        onTextoPersonalizadoChange={setTextoPersonalizado}
-                                                    />
-                                                </div>
-                                            )}
+                                        <div className={`mt-5 ${tieneAddons ? '' : 'hidden lg:block'}`}>
+                                            <div className="hidden lg:block">{selectorColor}</div>
                                             <ProductoAddonsChecklist
                                                 addons={addons}
                                                 seleccionados={addonIds}
@@ -1031,182 +983,123 @@ export default function ShowProduct({ producto, relacionados, resenas = [], canL
                                             />
                                         </div>
                                     )}
-
-                                    <div className="mt-6 rounded-[1.5rem] border border-black/[0.05] bg-[#f7f6f9] p-4 sm:p-5">
-                                        <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#4b4356]">
-                                            Elegí la cantidad
-                                        </p>
-
-                                        <PillsCantidad producto={producto} qty={qty} onChange={cambiarQty} className="mb-3" />
-
-                                        {qty > 1 && (
-                                            <div className="mb-3 rounded-2xl border border-[#6000ca]/[0.12] bg-white px-4 py-3">
-                                                <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#81788a]">
-                                                    {repartoActivo && repartoIncompleto
-                                                        ? `Total (${sumAsignado} de ${qty} asignadas)`
-                                                        : `Total por ${qty} unidades`}
-                                                </p>
-                                                <p className="text-xl font-black leading-tight text-[#6000ca]">
-                                                    {formatPrice(totalProductoActual)}
-                                                </p>
-                                                <p className="mt-0.5 text-[11px] font-semibold text-[#81788a]">
-                                                    {repartoActivo
-                                                        ? `${qty} unidades repartidas entre colores`
-                                                        : `${formatPrice(precioInfo.precioFinalConOpciones)} cada una`}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                            <div className="flex h-14 w-full items-center justify-between rounded-full border border-black/[0.08] bg-white px-1 shadow-sm sm:w-auto">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => cambiarQty(qty - 1)}
-                                                    className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95"
-                                                    aria-label="Reducir cantidad"
-                                                >
-                                                    −
-                                                </button>
-                                                <span className="min-w-10 select-none text-center text-base font-black text-[#1c1b1b]">
-                                                    {qty}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => cambiarQty(qty + 1)}
-                                                    disabled={topeCantidad !== null && qty >= topeCantidad}
-                                                    className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold leading-none text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                                                    aria-label="Aumentar cantidad"
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={addToCart}
-                                                disabled={!puedeAgregar}
-                                                className="flex h-16 w-full items-center justify-center gap-2.5 rounded-full bg-[#6000ca] px-6 text-xs font-extrabold uppercase tracking-[0.07em] text-white shadow-[0_12px_25px_-12px_rgba(96,0,202,0.8)] transition-all hover:bg-[#4f00a8] hover:shadow-[0_16px_30px_-12px_rgba(96,0,202,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-[#81788a] disabled:shadow-none motion-reduce:transform-none sm:h-14 sm:flex-1"
-                                            >
-                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25h10.5l.75 12H6l.75-12z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V6.75a3 3 0 016 0V9" />
-                                                </svg>
-                                                Añadir al carrito
-                                            </button>
+                                    {qty > 1 && (
+                                        <div
+                                            className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                                            aria-live="polite"
+                                            aria-atomic="true"
+                                        >
+                                            <p className="text-sm text-[#737373]">
+                                                {repartoIncompleto
+                                                    ? `Total (${sumAsignado} de ${qty} asignadas)`
+                                                    : `Total por ${qty} unidades`}
+                                            </p>
+                                            <p className="text-xl font-semibold">{formatPrice(totalProductoActual)}</p>
                                         </div>
-                                        {faltaElegirVariante && (
-                                            <p className="mt-3 text-center text-[11px] font-bold text-[#ba1a1a] sm:text-left">
-                                                Elegí un color para poder agregarlo al carrito.
-                                            </p>
-                                        )}
-                                        {repartoIncompleto && (
-                                            <p className="mt-3 text-center text-[11px] font-bold text-[#ba1a1a] sm:text-left">
-                                                Repartí las {qty} unidades entre los colores de arriba para continuar.
-                                            </p>
-                                        )}
-                                        {!faltaElegirVariante && !repartoIncompleto && topeCantidad !== null && (
-                                            <p className="mt-3 text-center text-[11px] font-semibold text-[#81788a] sm:text-left">
-                                                Quedan {topeCantidad} {topeCantidad === 1 ? 'unidad' : 'unidades'} disponibles{repartoActivo ? ' entre todos los colores' : ''}.
-                                            </p>
-                                        )}
+                                    )}
+                                    <div className="mt-5 space-y-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => addToCart(true)}
+                                            disabled={!puedeAgregar}
+                                            aria-describedby={!puedeAgregar ? 'seleccion-producto-aviso' : undefined}
+                                            className="flex min-h-12 w-full items-center justify-center rounded-md bg-[#6000ca] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#4f00a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#e5e5e5] disabled:text-[#737373]"
+                                        >
+                                            Comprar ahora
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => addToCart()}
+                                            disabled={!puedeAgregar}
+                                            aria-describedby={!puedeAgregar ? 'seleccion-producto-aviso' : undefined}
+                                            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#6000ca]/[0.08] px-4 py-3 text-sm font-semibold text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#f5f5f5] disabled:text-[#737373]"
+                                        >
+                                            <ShoppingCart className="h-[18px] w-[18px]" aria-hidden="true" /> Agregar al
+                                            carrito
+                                        </button>
                                     </div>
+                                    {!puedeAgregar && (
+                                        <p
+                                            id="seleccion-producto-aviso"
+                                            role="status"
+                                            className="mt-3 text-xs leading-relaxed text-[#ba1a1a]"
+                                        >
+                                            {faltaElegirVariante
+                                                ? 'Elegí un color para continuar.'
+                                                : repartoIncompleto
+                                                  ? `Repartí las ${qty} unidades entre los colores para continuar.`
+                                                  : faltaCompletarColorPersonalizado || faltaColorPersonalizadoReparto
+                                                    ? 'Elegí un color personalizado o escribí una descripción para continuar.'
+                                                    : !addonsValidos
+                                                      ? 'Completá el texto de las personalizaciones elegidas para continuar.'
+                                                      : 'Elegí otro color con stock disponible.'}
+                                        </p>
+                                    )}
+                                    <p className="mt-3 text-center text-xs leading-relaxed text-[#737373]">
+                                        Completá tus datos y coordiná el pago por WhatsApp.
+                                    </p>
                                 </>
                             )}
+                            <ProductSellerInfo tieneResenas={resenas.length > 0} />
                         </div>
-                    </div>
-                </section>
-
-                <ResenasConfianza resenas={resenas} />
-
+                    </section>
+                    {producto.descripcion && (
+                        <section
+                            className="border-t border-black/10 px-4 py-8 sm:px-6 lg:px-8"
+                            aria-labelledby="descripcion-producto"
+                        >
+                            <h2 id="descripcion-producto" className="mb-5 text-lg font-medium">
+                                Lo que tenés que saber de este producto
+                            </h2>
+                            <div
+                                className="quill-content max-w-3xl break-words text-sm leading-7 text-[#4b4356] [&_li]:mb-2 [&_p]:mb-3"
+                                dangerouslySetInnerHTML={{ __html: producto.descripcion }}
+                            />
+                        </section>
+                    )}
+                    <ProductAttributes producto={producto} />
+                </div>
+                <div id="opiniones-clientes" className="scroll-mt-36">
+                    <ResenasConfianza resenas={resenas} compact />
+                </div>
                 {relacionados?.length > 0 && (
-                    <section className="relative mt-16 w-full md:mt-24 md:px-4">
-                        <div className="mb-7 flex items-end justify-between gap-5 px-4 md:px-0">
-                            <div className="max-w-3xl">
-                                <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#6000ca]">
-                                    Seguí descubriendo
-                                </p>
-                                <h2 className="text-[clamp(1.75rem,7vw,3.5rem)] font-black uppercase leading-[0.96] tracking-[-0.045em] text-[#1c1b1b]">
-                                    Productos <span className="text-[#6000ca]">relacionados</span>
-                                </h2>
-                            </div>
+                    <section
+                        className="mt-8 border-t border-black/10 py-8 lg:rounded-xl lg:border lg:bg-white"
+                        aria-labelledby="productos-relacionados"
+                    >
+                        <div className="mb-5 flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+                            <h2 id="productos-relacionados" className="text-lg font-medium">
+                                Productos relacionados
+                            </h2>
                             <Link
                                 href={route('tienda.index')}
-                                className="hidden h-12 items-center gap-2 rounded-full border-2 border-[#6000ca] bg-white px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-[#6000ca] transition-all hover:bg-[#6000ca] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 active:scale-95 sm:inline-flex"
+                                className="inline-flex min-h-11 shrink-0 items-center gap-1 text-xs font-medium text-[#6000ca] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
                             >
-                                Ver catálogo
-                                <ArrowIcon />
+                                Ver catálogo <ArrowIcon className="h-3 w-3" />
                             </Link>
                         </div>
-
-                        <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 gap-4 overflow-x-auto px-4 pb-4 md:hidden">
+                        <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 sm:px-6 md:grid md:grid-cols-3 md:gap-4 lg:px-8">
                             {relacionados.map((prod) => (
                                 <RelatedCard key={prod.id} producto={prod} />
                             ))}
-                        </div>
-
-                        <div className="hidden grid-cols-3 gap-5 md:grid lg:grid-cols-4 lg:gap-6">
-                            {relacionados.map((prod) => (
-                                <RelatedCard key={prod.id} producto={prod} />
-                            ))}
-                        </div>
-
-                        <div className="mt-5 px-4 sm:hidden">
-                            <Link
-                                href={route('tienda.index')}
-                                className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-2 border-[#6000ca] bg-white text-xs font-extrabold uppercase tracking-[0.07em] text-[#6000ca] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-[0.98]"
-                            >
-                                Ver catálogo
-                                <ArrowIcon />
-                            </Link>
                         </div>
                     </section>
                 )}
-
-                <section className="relative mt-16 w-full px-3 sm:px-4 md:mt-24">
-                    <div className="relative overflow-hidden rounded-[2rem] bg-[#6000ca] px-6 py-10 shadow-[0_28px_60px_-35px_rgba(96,0,202,0.85)] sm:px-9 sm:py-12 md:rounded-[2.5rem] md:px-14 md:py-16 lg:px-16">
-                        <div className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full border-[64px] border-white/[0.055]" />
-                        <div className="pointer-events-none absolute -bottom-28 right-36 h-64 w-64 rounded-full bg-[#FF00D4]/20 blur-3xl" />
-                        <div className="pointer-events-none absolute right-10 top-1/2 hidden -translate-y-1/2 lg:block" aria-hidden="true">
-                            <svg className="h-44 w-44 text-white/[0.08]" viewBox="0 0 100 100" fill="currentColor">
-                                <path d="M50 2l9.3 32.7L92 44l-32.7 9.3L50 86l-9.3-32.7L8 44l32.7-9.3L50 2z" />
-                            </svg>
-                        </div>
-
-                        <div className="relative z-10 max-w-3xl">
-                            <span className="mb-3 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#ffd8ed]">
-                                Tecnología de vanguardia
-                            </span>
-                            <h2 className="max-w-2xl text-[clamp(2rem,8vw,4.15rem)] font-black uppercase leading-[0.94] tracking-[-0.045em] text-white">
-                                Dominá el escenario con efectos Chisperío
-                            </h2>
-                            <p className="mt-5 max-w-2xl text-sm font-medium leading-relaxed text-white/75 md:text-base">
-                                Nuestras máquinas están diseñadas para ofrecer un rendimiento impecable bajo las condiciones más exigentes. Seguridad certificada y efectos visuales de alto impacto.
-                            </p>
-                            <Link
-                                href={route('tienda.index')}
-                                className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.07em] text-[#6000ca] shadow-xl shadow-black/10 transition-all hover:-translate-y-0.5 hover:bg-[#fcf9f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#6000ca] active:scale-95 motion-reduce:transform-none"
-                            >
-                                Ver catálogo completo
-                                <ArrowIcon />
-                            </Link>
-                        </div>
-                    </div>
-                </section>
             </main>
-
             <LandingFooter />
-
             {toast && (
                 <div
                     role="status"
                     aria-live="polite"
-                    className="pointer-events-none fixed bottom-24 left-1/2 z-[100] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-full bg-[#1c1b1b] px-5 py-3 text-xs font-semibold text-white shadow-2xl md:bottom-8 md:text-sm"
+                    className="fixed bottom-24 left-1/2 z-[100] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-lg bg-[#1c1b1b] px-4 py-3 text-xs text-white shadow-xl md:bottom-8"
                 >
-                    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#FF00D4]" aria-hidden="true">
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </span>
-                    <span className="truncate">{toast}</span>
+                    <span className="min-w-0">{toast}</span>
+                    <Link
+                        href={route('carrito.index')}
+                        className="shrink-0 rounded py-2 font-semibold text-white underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    >
+                        Ver carrito
+                    </Link>
                 </div>
             )}
         </div>
