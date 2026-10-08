@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AccionesCardAdmin from '@/Components/AccionesCardAdmin';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { SUCURSAL_LABELS } from '@/lib/whatsapp';
@@ -65,7 +66,71 @@ export default function Index({ usuarios }) {
                         </div>
                     )}
 
-                    <div className="overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    {/* Cards para mobile (la tabla queda desde lg) */}
+                    <div className="lg:hidden grid grid-cols-2 gap-3 sm:gap-4 px-4 cards-2-impar">
+                        {usuarios.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">No hay usuarios registrados</div>
+                        ) : (
+                            usuarios.map((usuario) => {
+                                const esUltimoAdmin = usuario.role === 'admin' && totalAdmins === 1;
+                                const esUnoMismo = usuario.id === auth.user.id;
+                                const noSePuedeEliminar = esUnoMismo || esUltimoAdmin;
+
+                                return (
+                                    <div key={usuario.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                                        <div className="flex-1 p-3 sm:p-5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-9 w-9 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                                                    <span className="text-white font-bold text-sm">{usuario.name.charAt(0).toUpperCase()}</span>
+                                                </div>
+                                                <div className="min-w-0 text-sm font-bold text-gray-900 break-words">
+                                                    {usuario.name}
+                                                    {esUnoMismo && <span className="ml-1 text-[11px] font-normal text-gray-400">(vos)</span>}
+                                                </div>
+                                            </div>
+
+                                            <p className="mt-2 break-all text-[11px] text-gray-600">{usuario.email}</p>
+
+                                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                                                    usuario.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'
+                                                }`}>
+                                                    {usuario.role === 'admin' ? 'Administrador' : 'Vendedor'}
+                                                </span>
+                                                {usuario.debe_cambiar_password && (
+                                                    <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                        Clave sin configurar
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {SUCURSAL_LABELS[usuario.sucursal] && (
+                                                <p className="mt-2 text-[11px] text-gray-600">
+                                                    <span className="font-semibold">Sucursal:</span> {SUCURSAL_LABELS[usuario.sucursal]}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-5">
+                                            <AccionesCardAdmin
+                                                editHref={route('usuarios.edit', usuario.id)}
+                                                onDelete={() => openDeleteModal(usuario)}
+                                                deleteDisabled={noSePuedeEliminar}
+                                                deleteTitle={
+                                                    esUnoMismo
+                                                        ? 'No podés eliminar tu propia cuenta'
+                                                        : esUltimoAdmin
+                                                        ? 'No se puede eliminar al único administrador'
+                                                        : undefined
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <div className="hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-6">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full">

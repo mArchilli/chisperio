@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AccionesCardAdmin from '@/Components/AccionesCardAdmin';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -78,7 +79,52 @@ export default function Index({ addons }) {
                         </div>
                     )}
 
-                    <div className="overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    {/* Cards para mobile (la tabla queda desde lg) */}
+                    <div className="lg:hidden grid grid-cols-2 gap-3 sm:gap-4 px-4 cards-2-impar">
+                        {addons.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">No hay add-ons registrados</div>
+                        ) : (
+                            addons.map((addon) => (
+                                <div key={addon.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                                    <div className="flex-1 p-3 sm:p-5">
+                                        <h3 className="break-words text-sm font-bold text-gray-900">{addon.nombre}</h3>
+                                        {addon.descripcion && (
+                                            <p className="mt-1 text-[11px] text-gray-500 line-clamp-2">{addon.descripcion}</p>
+                                        )}
+
+                                        <div className="mt-2 text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                            {formatearPrecio(addon.precio)}
+                                        </div>
+
+                                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                                                addon.is_active ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-200 text-gray-600'
+                                            }`}>
+                                                {addon.is_active ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                            {addon.requiere_texto && (
+                                                <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-700">
+                                                    Pide texto{addon.max_caracteres ? ` (máx. ${addon.max_caracteres})` : ''}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-5">
+                                        <AccionesCardAdmin
+                                            activo={addon.is_active}
+                                            onToggle={() => toggleActive(addon)}
+                                            editHref={route('addons.edit', addon.id)}
+                                            onDelete={auth.user.role === 'admin' ? () => openDeleteModal(addon) : undefined}
+                                            deleteDisabled={addon.usado}
+                                            deleteTitle={addon.usado ? 'No se puede eliminar: ya fue usado en pedidos' : undefined}
+                                        />
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-6">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full">

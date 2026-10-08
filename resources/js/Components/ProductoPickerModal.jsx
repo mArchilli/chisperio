@@ -10,7 +10,7 @@ const formatearPrecio = (precio) =>
  * <select> de texto plano por una grilla filtrable, igual de espíritu que el buscador
  * de Admin/Ofertas/Create.jsx pero con la imagen del producto como referencia visual.
  */
-export default function ProductoPickerModal({ show, productos, onSelect, onClose }) {
+export default function ProductoPickerModal({ show, productos, onSelect, onClose, titulo = 'Elegir producto', placeholder = 'Buscar producto por título...' }) {
     const [busqueda, setBusqueda] = useState('');
 
     const filtrados = useMemo(() => {
@@ -33,7 +33,7 @@ export default function ProductoPickerModal({ show, productos, onSelect, onClose
         <Modal show={show} onClose={cerrar} maxWidth="3xl">
             <div className="p-6">
                 <div className="flex items-center justify-between gap-4 mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">Elegir producto</h3>
+                    <h3 className="text-lg font-bold text-gray-800">{titulo}</h3>
                     <button type="button" onClick={cerrar} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Cerrar">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -50,7 +50,7 @@ export default function ProductoPickerModal({ show, productos, onSelect, onClose
                         autoFocus
                         value={busqueda}
                         onChange={(e) => setBusqueda(e.target.value)}
-                        placeholder="Buscar producto por título..."
+                        placeholder={placeholder}
                         className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
                     />
                 </div>

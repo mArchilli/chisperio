@@ -16,6 +16,7 @@ use App\Models\PlanPagoTarjeta;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
 use App\Services\CodigoDescuentoService;
+use App\Services\ComboPedidoResolver;
 use App\Services\PedidoEdicionService;
 use App\Services\PricingService;
 use App\Services\RecargoPagoService;
@@ -105,18 +106,18 @@ class PedidoController extends Controller
     }
 
     /**
-     * Pantalla de edición de un pedido (admin y vendedor de la sucursal). Solo los
-     * pedidos pendientes son editables: uno despachado ya salió con lo que decía, y
-     * uno cancelado ya repuso su stock.
+     * Pantalla de edición de un pedido (admin y vendedor de la sucursal). Se editan los
+     * pedidos pendientes y los despachados (ver EstadoPedido::esEditable); uno cancelado
+     * ya repuso su stock y es terminal.
      */
-    public function edit(Request $request, Pedido $pedido)
+    public function edit(Request $request, Pedido $pedido, PricingService $pricingService)
     {
         $this->autorizarSucursal($request, $pedido);
 
-        if ($pedido->estado !== EstadoPedido::Pendiente) {
+        if (! $pedido->estado->esEditable()) {
             return redirect()
                 ->route('pedidos.show', $pedido)
-                ->with('error', 'Solo se pueden editar pedidos pendientes.');
+                ->with('error', 'Un pedido cancelado no se puede editar.');
         }
 
         $pedido->load('items.producto.imagenPrincipal');
@@ -145,14 +146,39 @@ class PedidoController extends Controller
             ->get(['id', 'producto_id', 'nombre', 'color_hex', 'es_color_personalizado', 'precio_adicional', 'stock'])
             ->groupBy('producto_id');
 
+        // Catálogo para sumar líneas al pedido. Con el mismo shape que la ficha pública
+        // (variantes/add-ons activos, escalas y oferta) para sugerir el precio con
+        // resolverPrecio() en el cliente; el precio final lo sigue fijando quien edita.
+        $productosCatalogo = Producto::where('is_active', true)
+            ->with([
+                'imagenPrincipal',
+                'ofertaVigente',
+                'escalasPrecio',
+                'variantes' => fn ($query) => $query->where('is_active', true),
+                'addons' => fn ($query) => $query->where('addons.is_active', true)->orderBy('producto_addon.orden'),
+            ])
+            ->orderBy('titulo')
+            ->get();
+
+        $combosCatalogo = Combo::where('is_active', true)
+            ->with(['imagenPrincipal', 'items.producto.variantesActivas', 'items.productoVariante'])
+            ->orderBy('titulo')
+            ->get()
+            ->each(fn (Combo $combo) => $combo->setAttribute(
+                'precio_sugerido',
+                $pricingService->calcularPrecioCombo($combo, 1)->precio_unitario_final
+            ));
+
         return Inertia::render('Admin/Pedidos/Edit', [
             'pedido' => $pedido,
             'variantesPorProducto' => $variantesPorProducto,
+            'productosCatalogo' => $productosCatalogo,
+            'combosCatalogo' => $combosCatalogo,
         ]);
     }
 
     /**
-     * Guarda la edición de un pedido pendiente. La lógica de items/totales/stock vive en
+     * Guarda la edición de un pedido (pendiente o despachado). La lógica de items/totales/stock vive en
      * PedidoEdicionService; acá solo se autoriza y valida la forma del request.
      */
     public function actualizar(Request $request, Pedido $pedido, PedidoEdicionService $edicionService)
@@ -168,7 +194,10 @@ class PedidoController extends Controller
             'cliente_ciudad' => 'nullable|string|max:255',
             'cliente_codigo_postal' => 'nullable|string|max:20',
             'observaciones' => 'nullable|string|max:5000',
-            'items' => 'required|array|min:1',
+            // Las líneas existentes que siguen en el pedido (las que no vienen se quitan) y las
+            // nuevas que se suman. Que quede al menos una lo valida el servicio, porque
+            // depende de las dos listas juntas.
+            'items' => 'nullable|array',
             'items.*.id' => 'required|integer|distinct',
             'items.*.cantidad' => 'required|integer|min:1|max:100000',
             'items.*.precio_unitario' => 'required|numeric|min:0|max:99999999',
@@ -178,9 +207,20 @@ class PedidoController extends Controller
             'items.*.addons_textos.*' => 'nullable|string|max:1000',
             'items.*.componentes_variantes' => 'nullable|array',
             'items.*.componentes_variantes.*' => 'nullable|integer',
-        ], [
-            'items.required' => 'El pedido necesita al menos un producto.',
-            'items.min' => 'El pedido necesita al menos un producto.',
+            'nuevos_items' => 'nullable|array',
+            'nuevos_items.*.tipo' => ['required', Rule::in(['producto', 'combo'])],
+            'nuevos_items.*.producto_id' => 'required_if:nuevos_items.*.tipo,producto|nullable|integer|exists:productos,id',
+            'nuevos_items.*.combo_id' => 'required_if:nuevos_items.*.tipo,combo|nullable|integer|exists:combos,id',
+            'nuevos_items.*.cantidad' => 'required|integer|min:1|max:100000',
+            'nuevos_items.*.precio_unitario' => 'nullable|numeric|min:0|max:99999999',
+            'nuevos_items.*.variante_id' => 'nullable|integer',
+            'nuevos_items.*.color_personalizado_texto' => 'nullable|string|max:255',
+            'nuevos_items.*.addons' => 'nullable|array',
+            'nuevos_items.*.addons.*.addon_id' => 'required|integer',
+            'nuevos_items.*.addons.*.texto_personalizado' => 'nullable|string|max:1000',
+            'nuevos_items.*.selecciones' => 'nullable|array',
+            'nuevos_items.*.selecciones.*.combo_producto_id' => 'required|integer',
+            'nuevos_items.*.selecciones.*.variante_id' => 'nullable|integer',
         ]);
 
         $edicionService->actualizar($pedido, $validated);
@@ -635,66 +675,12 @@ class PedidoController extends Controller
     }
 
     /**
-     * Resuelve una línea de combo del request ({combo_id, cantidad, selecciones}) contra
-     * su receta real (combo_productos): por cada item, usa la variante fija del admin si
-     * la hay; si no, busca la elegida por el comprador en `selecciones` (por
-     * combo_producto_id) y valida que sea una variante activa de ESE producto — mismo
-     * criterio de "no confiar en el frontend" que PricingService::resolverVariante. Si el
-     * producto no tiene variantes activas, no hace falta ninguna selección.
-     *
-     * Devuelve el combo cargado, la cantidad de combos pedida, y el snapshot de
-     * componentes ya resuelto (`combo_items_seleccionados`) con las cantidades totales
-     * (cantidad de receta × cantidad de combos) listas para precio/stock.
-     *
-     * @return array{combo: Combo, cantidad: int, componentes: array<int, array{producto_id: int, producto_variante_id: ?int, titulo: string, variante_nombre: ?string, variante_color_hex: ?string, cantidad_por_combo: int, cantidad_total: int}>}
+     * Resuelve una línea de combo del request contra su receta (ver ComboPedidoResolver,
+     * compartido con la edición de pedidos).
      */
     private function resolverLineaCombo(array $comboInput): array
     {
-        $combo = Combo::with(['items.producto.variantesActivas', 'items.productoVariante'])
-            ->find($comboInput['combo_id']);
-
-        if ($combo === null || ! $combo->is_active) {
-            throw ValidationException::withMessages([
-                'combos' => 'Uno de los combos elegidos ya no está disponible.',
-            ]);
-        }
-
-        $cantidadCombo = (int) $comboInput['cantidad'];
-        $seleccionesInput = collect($comboInput['selecciones'] ?? [])->keyBy('combo_producto_id');
-
-        $componentes = [];
-
-        foreach ($combo->items as $item) {
-            $varianteResuelta = null;
-
-            if ($item->producto_variante_id !== null) {
-                $varianteResuelta = $item->productoVariante;
-            } elseif ($item->producto->variantesActivas->isNotEmpty()) {
-                $varianteIdElegida = $seleccionesInput->get($item->id)['variante_id'] ?? null;
-
-                if ($varianteIdElegida !== null) {
-                    $varianteResuelta = $item->producto->variantesActivas->firstWhere('id', (int) $varianteIdElegida);
-                }
-
-                if ($varianteResuelta === null) {
-                    throw ValidationException::withMessages([
-                        'combos' => "Elegí un color para \"{$item->producto->titulo}\" dentro del combo \"{$combo->titulo}\".",
-                    ]);
-                }
-            }
-
-            $componentes[] = [
-                'producto_id' => $item->producto_id,
-                'producto_variante_id' => $varianteResuelta?->id,
-                'titulo' => $item->producto->titulo,
-                'variante_nombre' => $varianteResuelta?->nombre,
-                'variante_color_hex' => $varianteResuelta?->color_hex,
-                'cantidad_por_combo' => $item->cantidad,
-                'cantidad_total' => $item->cantidad * $cantidadCombo,
-            ];
-        }
-
-        return ['combo' => $combo, 'cantidad' => $cantidadCombo, 'componentes' => $componentes];
+        return app(ComboPedidoResolver::class)->resolverLinea($comboInput);
     }
 
     /**

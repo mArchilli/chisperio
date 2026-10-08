@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AccionesCardAdmin from '@/Components/AccionesCardAdmin';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -105,7 +106,75 @@ export default function Index({ codigosDescuento }) {
                         </div>
                     )}
 
-                    <div className="overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    {/* Cards para mobile (la tabla queda desde lg) */}
+                    <div className="lg:hidden grid grid-cols-2 gap-3 sm:gap-4 px-4 cards-2-impar">
+                        {codigosDescuento.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">No hay códigos de descuento registrados</div>
+                        ) : (
+                            codigosDescuento.map((codigo) => {
+                                const noSePuedeEliminar = codigo.usos_actuales > 0;
+
+                                return (
+                                    <div key={codigo.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                                        <div className="flex-1 p-3 sm:p-5">
+                                            <div className="flex flex-wrap items-start justify-between gap-1">
+                                                <span className="break-all text-sm font-bold text-gray-900">{codigo.codigo}</span>
+                                                {estaVigente(codigo) && (
+                                                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-700">
+                                                        Vigente
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-2 text-xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                                {formatearDescuento(codigo)}
+                                            </div>
+                                            <div className="text-[11px] text-gray-500">
+                                                {codigo.tipo_descuento === 'porcentaje' ? 'Porcentaje' : 'Monto fijo'}
+                                            </div>
+
+                                            <dl className="mt-3 space-y-1 text-[11px] text-gray-600">
+                                                <div>
+                                                    <dt className="inline font-semibold">Desde: </dt>
+                                                    <dd className="inline">{formatearFecha(codigo.vigente_desde)}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="inline font-semibold">Hasta: </dt>
+                                                    <dd className="inline">{formatearFecha(codigo.vigente_hasta)}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="inline font-semibold">Usos: </dt>
+                                                    <dd className="inline">{codigo.usos_actuales} / {codigo.limite_usos ?? '∞'}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="inline font-semibold">Descontado: </dt>
+                                                    <dd className="inline font-bold text-gray-900">{formatearPrecio(codigo.total_descontado ?? 0)}</dd>
+                                                </div>
+                                            </dl>
+
+                                            <span className={`mt-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                                                codigo.activo ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-200 text-gray-600'
+                                            }`}>
+                                                {codigo.activo ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </div>
+                                        <div className="border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-5">
+                                            <AccionesCardAdmin
+                                                activo={codigo.activo}
+                                                onToggle={() => toggleActive(codigo)}
+                                                editHref={route('codigos-descuento.edit', codigo.id)}
+                                                onDelete={auth.user.role === 'admin' ? () => openDeleteModal(codigo) : undefined}
+                                                deleteDisabled={noSePuedeEliminar}
+                                                deleteTitle={noSePuedeEliminar ? 'No se puede eliminar: ya fue usado en pedidos' : undefined}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <div className="hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-6">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full">

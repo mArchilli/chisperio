@@ -7,6 +7,7 @@ use App\Enums\MotivoMovimientoStock;
 use App\Enums\Sucursal;
 use App\Enums\TipoDescuento;
 use App\Models\CodigoDescuento;
+use App\Models\Combo;
 use App\Models\ConfiguracionEnvio;
 use App\Models\MovimientoStock;
 use App\Models\Pedido;
@@ -340,21 +341,187 @@ class PedidoEdicionTest extends TestCase
         $this->assertSame($rojo->id, $pedido->fresh()->items->first()->producto_variante_id);
     }
 
-    public function test_un_pedido_despachado_o_cancelado_no_se_puede_editar(): void
+    public function test_un_pedido_cancelado_no_se_puede_editar(): void
     {
         $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $pedido = $this->comprar([['producto_id' => $producto->id, 'cantidad' => 1]]);
+        $pedido->update(['estado' => EstadoPedido::Cancelado]);
 
-        foreach ([EstadoPedido::Despachado, EstadoPedido::Cancelado] as $estado) {
-            $pedido = $this->comprar([['producto_id' => $producto->id, 'cantidad' => 1]]);
-            $pedido->update(['estado' => $estado]);
+        $this->editar($pedido, $this->payload($pedido, [['cantidad' => 4]]))->assertSessionHasErrors('estado');
+        $this->assertSame(1, $pedido->fresh()->items->first()->cantidad);
 
-            $this->editar($pedido, $this->payload($pedido, [['cantidad' => 4]]))->assertSessionHasErrors('estado');
-            $this->assertSame(1, $pedido->fresh()->items->first()->cantidad);
+        $this->actingAs(User::factory()->create())
+            ->get(route('pedidos.edit', $pedido))
+            ->assertRedirect(route('pedidos.show', $pedido));
+    }
 
-            $this->actingAs(User::factory()->create())
-                ->get(route('pedidos.edit', $pedido))
-                ->assertRedirect(route('pedidos.show', $pedido));
-        }
+    public function test_un_pedido_despachado_se_puede_editar_y_ajusta_el_stock(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $pedido = $this->comprar([['producto_id' => $producto->id, 'cantidad' => 2]]);
+        $pedido->update(['estado' => EstadoPedido::Despachado, 'despachado_at' => now()]);
+
+        $this->actingAs(User::factory()->create())->get(route('pedidos.edit', $pedido))->assertOk();
+
+        $this->editar($pedido, $this->payload($pedido, [['cantidad' => 5]]))->assertSessionHasNoErrors();
+
+        $pedido->refresh();
+        $this->assertSame(EstadoPedido::Despachado, $pedido->estado);
+        $this->assertSame(5, $pedido->items->first()->cantidad);
+        $this->assertSame(5000.0, (float) $pedido->total);
+        $this->assertSame(5, $producto->fresh()->stock);
+    }
+
+    /* ─── Sumar productos y combos ──────────────────────────────────────────── */
+
+    public function test_se_puede_sumar_un_producto_al_pedido(): void
+    {
+        $original = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $nuevo = Producto::factory()->create(['precio' => 500, 'stock' => 10, 'titulo' => 'Pote de humo']);
+        $pedido = $this->comprar([['producto_id' => $original->id, 'cantidad' => 1]]);
+
+        $payload = $this->payload($pedido);
+        $payload['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $nuevo->id, 'cantidad' => 3]];
+
+        $this->editar($pedido, $payload)->assertSessionHasNoErrors();
+
+        $pedido->refresh();
+        $this->assertCount(2, $pedido->items);
+        $linea = $pedido->items->firstWhere('producto_id', $nuevo->id);
+        $this->assertSame('Pote de humo', $linea->titulo);
+        $this->assertSame(3, $linea->cantidad);
+        $this->assertSame(500.0, (float) $linea->precio_unitario);
+        $this->assertSame(2500.0, (float) $pedido->subtotal);
+        $this->assertSame(2500.0, (float) $pedido->total);
+        $this->assertSame(7, $nuevo->fresh()->stock);
+        $this->assertNotNull($pedido->editado_at);
+    }
+
+    public function test_el_precio_de_una_linea_nueva_puede_fijarse_a_mano(): void
+    {
+        $original = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $nuevo = Producto::factory()->create(['precio' => 500, 'stock' => 10]);
+        $pedido = $this->comprar([['producto_id' => $original->id, 'cantidad' => 1]]);
+
+        $payload = $this->payload($pedido);
+        $payload['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $nuevo->id, 'cantidad' => 2, 'precio_unitario' => 400]];
+
+        $this->editar($pedido, $payload)->assertSessionHasNoErrors();
+
+        $this->assertSame(1800.0, (float) $pedido->fresh()->total);
+    }
+
+    public function test_se_puede_cambiar_un_producto_por_otro(): void
+    {
+        $viejo = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $nuevo = Producto::factory()->create(['precio' => 700, 'stock' => 10]);
+        $pedido = $this->comprar([['producto_id' => $viejo->id, 'cantidad' => 2]]);
+
+        $payload = $this->payload($pedido);
+        $payload['items'] = [];
+        $payload['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $nuevo->id, 'cantidad' => 2]];
+
+        $this->editar($pedido, $payload)->assertSessionHasNoErrors();
+
+        $pedido->refresh();
+        $this->assertSame([$nuevo->id], $pedido->items->pluck('producto_id')->all());
+        $this->assertSame(1400.0, (float) $pedido->total);
+        // El viejo se repone y el nuevo se descuenta.
+        $this->assertSame(10, $viejo->fresh()->stock);
+        $this->assertSame(8, $nuevo->fresh()->stock);
+    }
+
+    public function test_sumar_un_producto_sin_stock_suficiente_rechaza_todo(): void
+    {
+        $original = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $nuevo = Producto::factory()->create(['precio' => 500, 'stock' => 2]);
+        $pedido = $this->comprar([['producto_id' => $original->id, 'cantidad' => 1]]);
+
+        $payload = $this->payload($pedido, [['cantidad' => 4]]);
+        $payload['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $nuevo->id, 'cantidad' => 3]];
+
+        $this->editar($pedido, $payload)->assertSessionHasErrors('items');
+
+        $pedido->refresh();
+        $this->assertCount(1, $pedido->items);
+        $this->assertSame(1, $pedido->items->first()->cantidad);
+        $this->assertSame(9, $original->fresh()->stock);
+        $this->assertSame(2, $nuevo->fresh()->stock);
+    }
+
+    public function test_sumar_un_producto_con_colores_exige_elegir_color(): void
+    {
+        $original = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $conColor = Producto::factory()->create(['precio' => 500]);
+        $rojo = $this->variante($conColor, 'Rojo', 100, 5);
+        $pedido = $this->comprar([['producto_id' => $original->id, 'cantidad' => 1]]);
+
+        $sinColor = $this->payload($pedido);
+        $sinColor['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $conColor->id, 'cantidad' => 1]];
+        $this->editar($pedido, $sinColor)->assertSessionHasErrors('nuevos_items');
+        $this->assertCount(1, $pedido->fresh()->items);
+
+        $conElColor = $this->payload($pedido);
+        $conElColor['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $conColor->id, 'cantidad' => 2, 'variante_id' => $rojo->id]];
+        $this->editar($pedido, $conElColor)->assertSessionHasNoErrors();
+
+        $linea = $pedido->fresh()->items->firstWhere('producto_id', $conColor->id);
+        $this->assertSame($rojo->id, $linea->producto_variante_id);
+        $this->assertSame('Rojo', $linea->variante_nombre);
+        $this->assertSame(600.0, (float) $linea->precio_unitario);
+        $this->assertSame(3, $rojo->fresh()->stock);
+    }
+
+    public function test_no_se_puede_sumar_un_producto_inactivo(): void
+    {
+        $original = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $inactivo = Producto::factory()->create(['precio' => 500, 'stock' => 10, 'is_active' => false]);
+        $pedido = $this->comprar([['producto_id' => $original->id, 'cantidad' => 1]]);
+
+        $payload = $this->payload($pedido);
+        $payload['nuevos_items'] = [['tipo' => 'producto', 'producto_id' => $inactivo->id, 'cantidad' => 1]];
+
+        $this->editar($pedido, $payload)->assertSessionHasErrors('nuevos_items');
+        $this->assertCount(1, $pedido->fresh()->items);
+    }
+
+    public function test_se_puede_sumar_un_combo_y_descuenta_sus_componentes(): void
+    {
+        $original = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        $componente = Producto::factory()->create(['precio' => 300, 'stock' => 20]);
+        $combo = Combo::create(['titulo' => 'Combo fiesta', 'precio' => 2000, 'is_active' => true, 'envio_gratis' => false]);
+        $combo->items()->create(['producto_id' => $componente->id, 'cantidad' => 3, 'orden' => 0]);
+        $pedido = $this->comprar([['producto_id' => $original->id, 'cantidad' => 1]]);
+
+        $payload = $this->payload($pedido);
+        $payload['nuevos_items'] = [['tipo' => 'combo', 'combo_id' => $combo->id, 'cantidad' => 2]];
+
+        $this->editar($pedido, $payload)->assertSessionHasNoErrors();
+
+        $pedido->refresh();
+        $linea = $pedido->items->firstWhere('combo_id', $combo->id);
+        $this->assertSame('Combo fiesta', $linea->titulo);
+        $this->assertSame(2, $linea->cantidad);
+        $this->assertSame(6, $linea->combo_items_seleccionados[0]['cantidad_total']);
+        $this->assertSame(5000.0, (float) $pedido->total);
+        $this->assertSame(14, $componente->fresh()->stock);
+    }
+
+    public function test_la_pantalla_de_edicion_trae_el_catalogo_para_sumar(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
+        Producto::factory()->create(['is_active' => false]);
+        $combo = Combo::create(['titulo' => 'Combo', 'precio' => 2000, 'is_active' => true, 'envio_gratis' => false]);
+        $combo->items()->create(['producto_id' => $producto->id, 'cantidad' => 1, 'orden' => 0]);
+        $pedido = $this->comprar([['producto_id' => $producto->id, 'cantidad' => 1]]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('pedidos.edit', $pedido))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('productosCatalogo', 1)
+                ->has('combosCatalogo', 1)
+                ->where('combosCatalogo.0.precio_sugerido', 2000));
     }
 
     public function test_la_pantalla_de_edicion_carga_las_variantes_del_producto(): void

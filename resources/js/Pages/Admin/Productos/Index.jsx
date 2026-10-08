@@ -527,7 +527,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                     </div>
 
                     {/* Vista de Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-0">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {productosFiltrados.length === 0 ? (
                             <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
                                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
@@ -586,7 +586,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                         </div>
                                         
                                         {/* Botón de destacar en la esquina superior izquierda */}
-                                        <div className="absolute top-3 left-3 z-10">
+                                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
                                             <button
                                                 onClick={() => toggleFeatured(producto)}
                                                 className={`inline-flex items-center justify-center p-2.5 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-110 active:scale-95 shadow-lg ${
@@ -603,7 +603,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                         </div>
                                         
                                         {/* Badges en la esquina superior derecha */}
-                                        <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+                                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col items-end gap-1 sm:gap-2 z-10">
                                             {sinStock && (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-lg animate-bounceIn">
                                                     ⚠ Sin stock
@@ -635,7 +635,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                     </div>
 
                                     {/* Contenido de la card */}
-                                    <div className="p-4">
+                                    <div className="p-3 sm:p-4">
                                         {/* Categorías y Subcategorías */}
                                         {((producto.categorias && producto.categorias.length > 0) ||
                                           (producto.subcategorias && producto.subcategorias.length > 0)) ? (
@@ -714,24 +714,26 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
 
                                         {/* Botones de acción */}
                                         <div className="flex items-center gap-2">
-                                            {/* Botón de crear/gestionar oferta */}
+                                            {/* Botón de crear/gestionar oferta: en mobile solo el ícono (la card es de media pantalla) */}
                                             {producto.oferta_vigente ? (
                                                 <Link
                                                     href={route('ofertas.edit', producto.oferta_vigente.id)}
-                                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-xs font-semibold hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
+                                                    className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 h-9 sm:h-auto sm:py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-xs font-semibold hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
                                                     title="Gestionar oferta"
+                                                    aria-label="Gestionar oferta"
                                                 >
-                                                    <Tag className="h-3.5 w-3.5" />
-                                                    Gestionar Oferta
+                                                    <Tag className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    <span className="hidden sm:inline">Gestionar Oferta</span>
                                                 </Link>
                                             ) : (
                                                 <Link
                                                     href={route('ofertas.create', { producto_id: producto.id })}
-                                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border-2 border-orange-500 text-orange-500 rounded-lg text-xs font-semibold hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
+                                                    className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 h-9 sm:h-auto sm:py-2 bg-white border-2 border-orange-500 text-orange-500 rounded-lg text-xs font-semibold hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
                                                     title="Crear oferta"
+                                                    aria-label="Crear oferta"
                                                 >
-                                                    <Tag className="h-3.5 w-3.5" />
-                                                    Crear Oferta
+                                                    <Tag className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    <span className="hidden sm:inline">Crear Oferta</span>
                                                 </Link>
                                             )}
 

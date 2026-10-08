@@ -144,7 +144,7 @@ export default function Index({ ofertas }) {
                     </div>
 
                     {/* Grid de Cards de Ofertas */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-0">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {ofertasFiltradas.length === 0 ? (
                             <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
                                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
@@ -164,57 +164,57 @@ export default function Index({ ofertas }) {
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     {/* Header con producto */}
-                                    <div className="relative h-32 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
-                                        <div className="text-white text-5xl font-bold opacity-30">
+                                    <div className="relative h-28 sm:h-32 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
+                                        <div className="text-white text-3xl sm:text-5xl font-bold opacity-30">
                                             {formatearDescuento(oferta)}
                                         </div>
 
                                         {/* Badge de estado */}
-                                        <div className="absolute top-3 right-3 flex flex-col gap-2">
+                                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col gap-1 sm:gap-2">
                                             {estaVigente(oferta) && (
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-400 text-green-900 shadow-lg animate-bounceIn">
+                                                <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-green-400 text-green-900 shadow-lg animate-bounceIn">
                                                     ✓ Vigente
                                                 </span>
                                             )}
                                             {!oferta.is_active && (
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gray-400 text-gray-900 shadow-lg">
+                                                <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-gray-400 text-gray-900 shadow-lg">
                                                     ✕ Inactiva
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Badge de alcance */}
-                                        <div className="absolute top-3 left-3">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/90 text-gray-800 shadow-lg">
+                                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 max-w-[48%] sm:max-w-none">
+                                            <span className="inline-flex max-w-full items-center px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-white/90 text-gray-800 shadow-lg truncate">
                                                 {describirAlcance(oferta)}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Contenido */}
-                                    <div className="p-6">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
+                                    <div className="p-3 sm:p-6">
+                                        <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 line-clamp-1">
                                             {oferta.producto.titulo}
                                         </h3>
 
                                         {/* Precios */}
-                                        <div className="mb-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4">
-                                            <div className="flex justify-between items-center mb-2">
+                                        <div className="mb-3 sm:mb-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-3 sm:p-4">
+                                            <div className="flex flex-wrap justify-between items-center gap-x-2 mb-2">
                                                 <span className="text-sm text-gray-600">Precio original:</span>
                                                 <span className="text-sm line-through text-gray-500">
                                                     {formatearPrecio(oferta.producto.precio)}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex flex-wrap justify-between items-center gap-x-2">
                                                 <span className="text-sm font-semibold text-gray-900">Descuento:</span>
-                                                <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                                                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
                                                     {formatearDescuento(oferta)}
                                                 </span>
                                             </div>
                                         </div>
 
                                         {/* Fechas */}
-                                        <div className="mb-4 space-y-1 text-xs text-gray-600">
+                                        <div className="mb-3 sm:mb-4 space-y-1 text-xs text-gray-600">
                                             <div className="flex justify-between">
                                                 <span>Inicio:</span>
                                                 <span className="font-medium">{formatearFecha(oferta.fecha_inicio)}</span>

@@ -16,19 +16,6 @@ const formatearFechaCompleta = (fechaIso) =>
     });
 
 const ICONOS = {
-    categorias: (
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-    ),
-    subcategorias: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />,
-    productos: (
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    ),
-    ofertas: (
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-    ),
-    pedidos: (
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    ),
     reloj: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
     check: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />,
     alerta: (
@@ -50,33 +37,10 @@ function Icon({ path, className = 'h-6 w-6' }) {
     );
 }
 
-function AccessCard({ href, params, icon, title, description }) {
-    return (
-        <Link href={route(href, params)} className="group block h-full">
-            <div className="h-full flex flex-col overflow-hidden bg-white shadow-lg sm:rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="p-6 flex-1">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#40B0C2]/10 to-[#A72DAB]/10">
-                            <Icon path={icon} className="h-6 w-6 text-[#40B0C2]" />
-                        </div>
-                        <Icon
-                            path={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />}
-                            className="h-5 w-5 text-gray-300 group-hover:text-[#A72DAB] group-hover:translate-x-0.5 transition-all"
-                        />
-                    </div>
-                    <h3 className="text-base font-bold text-gray-800 mb-1">{title}</h3>
-                    <p className="text-sm text-gray-500">{description}</p>
-                </div>
-                <div className="bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] h-1"></div>
-            </div>
-        </Link>
-    );
-}
-
 function MetricCard({ href, params, label, value, sublabel, color, icon, alert, clickable = true }) {
     const contenido = (
         <div
-            className={`h-full bg-white rounded-2xl shadow-lg p-5 transition-all duration-300 ${
+            className={`h-full bg-white rounded-2xl shadow-lg p-4 sm:p-5 transition-all duration-300 ${
                 clickable ? 'hover:shadow-2xl transform hover:-translate-y-1' : ''
             } ${alert ? 'ring-2 ring-amber-300' : ''}`}
         >
@@ -86,9 +50,13 @@ function MetricCard({ href, params, label, value, sublabel, color, icon, alert, 
                 </div>
                 <div className="flex items-center gap-2">
                     {alert && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                        <span
+                            className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 sm:px-2.5 py-1 text-[11px] font-semibold text-amber-700"
+                            title="Requiere atención"
+                        >
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                            Requiere atención
+                            <span className="hidden sm:inline">Requiere atención</span>
+                            <span className="sr-only sm:hidden">Requiere atención</span>
                         </span>
                     )}
                     {clickable && (
@@ -100,7 +68,7 @@ function MetricCard({ href, params, label, value, sublabel, color, icon, alert, 
                 </div>
             </div>
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</div>
-            <div className="mt-1 text-2xl font-bold text-gray-900 truncate">{value}</div>
+            <div className="mt-1 text-xl sm:text-2xl font-bold text-gray-900 truncate">{value}</div>
             {sublabel && <div className="mt-0.5 text-xs text-gray-400 truncate">{sublabel}</div>}
         </div>
     );
@@ -212,27 +180,9 @@ export default function Dashboard({ stats }) {
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
-                    {/* Accesos rápidos */}
-                    <div className="px-4 sm:px-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <AccessCard
-                            href="categorias.index"
-                            icon={ICONOS.categorias}
-                            title="Categorías"
-                            description="Gestiona las categorías de productos"
-                        />
-                        <AccessCard
-                            href="subcategorias.index"
-                            icon={ICONOS.subcategorias}
-                            title="Subcategorías"
-                            description="Gestiona las subcategorías de productos"
-                        />
-                        <AccessCard href="productos.index" icon={ICONOS.productos} title="Productos" description="Administra el catálogo" />
-                        <AccessCard href="ofertas.index" icon={ICONOS.ofertas} title="Ofertas" description="Gestiona descuentos vigentes" />
-                        <AccessCard href="pedidos.index" icon={ICONOS.pedidos} title="Pedidos" description="Pedidos de los clientes" />
-                    </div>
 
                     {/* Métricas operativas */}
-                    <div className="px-4 sm:px-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="px-4 sm:px-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 cards-2-impar">
                         <MetricCard
                             href="pedidos.index"
                             params={{ estado: 'pendiente' }}

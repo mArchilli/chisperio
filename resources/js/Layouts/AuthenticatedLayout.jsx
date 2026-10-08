@@ -18,6 +18,16 @@ export default function AuthenticatedLayout({ header, children }) {
         return false;
     });
 
+    // Con el menú móvil abierto (ocupa toda la pantalla) la página de atrás no debe scrollear.
+    useEffect(() => {
+        if (!sidebarOpen) return undefined;
+        const original = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = original;
+        };
+    }, [sidebarOpen]);
+
     // Guardar el estado en localStorage cuando cambie
     useEffect(() => {
         localStorage.setItem('sidebarCollapsed', sidebarCollapsed);
@@ -106,18 +116,21 @@ export default function AuthenticatedLayout({ header, children }) {
             {/* Sidebar para móvil */}
             <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
                 <div className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onClick={() => setSidebarOpen(false)}></div>
-                <div className="fixed inset-y-0 left-0 flex w-72 flex-col bg-white shadow-2xl">
-                    <div className="flex h-24 items-center justify-between px-6 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB]">
+                <div className="fixed inset-0 flex h-[100dvh] w-full flex-col bg-white">
+                    <div className="flex h-20 flex-shrink-0 items-center justify-between px-6 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB]">
                         <Link href="/">
                             <span className="text-white text-xl font-bold">Chisperio</span>
                         </Link>
-                        <button onClick={() => setSidebarOpen(false)} className="text-white hover:text-gray-200 transition-colors">
+                        <button onClick={() => setSidebarOpen(false)} className="p-2 -mr-2 text-white hover:text-gray-200 transition-colors" aria-label="Cerrar menú">
                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
-                    <nav className="flex-1 space-y-2 px-4 py-6">
+                    {/* Todo lo que está debajo del encabezado scrollea junto (menú + datos del usuario),
+                        así se llega a "Cerrar sesión" aunque la pantalla sea baja. */}
+                    <div className="flex-1 overflow-y-auto overscroll-contain">
+                    <nav className="space-y-2 px-4 py-6">
                         {navigation.map((item) => (
                             <Link
                                 key={item.name}
@@ -174,6 +187,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 Cerrar Sesión
                             </Link>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

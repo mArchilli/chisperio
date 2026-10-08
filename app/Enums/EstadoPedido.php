@@ -27,6 +27,17 @@ enum EstadoPedido: string
     }
 
     /**
+     * Se puede editar el contenido del pedido (productos, cantidades, datos del cliente)
+     * mientras no esté cancelado: uno cancelado ya repuso su stock y es terminal. Un
+     * despachado también, porque un error de carga o un cambio acordado con el cliente se
+     * corrige igual; el stock se ajusta por la diferencia.
+     */
+    public function esEditable(): bool
+    {
+        return $this !== self::Cancelado;
+    }
+
+    /**
      * Reglas de transición de estado de un pedido (Fase 0 del plan de stock):
      * pendiente↔despachado es libre y no afecta stock; pendiente→cancelado es la única
      * forma de cancelar (repone stock); cancelado es terminal; despachado→cancelado

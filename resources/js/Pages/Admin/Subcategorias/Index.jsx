@@ -69,9 +69,9 @@ export default function Index({ subcategorias, categoria, categoriaId }) {
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Vista de Cards para móvil */}
-                    <div className="lg:hidden space-y-4 px-4">
+                    <div className="lg:hidden grid grid-cols-2 gap-3 sm:gap-4 px-4 cards-2-impar">
                         {subcategorias.length === 0 ? (
-                            <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-8 text-center">
                                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
                                     <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -82,14 +82,14 @@ export default function Index({ subcategorias, categoria, categoriaId }) {
                         ) : (
                             subcategorias.map((subcategoria) => (
                                 <div key={subcategoria.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-200">
-                                    <div className="p-6">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex items-center flex-1">
-                                                <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 flex items-center justify-center border-2 border-[#A72DAB]/30">
+                                    <div className="p-3 sm:p-6">
+                                        <div className="flex items-start justify-between mb-3 sm:mb-4">
+                                            <div className="flex items-center flex-1 min-w-0">
+                                                <div className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 flex items-center justify-center border-2 border-[#A72DAB]/30">
                                                     <span className="text-[#A72DAB] font-bold text-lg">{subcategoria.nombre.charAt(0)}</span>
                                                 </div>
-                                                <div className="ml-4 flex-1">
-                                                    <h3 className="text-lg font-bold text-gray-900">{subcategoria.nombre}</h3>
+                                                <div className="ml-2 sm:ml-4 flex-1 min-w-0">
+                                                    <h3 className="text-sm sm:text-lg font-bold text-gray-900 break-words">{subcategoria.nombre}</h3>
                                                 </div>
                                             </div>
                                         </div>
@@ -109,7 +109,7 @@ export default function Index({ subcategorias, categoria, categoriaId }) {
                                             </div>
                                         )}
 
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-col sm:flex-row gap-2">
                                             <Link
                                                 href={route('subcategorias.edit', subcategoria.id)}
                                                 className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg text-sm font-medium"

@@ -1,5 +1,4 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import Dropdown from '@/Components/Dropdown';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { WHATSAPP_SUCURSALES, SUCURSAL_LABELS } from '@/lib/whatsapp';
@@ -32,6 +31,8 @@ const formatearFechaCorta = (fecha) =>
 
 export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFiltrarSucursal, stats }) {
     const [pedidoACancelar, setPedidoACancelar] = useState(null);
+    // Pedido cuyas acciones rápidas (mobile) están desplegadas.
+    const [accionesAbiertas, setAccionesAbiertas] = useState(null);
 
     const sucursalTabs = [
         { value: 'todas', label: 'Todas' },
@@ -167,7 +168,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Cards de estadísticas */}
                     <div className="mb-6 px-4 sm:px-0">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 cards-2-impar">
                             {statCards.map((card) => {
                                 const esClickeable = card.estado !== null;
                                 const activa = esClickeable && filtroEstado === card.estado;
@@ -177,7 +178,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                     <Tag
                                         key={card.key}
                                         {...(esClickeable ? { type: 'button', onClick: () => filtrarPor(card.estado) } : {})}
-                                        className={`text-left bg-white rounded-2xl shadow-lg p-5 transition-all duration-300 ${
+                                        className={`text-left bg-white rounded-2xl shadow-lg p-4 sm:p-5 transition-all duration-300 ${
                                             esClickeable
                                                 ? 'hover:shadow-2xl transform hover:-translate-y-1 active:scale-95 cursor-pointer'
                                                 : ''
@@ -191,7 +192,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                             {card.label}
                                         </div>
-                                        <div className="mt-1 text-2xl font-bold text-gray-900 truncate">{card.value}</div>
+                                        <div className="mt-1 text-xl sm:text-2xl font-bold text-gray-900 truncate">{card.value}</div>
                                     </Tag>
                                 );
                             })}
@@ -377,35 +378,45 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
 
                                                             {/* Acciones rápidas: menú desplegable en mobile/tablet chico */}
                                                             <div className="md:hidden">
-                                                                <Dropdown>
-                                                                    <Dropdown.Trigger>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setAccionesAbiertas(accionesAbiertas === pedido.id ? null : pedido.id)}
+                                                                    aria-expanded={accionesAbiertas === pedido.id}
+                                                                    className="w-full inline-flex items-center justify-center gap-2 p-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+                                                                >
+                                                                    Acciones rápidas
+                                                                    <svg
+                                                                        className={`h-4 w-4 transition-transform duration-200 ${accionesAbiertas === pedido.id ? 'rotate-180' : ''}`}
+                                                                        fill="currentColor"
+                                                                        viewBox="0 0 20 20"
+                                                                    >
+                                                                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </button>
+                                                                {accionesAbiertas === pedido.id && (
+                                                                    <div className="mt-2 grid grid-cols-2 gap-2">
                                                                         <button
                                                                             type="button"
-                                                                            className="w-full inline-flex items-center justify-center gap-2 p-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+                                                                            onClick={() => {
+                                                                                setAccionesAbiertas(null);
+                                                                                cambiarEstado(pedido, 'despachado');
+                                                                            }}
+                                                                            className="inline-flex items-center justify-center p-3 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all active:scale-95"
                                                                         >
-                                                                            Acciones rápidas
-                                                                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                        </button>
-                                                                    </Dropdown.Trigger>
-                                                                    <Dropdown.Content align="left">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => cambiarEstado(pedido, 'despachado')}
-                                                                            className="block w-full px-4 py-2.5 text-left text-sm font-medium text-green-700 hover:bg-gray-100"
-                                                                        >
-                                                                            Marcar como despachado
+                                                                            Despachar
                                                                         </button>
                                                                         <button
                                                                             type="button"
-                                                                            onClick={() => setPedidoACancelar(pedido)}
-                                                                            className="block w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-gray-100"
+                                                                            onClick={() => {
+                                                                                setAccionesAbiertas(null);
+                                                                                setPedidoACancelar(pedido);
+                                                                            }}
+                                                                            className="inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all active:scale-95"
                                                                         >
-                                                                            Cancelar pedido
+                                                                            Cancelar
                                                                         </button>
-                                                                    </Dropdown.Content>
-                                                                </Dropdown>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </>
                                                     )}

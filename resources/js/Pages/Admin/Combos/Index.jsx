@@ -64,7 +64,7 @@ export default function Index({ combos }) {
                             </Link>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                             {combos.map((combo) => (
                                 <div key={combo.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden border border-gray-100">
                                     <div className="relative aspect-video bg-gray-100">
@@ -90,14 +90,14 @@ export default function Index({ combos }) {
                                         )}
                                     </div>
 
-                                    <div className="p-5">
+                                    <div className="p-3 sm:p-5">
                                         <h3 className="font-bold text-gray-800 mb-1 truncate">{combo.titulo}</h3>
                                         <p className="text-xs text-gray-500 mb-3">
                                             {combo.items?.length ?? 0} producto{(combo.items?.length ?? 0) === 1 ? '' : 's'}
                                         </p>
 
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-lg font-bold text-[#A72DAB]">{formatearPrecio(combo.precio)}</span>
+                                        <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+                                            <span className="text-base sm:text-lg font-bold text-[#A72DAB]">{formatearPrecio(combo.precio)}</span>
                                             {combo.descuento_activo && (
                                                 <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700">Con descuento</span>
                                             )}

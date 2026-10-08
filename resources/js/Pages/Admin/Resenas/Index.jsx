@@ -4,7 +4,7 @@ import { StarRating } from '@/Components/Landing/ReviewsSection';
 import { tiempoRelativo } from '@/lib/tiempoRelativo';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { MessageSquareQuote, Pencil, Trash2 } from 'lucide-react';
+import { MessageSquareQuote, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 
 const formatearFecha = (fecha) => {
     const [anio, mes, dia] = String(fecha).slice(0, 10).split('-');
@@ -77,7 +77,7 @@ export default function Index({ resenas }) {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-0">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {resenas.length === 0 ? (
                             <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center">
                                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
@@ -99,8 +99,8 @@ export default function Index({ resenas }) {
                                         resena.is_active ? '' : 'opacity-70'
                                     }`}
                                 >
-                                    <div className="p-6 flex-1 flex flex-col">
-                                        <div className="flex items-start gap-3">
+                                    <div className="p-3 sm:p-6 flex-1 flex flex-col">
+                                        <div className="flex flex-wrap items-start gap-2 sm:gap-3">
                                             <div
                                                 className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
                                                 style={{ backgroundColor: resena.color_avatar || '#1a73e8' }}
@@ -128,19 +128,28 @@ export default function Index({ resenas }) {
                                         </div>
 
                                         {resena.texto ? (
-                                            <p className="mt-3 text-sm text-gray-700 whitespace-pre-line line-clamp-5 flex-1">{resena.texto}</p>
+                                            <p className="mt-3 text-xs sm:text-sm text-gray-700 whitespace-pre-line line-clamp-5 flex-1">{resena.texto}</p>
                                         ) : (
                                             <p className="mt-3 text-sm text-gray-400 italic flex-1">Sin texto, solo estrellas</p>
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-2 border-t border-gray-100 px-6 py-3 bg-gray-50">
+                                    <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 sm:px-6 py-3 bg-gray-50">
                                         <button
                                             onClick={() => toggleActive(resena)}
-                                            className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-gray-200 text-gray-600 rounded-lg text-xs font-semibold hover:border-gray-300 transition-all"
-                                            title={resena.is_active ? 'Ocultar de la landing' : 'Mostrar en la landing'}
+                                            className={`flex-1 inline-flex items-center justify-center px-3 py-2 border-2 rounded-lg text-xs font-semibold transition-all ${
+                                                resena.is_active
+                                                    ? 'bg-green-50 border-green-200 text-green-700 hover:border-green-300'
+                                                    : 'bg-gray-100 border-gray-200 text-gray-400 hover:border-gray-300'
+                                            }`}
+                                            title={resena.is_active ? 'Visible: tocá para ocultar de la landing' : 'Oculta: tocá para mostrar en la landing'}
+                                            aria-label={resena.is_active ? 'Visible en la landing, ocultar' : 'Oculta de la landing, mostrar'}
                                         >
-                                            {resena.is_active ? 'Ocultar' : 'Mostrar'}
+                                            {/* Mobile: ojo abierto = visible, ojo tachado = oculta. Desde sm, la acción en texto. */}
+                                            <span className="sm:hidden">
+                                                {resena.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                            </span>
+                                            <span className="hidden sm:inline">{resena.is_active ? 'Ocultar' : 'Mostrar'}</span>
                                         </button>
                                         <Link
                                             href={route('resenas.edit', resena.id)}

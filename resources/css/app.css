@@ -116,3 +116,20 @@ body {
         animation: slideDown 0.5s ease-out;
     }
 }
+
+@layer components {
+    /*
+     * Grillas de cards del admin: 2 por fila en mobile. Si la cantidad es impar, la última
+     * ocupa las dos columnas. Desde lg cada grilla define sus propias columnas y la última
+     * vuelve a su tamaño normal.
+     */
+    .cards-2-impar > :last-child:nth-child(odd) {
+        grid-column: span 2 / span 2;
+    }
+
+    @media (min-width: 1024px) {
+        .cards-2-impar > :last-child:nth-child(odd) {
+            grid-column: auto;
+        }
+    }
+}

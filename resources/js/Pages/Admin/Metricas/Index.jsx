@@ -63,12 +63,12 @@ const ICONOS = {
 
 function KpiCard({ label, value, sublabel, color, icon }) {
     return (
-        <div className="h-full bg-white rounded-2xl shadow-lg p-5">
+        <div className="h-full bg-white rounded-2xl shadow-lg p-4 sm:p-5">
             <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br ${color} text-white mb-3 shadow-md`}>
                 <Icon path={icon} />
             </div>
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</div>
-            <div className="mt-1 text-2xl font-bold text-gray-900 truncate">{value}</div>
+            <div className="mt-1 text-xl sm:text-2xl font-bold text-gray-900 truncate">{value}</div>
             {sublabel}
         </div>
     );
@@ -294,7 +294,7 @@ export default function Index({ periodo, fecha, stats }) {
                     </div>
 
                     {/* KPIs */}
-                    <div className="px-4 sm:px-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="px-4 sm:px-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 cards-2-impar">
                         <KpiCard
                             label="Facturación total"
                             value={formatearPrecio(facturacion_total)}

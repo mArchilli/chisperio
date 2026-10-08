@@ -1,6 +1,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
+import ProductoPickerModal from '@/Components/ProductoPickerModal';
+import NuevaLineaPedido, { crearLineaNueva, lineaParaEnviar, precioSugerido } from '@/Components/NuevaLineaPedido';
 
 const formatearPrecio = (precio) =>
     new Intl.NumberFormat('es-AR', {
@@ -41,7 +44,7 @@ const itemInicial = (item) => ({
     quitado: false,
 });
 
-export default function Edit({ pedido, variantesPorProducto }) {
+export default function Edit({ pedido, variantesPorProducto, productosCatalogo = [], combosCatalogo = [] }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         cliente_nombre: pedido.cliente_nombre ?? '',
         cliente_dni: pedido.cliente_dni ?? '',
@@ -52,15 +55,57 @@ export default function Edit({ pedido, variantesPorProducto }) {
         cliente_codigo_postal: pedido.cliente_codigo_postal ?? '',
         observaciones: pedido.observaciones ?? '',
         items: pedido.items.map(itemInicial),
+        nuevos: [],
     });
 
     // Las líneas quitadas no se mandan: el servidor interpreta "no vino" como "se quitó".
-    transform((formData) => ({
+    // Las líneas nuevas viajan aparte (`nuevos_items`) en el shape que valida el controller.
+    transform(({ nuevos, ...formData }) => ({
         ...formData,
         items: formData.items
             .filter((item) => !item.quitado)
             .map(({ quitado, ...resto }) => resto),
+        nuevos_items: nuevos.map(lineaParaEnviar),
     }));
+
+    const [selectorAbierto, setSelectorAbierto] = useState(null); // 'producto' | 'combo' | null
+
+    const productosPorId = useMemo(() => new Map(productosCatalogo.map((p) => [p.id, p])), [productosCatalogo]);
+    const combosPorId = useMemo(() => new Map(combosCatalogo.map((c) => [c.id, c])), [combosCatalogo]);
+    // El selector de combos usa el precio vigente como "precio" de la card.
+    const combosParaSelector = useMemo(
+        () => combosCatalogo.map((c) => ({ ...c, precio: c.precio_sugerido })),
+        [combosCatalogo]
+    );
+    const referenciaDe = (linea) => (linea.tipo === 'combo' ? combosPorId : productosPorId).get(linea.ref_id);
+
+    const agregarLinea = (tipo, referencia) => {
+        setData('nuevos', [...data.nuevos, crearLineaNueva(tipo, referencia)]);
+        setSelectorAbierto(null);
+    };
+
+    const cambiarLineaNueva = (key, cambios) =>
+        setData(
+            'nuevos',
+            data.nuevos.map((linea) => {
+                if (linea.key !== key) return linea;
+
+                const siguiente = { ...linea, ...cambios };
+
+                // Mientras el precio no se haya tocado a mano, sigue al catálogo (color, add-ons, cantidad).
+                if (!siguiente.precio_manual && !('precio_unitario' in cambios)) {
+                    siguiente.precio_unitario = String(precioSugerido(siguiente, referenciaDe(siguiente)));
+                }
+
+                return siguiente;
+            })
+        );
+
+    const quitarLineaNueva = (key) =>
+        setData(
+            'nuevos',
+            data.nuevos.filter((linea) => linea.key !== key)
+        );
 
     const variantesDe = (productoId) => variantesPorProducto?.[productoId] ?? [];
 
@@ -93,8 +138,12 @@ export default function Edit({ pedido, variantesPorProducto }) {
     // Vista previa de totales: espeja PedidoEdicionService::recalcularTotales (que es
     // la que manda al guardar) para que se vea el efecto de los cambios antes de guardar.
     const lineas = data.items.filter((item) => !item.quitado);
+    const totalLineas = lineas.length + data.nuevos.length;
     const subtotal = redondear(
-        lineas.reduce((acc, item) => acc + redondear(Number(item.precio_unitario || 0) * Number(item.cantidad || 0)), 0)
+        [...lineas, ...data.nuevos].reduce(
+            (acc, item) => acc + redondear(Number(item.precio_unitario || 0) * Number(item.cantidad || 0)),
+            0
+        )
     );
 
     let descuento = Number(pedido.descuento_monto || 0);
@@ -112,7 +161,9 @@ export default function Edit({ pedido, variantesPorProducto }) {
     // Igual que PedidoEdicionService: por monto, o porque lo que queda son solo combos con envío gratis.
     const lineasGuardadas = data.items.map((item, i) => ({ item, guardado: pedido.items[i] })).filter(({ item }) => !item.quitado);
     const envioGratisPorCombo =
-        lineasGuardadas.length > 0 && lineasGuardadas.every(({ guardado }) => guardado.combo_id !== null && guardado.envio_gratis);
+        lineasGuardadas.length + data.nuevos.length > 0 &&
+        lineasGuardadas.every(({ guardado }) => guardado.combo_id !== null && guardado.envio_gratis) &&
+        data.nuevos.every((linea) => linea.tipo === 'combo' && combosPorId.get(linea.ref_id)?.envio_gratis);
     const hayEnvioGratisConfigurado = montoMinimoEnvio > 0 || envioGratisPorCombo;
     const envioGratis = hayEnvioGratisConfigurado ? (montoMinimoEnvio > 0 && subtotal >= montoMinimoEnvio) || envioGratisPorCombo : null;
     const enviar = (e) => {
@@ -145,10 +196,20 @@ export default function Edit({ pedido, variantesPorProducto }) {
 
             <form onSubmit={enviar} className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
-                    {(errors.estado || errors.items) && (
+                    {(errors.estado || errors.items || errors.nuevos_items) && (
                         <div className="px-4 sm:px-0">
                             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                                {errors.estado || errors.items}
+                                {errors.estado || errors.items || errors.nuevos_items}
+                            </div>
+                        </div>
+                    )}
+
+                    {pedido.estado === 'despachado' && (
+                        <div className="px-4 sm:px-0">
+                            <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                                Este pedido ya está <strong>despachado</strong>. Los cambios se guardan igual y el stock se
+                                ajusta por la diferencia, pero lo que ya salió no se modifica solo: avisá al cliente si
+                                cambia el contenido.
                             </div>
                         </div>
                     )}
@@ -191,9 +252,11 @@ export default function Edit({ pedido, variantesPorProducto }) {
                         <div className="bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900">Productos del pedido</h3>
                             <p className="mt-1 mb-5 text-sm text-gray-500">
-                                El precio unitario se guarda tal cual lo cargues: no se recalcula por escalas ni
-                                ofertas. Al cambiar el color se sugiere el precio con la diferencia de recargo, pero
-                                podés ajustarlo. El stock se corrige solo con la diferencia.
+                                Podés cambiar cantidades y colores, quitar productos o sumar otros que el cliente haya
+                                pedido después. El precio unitario se guarda tal cual lo cargues: no se recalcula por
+                                escalas ni ofertas. Al cambiar el color se sugiere el precio con la diferencia de
+                                recargo, y en lo que sumás se sugiere el de catálogo, pero podés ajustarlo. El stock
+                                se corrige solo con la diferencia.
                             </p>
 
                             <div className="space-y-4">
@@ -233,8 +296,8 @@ export default function Edit({ pedido, variantesPorProducto }) {
                                                 <button
                                                     type="button"
                                                     onClick={() => actualizarItem(indice, { quitado: !item.quitado })}
-                                                    disabled={!item.quitado && lineas.length <= 1}
-                                                    title={!item.quitado && lineas.length <= 1 ? 'El pedido necesita al menos un producto' : undefined}
+                                                    disabled={!item.quitado && totalLineas <= 1}
+                                                    title={!item.quitado && totalLineas <= 1 ? 'El pedido necesita al menos un producto' : undefined}
                                                     className="text-xs font-semibold text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-300"
                                                 >
                                                     {item.quitado ? 'Restaurar' : 'Quitar'}
@@ -356,9 +419,61 @@ export default function Edit({ pedido, variantesPorProducto }) {
                                         </div>
                                     );
                                 })}
+
+                                {data.nuevos.map((linea, indice) => (
+                                    <NuevaLineaPedido
+                                        key={linea.key}
+                                        linea={linea}
+                                        referencia={referenciaDe(linea)}
+                                        onChange={(cambios) => cambiarLineaNueva(linea.key, cambios)}
+                                        onQuitar={() => quitarLineaNueva(linea.key)}
+                                        error={
+                                            errors[`nuevos_items.${indice}.cantidad`] ||
+                                            errors[`nuevos_items.${indice}.precio_unitario`] ||
+                                            errors[`nuevos_items.${indice}.producto_id`] ||
+                                            errors[`nuevos_items.${indice}.combo_id`]
+                                        }
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="mt-5 flex flex-wrap gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectorAbierto('producto')}
+                                    disabled={productosCatalogo.length === 0}
+                                    className="inline-flex items-center rounded-lg border-2 border-dashed border-[#40B0C2] px-4 py-2.5 text-sm font-semibold text-[#40B0C2] transition-colors hover:bg-[#40B0C2] hover:text-white disabled:opacity-40"
+                                >
+                                    + Sumar producto
+                                </button>
+                                {combosCatalogo.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectorAbierto('combo')}
+                                        className="inline-flex items-center rounded-lg border-2 border-dashed border-[#A72DAB] px-4 py-2.5 text-sm font-semibold text-[#A72DAB] transition-colors hover:bg-[#A72DAB] hover:text-white"
+                                    >
+                                        + Sumar combo
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
+
+                    <ProductoPickerModal
+                        show={selectorAbierto === 'producto'}
+                        productos={productosCatalogo}
+                        onSelect={(producto) => agregarLinea('producto', producto)}
+                        onClose={() => setSelectorAbierto(null)}
+                        titulo="Sumar producto al pedido"
+                    />
+                    <ProductoPickerModal
+                        show={selectorAbierto === 'combo'}
+                        productos={combosParaSelector}
+                        onSelect={(combo) => agregarLinea('combo', combosPorId.get(combo.id))}
+                        onClose={() => setSelectorAbierto(null)}
+                        titulo="Sumar combo al pedido"
+                        placeholder="Buscar combo por título..."
+                    />
 
                     {/* Totales */}
                     <div className="px-4 sm:px-0">

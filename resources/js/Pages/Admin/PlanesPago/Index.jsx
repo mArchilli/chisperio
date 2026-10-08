@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AccionesCardAdmin from '@/Components/AccionesCardAdmin';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -69,7 +70,45 @@ export default function Index({ planes }) {
                         </div>
                     )}
 
-                    <div className="overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    {/* Cards para mobile (la tabla queda desde lg) */}
+                    <div className="lg:hidden grid grid-cols-2 gap-3 sm:gap-4 px-4 cards-2-impar">
+                        {planes.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">No hay planes de pago registrados</div>
+                        ) : (
+                            planes.map((plan) => (
+                                <div key={plan.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                                    <div className="flex-1 p-3 sm:p-5">
+                                        <h3 className="break-words text-sm font-bold text-gray-900">{plan.nombre}</h3>
+
+                                        <div className="mt-2 text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                            +{Number(plan.recargo_porcentaje).toFixed(2)}%
+                                        </div>
+                                        <div className="text-[11px] text-gray-500">
+                                            {plan.cuotas} {Number(plan.cuotas) === 1 ? 'cuota' : 'cuotas'}
+                                        </div>
+
+                                        <span className={`mt-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                                            plan.is_active ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-200 text-gray-600'
+                                        }`}>
+                                            {plan.is_active ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    </div>
+                                    <div className="border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-5">
+                                        <AccionesCardAdmin
+                                            activo={plan.is_active}
+                                            onToggle={() => toggleActive(plan)}
+                                            editHref={route('planes-pago.edit', plan.id)}
+                                            onDelete={auth.user.role === 'admin' ? () => openDeleteModal(plan) : undefined}
+                                            deleteDisabled={plan.usado}
+                                            deleteTitle={plan.usado ? 'No se puede eliminar: ya fue usado en pedidos' : undefined}
+                                        />
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-6">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full">

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\EstadoPedido;
 use App\Enums\TipoDescuento;
 use App\Exceptions\StockInsuficienteException;
+use App\Exceptions\VarianteRequeridaException;
+use App\Models\Addon;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Producto;
@@ -39,6 +41,8 @@ class PedidoEdicionService
         private readonly StockService $stockService,
         private readonly CodigoDescuentoService $codigoDescuentoService,
         private readonly RecargoPagoService $recargoPagoService,
+        private readonly PricingService $pricingService,
+        private readonly ComboPedidoResolver $comboResolver,
     ) {}
 
     /**
@@ -54,17 +58,23 @@ class PedidoEdicionService
                 // cambio de estado (ej. cancelar) que corra al mismo tiempo.
                 $pedido = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
 
-                if ($pedido->estado !== EstadoPedido::Pendiente) {
+                if (! $pedido->estado->esEditable()) {
                     throw ValidationException::withMessages([
-                        'estado' => $pedido->estado === EstadoPedido::Cancelado
-                            ? 'Un pedido cancelado no se puede editar.'
-                            : 'Un pedido despachado no se puede editar. Primero volvelo a pendiente.',
+                        'estado' => 'Un pedido cancelado no se puede editar.',
                     ]);
                 }
 
                 $operacionesAntes = $this->stockService->operacionesDe($pedido);
 
-                $this->aplicarItems($pedido, $datos['items']);
+                $this->aplicarItems($pedido, $datos['items'] ?? []);
+                $this->agregarItems($pedido, $datos['nuevos_items'] ?? []);
+
+                if (! $pedido->items()->exists()) {
+                    throw ValidationException::withMessages([
+                        'items' => 'El pedido necesita al menos un producto.',
+                    ]);
+                }
+
                 $this->recalcularTotales($pedido);
 
                 $pedido->fill(Arr::only($datos, self::CAMPOS_CLIENTE));
@@ -125,6 +135,154 @@ class PedidoEdicionService
                 'subtotal' => round($precio * $cantidad, 2),
             ]);
         }
+    }
+
+    /**
+     * Suma al pedido las líneas nuevas (productos sueltos o combos) que cargó quien edita,
+     * por ejemplo algo que el cliente pidió después de hacer el pedido en la web. El stock
+     * lo ajusta ajustarPorEdicion() por la diferencia, igual que el resto de la edición.
+     *
+     * @param  array<int, array<string, mixed>>  $nuevos
+     */
+    private function agregarItems(Pedido $pedido, array $nuevos): void
+    {
+        foreach ($nuevos as $indice => $input) {
+            $datos = ($input['tipo'] ?? 'producto') === 'combo'
+                ? $this->nuevoItemCombo($input, $indice)
+                : $this->nuevoItemProducto($input, $indice);
+
+            $pedido->items()->create($datos);
+        }
+    }
+
+    /**
+     * Línea de producto nueva. Variante y add-ons se validan contra el catálogo real (misma
+     * regla que el checkout: con variantes activas el color es obligatorio) y el precio de
+     * catálogo queda en los snapshots; el precio unitario es el que mande quien edita y, si
+     * no manda ninguno, el que calcula el catálogo para esa cantidad.
+     *
+     * @return array<string, mixed>
+     */
+    private function nuevoItemProducto(array $input, int $indice): array
+    {
+        $producto = Producto::with(['escalasPrecio', 'ofertaVigente'])->find($input['producto_id'] ?? null);
+
+        if ($producto === null || ! $producto->is_active) {
+            throw ValidationException::withMessages([
+                'nuevos_items' => 'Uno de los productos que querés sumar ya no está disponible.',
+            ]);
+        }
+
+        $cantidad = (int) $input['cantidad'];
+        $varianteId = isset($input['variante_id']) ? (int) $input['variante_id'] : null;
+        $addonsInput = collect($input['addons'] ?? []);
+
+        try {
+            $precio = $this->pricingService->calcularPrecio(
+                $producto,
+                $cantidad,
+                $varianteId,
+                $addonsInput->pluck('addon_id')->map(fn ($id) => (int) $id)->all(),
+                exigirVariante: true
+            );
+        } catch (VarianteRequeridaException) {
+            throw ValidationException::withMessages([
+                'nuevos_items' => "Elegí un color para \"{$producto->titulo}\".",
+            ]);
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages([
+                'nuevos_items' => "{$producto->titulo}: ".collect($e->errors())->flatten()->first(),
+            ]);
+        }
+
+        $addonsSeleccionados = collect($precio->addons_aplicados)
+            ->map(function (Addon $addon) use ($addonsInput, $producto) {
+                $texto = $addon->requiere_texto
+                    ? trim((string) ($addonsInput->firstWhere('addon_id', $addon->id)['texto_personalizado'] ?? ''))
+                    : null;
+
+                if ($addon->requiere_texto && $texto === '') {
+                    throw ValidationException::withMessages([
+                        'nuevos_items' => "El add-on \"{$addon->nombre}\" de {$producto->titulo} requiere un texto de personalización.",
+                    ]);
+                }
+
+                return [
+                    'addon_id' => $addon->id,
+                    'nombre' => $addon->nombre,
+                    'precio' => round((float) ($addon->pivot->precio_override ?? $addon->precio), 2),
+                    'texto_personalizado' => $texto,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $colorPersonalizado = null;
+
+        if ($precio->variante_aplicada?->esPersonalizada()) {
+            $colorPersonalizado = trim((string) ($input['color_personalizado_texto'] ?? ''));
+
+            if ($colorPersonalizado === '') {
+                throw ValidationException::withMessages([
+                    'nuevos_items' => "Indicá el color o una descripción para \"{$precio->variante_aplicada->nombre}\" en {$producto->titulo}.",
+                ]);
+            }
+        }
+
+        $precioUnitario = round((float) ($input['precio_unitario'] ?? $precio->precio_final_con_opciones), 2);
+
+        return [
+            'producto_id' => $producto->id,
+            'producto_variante_id' => $precio->variante_aplicada?->id,
+            'titulo' => $producto->titulo,
+            'precio_unitario' => $precioUnitario,
+            'cantidad' => $cantidad,
+            'subtotal' => round($precioUnitario * $cantidad, 2),
+            'variante_nombre' => $precio->variante_aplicada?->nombre,
+            'variante_color_hex' => $precio->variante_aplicada?->color_hex,
+            'recargo_variante_unitario' => $precio->recargo_variante,
+            'addons_seleccionados' => $addonsSeleccionados !== [] ? $addonsSeleccionados : null,
+            'addons_total_unitario' => $precio->addons_total,
+            'precio_base_unitario' => $precio->precio_unitario_final,
+            'color_personalizado_texto' => $colorPersonalizado,
+        ];
+    }
+
+    /**
+     * Línea de combo nueva: el snapshot de componentes lo arma el mismo resolver que usa el
+     * checkout (variante fija o elegida, validada contra el catálogo).
+     *
+     * @return array<string, mixed>
+     */
+    private function nuevoItemCombo(array $input, int $indice): array
+    {
+        try {
+            $resuelto = $this->comboResolver->resolverLinea([
+                'combo_id' => $input['combo_id'] ?? null,
+                'cantidad' => $input['cantidad'],
+                'selecciones' => $input['selecciones'] ?? [],
+            ]);
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages([
+                'nuevos_items' => collect($e->errors())->flatten()->first(),
+            ]);
+        }
+
+        $combo = $resuelto['combo'];
+        $cantidad = $resuelto['cantidad'];
+        $precio = $this->pricingService->calcularPrecioCombo($combo, $cantidad);
+        $precioUnitario = round((float) ($input['precio_unitario'] ?? $precio->precio_unitario_final), 2);
+
+        return [
+            'combo_id' => $combo->id,
+            'combo_items_seleccionados' => $resuelto['componentes'],
+            'titulo' => $combo->titulo,
+            'precio_unitario' => $precioUnitario,
+            'cantidad' => $cantidad,
+            'subtotal' => round($precioUnitario * $cantidad, 2),
+            'precio_base_unitario' => $precio->precio_lista,
+            'envio_gratis' => (bool) $combo->envio_gratis,
+        ];
     }
 
     /**
