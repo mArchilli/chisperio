@@ -13,7 +13,16 @@ const formatPrice = (price) =>
  * Carrito.jsx y Checkout.jsx (quien entra directo al checkout sin pasar por el
  * carrito también tiene que poder cargar un código acá).
  */
-export default function CodigoDescuentoBlock({ codigoAplicado, descuentoInfo, montoDescuento, validando, onAplicar, onQuitar }) {
+export default function CodigoDescuentoBlock({
+    codigoAplicado,
+    descuentoInfo,
+    montoDescuento,
+    validando,
+    onAplicar,
+    onQuitar,
+    compacto = false,
+    inputId = 'codigo-descuento',
+}) {
     const [inputValue, setInputValue] = useState('');
     const mostrarError = !codigoAplicado && descuentoInfo && !descuentoInfo.valido;
 
@@ -25,7 +34,11 @@ export default function CodigoDescuentoBlock({ codigoAplicado, descuentoInfo, mo
 
     if (codigoAplicado) {
         return (
-            <div className="mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] border border-[#1c8a4c]/20 bg-[#1c8a4c]/5 p-4">
+            <div
+                className={`flex items-center justify-between gap-3 border border-[#1c8a4c]/20 bg-[#1c8a4c]/5 ${
+                    compacto ? 'mb-3 rounded-xl p-3' : 'mb-5 rounded-[1.5rem] p-4'
+                }`}
+            >
                 <div className="min-w-0">
                     <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#1c8a4c]">
                         Código aplicado
@@ -46,18 +59,18 @@ export default function CodigoDescuentoBlock({ codigoAplicado, descuentoInfo, mo
     }
 
     return (
-        <form onSubmit={handleSubmit} className="mb-5">
-            <label htmlFor="codigo-descuento" className="mb-2 block text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#81788a]">
+        <form onSubmit={handleSubmit} className={compacto ? 'mb-3' : 'mb-5'}>
+            <label htmlFor={inputId} className="mb-2 block text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#81788a]">
                 ¿Tenés un código de descuento?
             </label>
             <div className="flex gap-2">
                 <input
-                    id="codigo-descuento"
+                    id={inputId}
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value.toUpperCase())}
                     placeholder="Ej: VERANO10"
-                    className="min-w-0 flex-1 rounded-full border border-black/[0.08] bg-[#f7f6f9] px-4 py-2.5 text-sm font-semibold text-[#1c1b1b] focus:border-[#6000ca] focus:outline-none focus:ring-2 focus:ring-[#6000ca]/20"
+                    className={`min-w-0 flex-1 rounded-full border border-black/[0.08] bg-[#f7f6f9] px-4 text-sm font-semibold text-[#1c1b1b] focus:border-[#6000ca] focus:outline-none focus:ring-2 focus:ring-[#6000ca]/20 ${compacto ? 'py-2' : 'py-2.5'}`}
                 />
                 <button
                     type="submit"

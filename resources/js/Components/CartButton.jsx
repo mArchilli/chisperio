@@ -9,6 +9,7 @@ import BarraEnvioGratis from '@/Components/BarraEnvioGratis';
 import { GRADIENTE_PERSONALIZADO } from '@/Components/VarianteColorSwatches';
 import ComboLineaDetalle from '@/Components/ComboLineaDetalle';
 import SugerenciasCarrito from '@/Components/SugerenciasCarrito';
+import CodigoDescuentoBlock from '@/Components/CodigoDescuentoBlock';
 
 const EXCLUDED_PREFIXES = [
     '/carrito', '/checkout', '/login',
@@ -131,7 +132,25 @@ function MiniCartItem({ item, onUpdateQty, onRemove, envioGratisPorCombo }) {
 
 export default function CartButton() {
     const [pageVisible, setPageVisible] = useState(() => shouldShow(window.location.pathname));
-    const { items, removeFromCart, updateQty, cartCount, subtotal, envioGratisPorCombo, hayComboConEnvioGratis, cartDrawerOpen, closeCartDrawer, toggleCartDrawer } = useCart();
+    const {
+        items,
+        removeFromCart,
+        updateQty,
+        cartCount,
+        subtotal,
+        envioGratisPorCombo,
+        hayComboConEnvioGratis,
+        cartDrawerOpen,
+        closeCartDrawer,
+        toggleCartDrawer,
+        codigoAplicado,
+        descuentoInfo,
+        montoDescuento,
+        totalConDescuento,
+        validandoCodigo,
+        aplicarCodigoDescuento,
+        quitarCodigoDescuento,
+    } = useCart();
     const { configuracionEnvio } = usePage().props;
     // En mobile el botón flotante queda oculto (el ícono del navbar dispara este mismo
     // drawer — ver LandingHeader); en desktop está siempre visible.
@@ -257,9 +276,29 @@ export default function CartButton() {
                         <div className="mb-3">
                             <BarraEnvioGratis subtotal={subtotal} porCombo={envioGratisPorCombo} avisoCombo={hayComboConEnvioGratis} />
                         </div>
+                        {/* Mismo estado que Carrito/Checkout (CartContext): el código cargado acá
+                            llega al checkout. El envío gratis sigue evaluándose sobre el subtotal bruto. */}
+                        <CodigoDescuentoBlock
+                            compacto
+                            inputId="codigo-descuento-drawer"
+                            codigoAplicado={codigoAplicado}
+                            descuentoInfo={descuentoInfo}
+                            montoDescuento={montoDescuento}
+                            validando={validandoCodigo}
+                            onAplicar={aplicarCodigoDescuento}
+                            onQuitar={quitarCodigoDescuento}
+                        />
+                        {codigoAplicado && (
+                            <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-sm text-[#7c7388]">Subtotal</span>
+                                <span className="text-sm font-semibold text-[#1c1b1b]">{formatPrice(subtotal)}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-sm text-[#7c7388]">Total</span>
-                            <span className="font-black text-base text-[#6000ca]">{formatPrice(subtotal)}</span>
+                            <span className="font-black text-base text-[#6000ca]">
+                                {formatPrice(codigoAplicado ? totalConDescuento : subtotal)}
+                            </span>
                         </div>
                         <Link
                             href={route('checkout.index')}
