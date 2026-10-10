@@ -8,6 +8,26 @@ body {
     font-family: 'Montserrat', sans-serif;
 }
 
+/* Selección de texto en el violeta del sitio. */
+::selection {
+    background-color: #6000ca;
+    color: #fff;
+}
+
+/* El texto violeta seleccionado se ve blanco sobre el fondo violeta. */
+[class~="text-[#6000ca]"]::selection,
+[class~="text-[#6000ca]"] ::selection {
+    background-color: #6000ca;
+    color: #fff;
+}
+
+/* Sobre fondos violeta la selección se oscurece para no perderse. */
+[class~="bg-[#6000ca]"]::selection,
+[class~="bg-[#6000ca]"] ::selection {
+    background-color: #2e0a5e;
+    color: #fff;
+}
+
 /* El panel comparte la tipografía y el morado del sitio, también en sus modales. */
 body[data-admin-panel] {
     font-family: 'Montserrat', sans-serif;

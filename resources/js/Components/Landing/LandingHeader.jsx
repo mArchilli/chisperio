@@ -45,6 +45,23 @@ const TOPBAR_MESSAGES = [
     },
 ];
 
+const formatPrice = (price) =>
+    new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(price);
+
+const FREE_SHIPPING_MESSAGE = {
+    id: 'free-shipping',
+    icon: (
+        <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        </svg>
+    ),
+};
+
 const NAV_LINKS = [
     {
         id: 'inicio',
@@ -164,7 +181,17 @@ export default function LandingHeader() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [currentHash, setCurrentHash] = useState('');
     const { cartCount, openCartDrawer } = useCart();
-    const { url } = usePage();
+    const { url, props } = usePage();
+
+    // El monto lo fija el admin; en 0 el envío gratis por monto está desactivado y no se muestra.
+    const montoMinimo = props.configuracionEnvio?.montoMinimo ?? 0;
+    const topbarMessages = montoMinimo > 0
+        ? [
+            TOPBAR_MESSAGES[0],
+            { ...FREE_SHIPPING_MESSAGE, text: `Envío gratis a partir de ${formatPrice(montoMinimo)}` },
+            ...TOPBAR_MESSAGES.slice(1),
+        ]
+        : TOPBAR_MESSAGES;
 
     useEffect(() => {
         document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -244,7 +271,7 @@ export default function LandingHeader() {
                                 className="flex shrink-0 items-center gap-4 px-4 py-1.5 md:gap-6 md:px-5"
                                 aria-hidden={groupIndex > 0}
                             >
-                                {TOPBAR_MESSAGES.map((message) => (
+                                {topbarMessages.map((message) => (
                                     <span
                                         key={`${message.id}-${groupIndex}`}
                                         className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] md:text-xs"
