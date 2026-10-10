@@ -6,6 +6,7 @@ import CategoriesSection from '@/Components/Landing/CategoriesSection';
 import OutstandingProducts from '@/Components/Landing/OutstandingProducts';
 import RentalMachine from '@/Components/Landing/RentalMachine';
 import ReviewsSection from '@/Components/Landing/ReviewsSection';
+import SocialSection from '@/Components/Landing/SocialSection';
 import FAQSection from '@/Components/Landing/FAQSection';
 import LocationSection from '@/Components/Landing/LocationSection';
 import LandingFooter from '@/Components/Landing/LandingFooter';
@@ -20,6 +21,7 @@ export default function Welcome({ canLogin, productosDestacados = [], categorias
                 <TrustBanner />
                 <CategoriesSection categorias={categorias} />
                 <OutstandingProducts productos={productosDestacados} />
+                <SocialSection />
                 <RentalMachine />
                 <ReviewsSection resenas={resenas} />
                 <FAQSection />

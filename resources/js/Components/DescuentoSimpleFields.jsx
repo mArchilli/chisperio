@@ -48,7 +48,7 @@ export default function DescuentoSimpleFields({ data, setData, errors = {} }) {
                         onChange={(e) => setData('descuento_activo', e.target.checked)}
                         className="sr-only peer"
                     />
-                    <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#40B0C2]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-600"></div>
+                    <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#6000ca]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-600"></div>
                 </label>
             </div>
 
@@ -67,7 +67,7 @@ export default function DescuentoSimpleFields({ data, setData, errors = {} }) {
                                     onClick={() => setData('tipo_descuento', opcion.value)}
                                     className={`flex-1 px-3 py-2 text-sm font-semibold transition-all ${
                                         data.tipo_descuento === opcion.value
-                                            ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white'
+                                            ? 'bg-[#6000ca] text-white'
                                             : 'bg-white text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
@@ -92,7 +92,7 @@ export default function DescuentoSimpleFields({ data, setData, errors = {} }) {
                                 step="0.01"
                                 value={data.valor_descuento}
                                 onChange={(e) => setData('valor_descuento', e.target.value)}
-                                className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                             />
                         </div>
                         {(errors.valor_descuento || erroresCliente.valor_descuento) && (
@@ -106,7 +106,7 @@ export default function DescuentoSimpleFields({ data, setData, errors = {} }) {
                             type="datetime-local"
                             value={data.descuento_fecha_inicio || ''}
                             onChange={(e) => setData('descuento_fecha_inicio', e.target.value)}
-                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                         />
                     </div>
 
@@ -116,7 +116,7 @@ export default function DescuentoSimpleFields({ data, setData, errors = {} }) {
                             type="datetime-local"
                             value={data.descuento_fecha_fin || ''}
                             onChange={(e) => setData('descuento_fecha_fin', e.target.value)}
-                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                         />
                         {(errors.descuento_fecha_fin || erroresCliente.descuento_fecha_fin) && (
                             <p className="mt-1 text-xs text-red-600">{errors.descuento_fecha_fin || erroresCliente.descuento_fecha_fin}</p>

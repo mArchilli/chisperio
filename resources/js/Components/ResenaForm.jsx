@@ -22,7 +22,7 @@ export function hoyISO() {
 }
 
 const inputClase =
-    'block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300';
+    'block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300';
 
 function Campo({ id, label, error, ayuda, children }) {
     return (
@@ -54,7 +54,7 @@ export default function ResenaForm({ data, setData, errors, processing, onSubmit
 
     return (
         <form onSubmit={onSubmit} className="grid grid-cols-1 gap-8 lg:grid-cols-5">
-            <div className="lg:col-span-3 bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            <div className="admin-card lg:col-span-3 bg-white rounded-2xl shadow-xl p-6 sm:p-8">
                 <Campo id="nombre" label="Nombre *" error={errors.nombre}>
                     <input
                         id="nombre"
@@ -106,10 +106,10 @@ export default function ResenaForm({ data, setData, errors, processing, onSubmit
                                     aria-checked={data.puntuacion === valor}
                                     aria-label={`${valor} ${valor === 1 ? 'estrella' : 'estrellas'}`}
                                     onClick={() => setData('puntuacion', valor)}
-                                    className="rounded p-0.5 transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A72DAB]"
+                                    className="rounded p-0.5 transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
                                 >
                                     <svg
-                                        className={`h-8 w-8 fill-current ${valor <= data.puntuacion ? 'text-[#fbbc04]' : 'text-gray-300'}`}
+                                        className={`h-8 w-8 fill-current text-[#6000ca] ${valor <= data.puntuacion ? '' : 'opacity-25'}`}
                                         viewBox="0 0 20 20"
                                         aria-hidden="true"
                                     >
@@ -143,8 +143,8 @@ export default function ResenaForm({ data, setData, errors, processing, onSubmit
                                 onClick={() => setData('color_avatar', color)}
                                 aria-label={`Color ${color}`}
                                 aria-pressed={data.color_avatar === color}
-                                className={`h-9 w-9 rounded-full border-2 border-white shadow ring-1 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A72DAB] ${
-                                    data.color_avatar === color ? 'scale-110 ring-2 ring-[#A72DAB]' : 'ring-black/15 hover:ring-[#A72DAB]/50'
+                                className={`h-9 w-9 rounded-full border-2 border-white shadow ring-1 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] ${
+                                    data.color_avatar === color ? 'scale-110 ring-2 ring-[#6000ca]' : 'ring-black/15 hover:ring-[#6000ca]/50'
                                 }`}
                                 style={{ backgroundColor: color }}
                             />
@@ -158,7 +158,7 @@ export default function ResenaForm({ data, setData, errors, processing, onSubmit
                         type="checkbox"
                         checked={data.is_active}
                         onChange={(e) => setData('is_active', e.target.checked)}
-                        className="h-5 w-5 rounded border-gray-300 text-[#A72DAB] focus:ring-[#A72DAB]"
+                        className="h-5 w-5 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                     />
                     <span className="text-sm font-semibold text-gray-900">Mostrar en la landing</span>
                 </label>
@@ -173,7 +173,7 @@ export default function ResenaForm({ data, setData, errors, processing, onSubmit
                     <button
                         type="submit"
                         disabled={processing}
-                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                        className="inline-flex items-center px-6 py-3 bg-[#6000ca] rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl transition-all duration-200 disabled:opacity-50"
                     >
                         {processing ? 'Guardando…' : submitLabel}
                     </button>

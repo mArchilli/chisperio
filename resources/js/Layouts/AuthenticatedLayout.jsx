@@ -1,4 +1,3 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -9,6 +8,14 @@ export default function AuthenticatedLayout({ header, children }) {
     const isAdmin = user.role === 'admin';
     const sucursalLabel = user.role === 'vendedor' ? SUCURSAL_LABELS[user.sucursal] : null;
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    useEffect(() => {
+        const previous = document.body.getAttribute('data-admin-panel');
+        document.body.setAttribute('data-admin-panel', '');
+        return () => {
+            if (previous === null) document.body.removeAttribute('data-admin-panel');
+            else document.body.setAttribute('data-admin-panel', previous);
+        };
+    }, []);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         // Obtener el estado guardado del localStorage
         if (typeof window !== 'undefined') {
@@ -117,11 +124,11 @@ export default function AuthenticatedLayout({ header, children }) {
             <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
                 <div className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onClick={() => setSidebarOpen(false)}></div>
                 <div className="fixed inset-0 flex h-[100dvh] w-full flex-col bg-white">
-                    <div className="flex h-20 flex-shrink-0 items-center justify-between px-6 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB]">
+                    <div className="flex h-20 flex-shrink-0 items-center justify-between px-6 bg-[#6000ca]">
                         <Link href="/">
                             <span className="text-white text-xl font-bold">Chisperio</span>
                         </Link>
-                        <button onClick={() => setSidebarOpen(false)} className="p-2 -mr-2 text-white hover:text-gray-200 transition-colors" aria-label="Cerrar menú">
+                        <button onClick={() => setSidebarOpen(false)} className="p-2 -mr-2 rounded-lg text-white hover:bg-white/20 transition-colors" aria-label="Cerrar menú">
                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -137,8 +144,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                 href={route(item.href)}
                                 className={`group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                                     route().current(item.current)
-                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg shadow-purple-500/30'
-                                        : 'text-gray-700 hover:bg-gray-50 hover:text-[#40B0C2]'
+                                        ? 'bg-[#6000ca]/10 text-[#6000ca] ring-1 ring-[#6000ca]/15'
+                                        : 'text-gray-700 hover:bg-gray-50 hover:text-[#6000ca]'
                                 }`}
                             >
                                 {item.icon}
@@ -149,7 +156,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="border-t border-gray-100 p-4">
                         <a
                             href="/"
-                            className="group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-700 hover:text-[#40B0C2] bg-white/50 hover:bg-white/70 border border-gray-200/50 mb-4"
+                            className="group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-700 hover:text-[#6000ca] bg-white/50 hover:bg-white/70 border border-gray-200/50 mb-4"
                         >
                             <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -160,7 +167,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="text-sm font-semibold text-gray-800">{user.name}</div>
                             <div className="text-xs text-gray-500 mt-1">{user.email}</div>
                             {sucursalLabel && (
-                                <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#40B0C2]/10 px-2 py-0.5 text-[11px] font-semibold text-[#3a9db0]">
+                                <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#6000ca]/10 px-2 py-0.5 text-[11px] font-semibold text-[#4f00a8]">
                                     Sucursal {sucursalLabel}
                                 </div>
                             )}
@@ -168,7 +175,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         <div className="space-y-1">
                             <Link
                                 href={route('profile.edit')}
-                                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#40B0C2] transition-all"
+                                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#6000ca] transition-all"
                             >
                                 <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -195,10 +202,14 @@ export default function AuthenticatedLayout({ header, children }) {
             {/* Sidebar para desktop */}
             <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'}`}>
                 <div className="flex flex-col flex-grow bg-white shadow-xl overflow-y-auto overflow-x-hidden">
-                    <div className={`flex h-16 min-h-[4rem] flex-shrink-0 items-center bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6'}`}>
+                    <div className={`flex h-16 min-h-[4rem] flex-shrink-0 items-center bg-[#6000ca] ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6'}`}>
                         {!sidebarCollapsed && (
-                            <Link href="/">
-                                <span className="text-white text-xl font-bold">Chisperio</span>
+                            <Link href="/" className="flex min-w-0 items-center">
+                                <img
+                                    src="/images/logo-chisperio.png"
+                                    alt="Chisperío"
+                                    className="h-12 w-auto max-w-40 object-contain"
+                                />
                             </Link>
                         )}
                         <button
@@ -222,8 +233,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                 href={route(item.href)}
                                 className={`group flex items-center py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                                     route().current(item.current)
-                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg shadow-purple-500/30'
-                                        : 'text-gray-700 hover:bg-gray-50 hover:text-[#40B0C2]'
+                                        ? 'bg-[#6000ca]/10 text-[#6000ca] ring-1 ring-[#6000ca]/15'
+                                        : 'text-gray-700 hover:bg-gray-50 hover:text-[#6000ca]'
                                 } ${sidebarCollapsed ? 'justify-center px-0' : 'px-4'}`}
                                 title={sidebarCollapsed ? item.name : ''}
                             >
@@ -235,7 +246,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className={`flex-shrink-0 border-t border-gray-100 ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
                         <a
                             href="/"
-                            className={`group flex items-center py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-700 hover:text-[#40B0C2] bg-white/50 hover:bg-white/70 border border-gray-200/50 mb-4 ${sidebarCollapsed ? 'justify-center px-0' : 'px-4'}`}
+                            className={`group flex items-center py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-700 hover:text-[#6000ca] bg-white/50 hover:bg-white/70 border border-gray-200/50 mb-4 ${sidebarCollapsed ? 'justify-center px-0' : 'px-4'}`}
                             title={sidebarCollapsed ? 'Sitio Principal' : ''}
                         >
                             <svg className={`h-5 w-5 flex-shrink-0 ${!sidebarCollapsed ? 'mr-3' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -248,14 +259,14 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Dropdown.Trigger>
                                     <button className="flex w-full items-center justify-between text-left px-4 py-3 bg-gradient-to-br from-gray-50 to-white rounded-xl hover:shadow-md transition-all">
                                         <div className="flex items-center">
-                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center text-white font-bold mr-3">
+                                            <div className="h-10 w-10 rounded-full bg-[#6000ca] flex items-center justify-center text-white font-bold mr-3">
                                                 {user.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
                                                 <div className="text-sm font-semibold text-gray-800">{user.name}</div>
                                                 <div className="text-xs text-gray-500">{user.email}</div>
                                                 {sucursalLabel && (
-                                                    <div className="text-[11px] font-semibold text-[#3a9db0]">Sucursal {sucursalLabel}</div>
+                                                    <div className="text-[11px] font-semibold text-[#4f00a8]">Sucursal {sucursalLabel}</div>
                                                 )}
                                             </div>
                                         </div>
@@ -273,7 +284,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             </Dropdown>
                         ) : (
                             <div className="flex flex-col items-center space-y-2">
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center text-white font-bold">
+                                <div className="h-10 w-10 rounded-full bg-[#6000ca] flex items-center justify-center text-white font-bold">
                                     {user.name.charAt(0).toUpperCase()}
                                 </div>
                                 <Dropdown>
@@ -303,7 +314,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white shadow-sm lg:hidden">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="px-4 text-gray-500 hover:text-[#40B0C2] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#40B0C2] transition-colors"
+                        className="m-2 rounded-lg bg-[#6000ca] px-3 text-white hover:bg-[#4f00a8] focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-colors"
                     >
                         <span className="sr-only">Abrir menú</span>
                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -312,7 +323,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     </button>
                     <div className="flex flex-1 justify-between px-4">
                         <div className="flex flex-1 items-center">
-                            <span className="text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">Chisperio</span>
+                            <span className="text-lg font-bold text-[#6000ca]">Chisperio</span>
                         </div>
                     </div>
                 </div>

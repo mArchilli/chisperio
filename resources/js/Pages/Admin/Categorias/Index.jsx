@@ -30,14 +30,14 @@ export default function Index({ categorias }) {
             header={
                 <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Categorías
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">Gestiona las categorías de productos</p>
                     </div>
                     <Link
                         href={route('categorias.create')}
-                        className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                        className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                     >
                         <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -54,8 +54,8 @@ export default function Index({ categorias }) {
                     {/* Vista de Cards para móvil */}
                     <div className="lg:hidden grid grid-cols-2 gap-3 sm:gap-4 px-4 cards-2-impar">
                         {categorias.length === 0 ? (
-                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-8 text-center">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card col-span-full bg-white rounded-2xl shadow-lg p-8 text-center">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#6000ca]/20 mb-4">
                                     <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                     </svg>
@@ -64,11 +64,11 @@ export default function Index({ categorias }) {
                             </div>
                         ) : (
                             categorias.map((categoria) => (
-                                <div key={categoria.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-200">
+                                <div key={categoria.id} className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-200">
                                     <div className="p-3 sm:p-6">
                                         <div className="flex items-start justify-between mb-3 sm:mb-4">
                                             <div className="flex items-center flex-1 min-w-0">
-                                                <div className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                                                <div className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-[#6000ca] flex items-center justify-center">
                                                     <span className="text-white font-bold text-lg">{categoria.nombre.charAt(0)}</span>
                                                 </div>
                                                 <div className="ml-2 sm:ml-4 flex-1 min-w-0">
@@ -87,7 +87,7 @@ export default function Index({ categorias }) {
                                             <span className="text-xs sm:text-sm text-gray-500 font-medium">Subcategorías:</span>
                                             <Link
                                                 href={route('subcategorias.index', { categoria_id: categoria.id })}
-                                                className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white"
+                                                className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-[#6000ca] text-white"
                                             >
                                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -99,7 +99,7 @@ export default function Index({ categorias }) {
                                         <div className="flex flex-col sm:flex-row gap-2">
                                             <Link
                                                 href={route('subcategorias.index', { categoria_id: categoria.id })}
-                                                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg text-sm font-medium"
+                                                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-[#6000ca] text-white rounded-lg text-sm font-medium"
                                             >
                                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -108,7 +108,7 @@ export default function Index({ categorias }) {
                                             </Link>
                                             <Link
                                                 href={route('categorias.edit', categoria.id)}
-                                                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg text-sm font-medium"
+                                                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-medium"
                                             >
                                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -118,7 +118,7 @@ export default function Index({ categorias }) {
                                             {auth.user.role === 'admin' && (
                                                 <button
                                                     onClick={() => openDeleteModal(categoria)}
-                                                    className="inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-medium"
+                                                    className="admin-delete inline-flex items-center justify-center px-3 py-2 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-medium"
                                                 >
                                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -133,22 +133,22 @@ export default function Index({ categorias }) {
                     </div>
 
                     {/* Vista de Tabla para desktop */}
-                    <div className="hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    <div className="admin-card hidden lg:block overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-6">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full">
                                     <thead>
-                                        <tr className="border-b-2 border-gradient-to-r from-[#40B0C2] to-[#A72DAB]">
-                                            <th className="px-6 py-4 text-left text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                        <tr className="border-b-2 border-[#6000ca]/20">
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-[#6000ca]">
                                                 Categoría
                                             </th>
-                                            <th className="px-6 py-4 text-left text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-[#6000ca]">
                                                 Descripción
                                             </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                            <th className="px-6 py-4 text-center text-sm font-semibold text-[#6000ca]">
                                                 Subcategorías
                                             </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                            <th className="px-6 py-4 text-center text-sm font-semibold text-[#6000ca]">
                                                 Acciones
                                             </th>
                                         </tr>
@@ -162,10 +162,10 @@ export default function Index({ categorias }) {
                                             </tr>
                                         ) : (
                                             categorias.map((categoria) => (
-                                                <tr key={categoria.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-[#40B0C2]/5 hover:to-[#A72DAB]/5 transition-all duration-200">
+                                                <tr key={categoria.id} className="border-b border-gray-100 hover:bg-[#6000ca]/5 transition-all duration-200">
                                                     <td className="px-6 py-5">
                                                         <div className="flex items-center">
-                                                            <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                                                            <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-[#6000ca] flex items-center justify-center">
                                                                 <span className="text-white font-bold text-sm">{categoria.nombre.charAt(0)}</span>
                                                             </div>
                                                             <div className="ml-4">
@@ -179,7 +179,7 @@ export default function Index({ categorias }) {
                                                     <td className="px-6 py-5 text-center">
                                                         <Link
                                                             href={route('subcategorias.index', { categoria_id: categoria.id })}
-                                                            className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white hover:shadow-lg hover:shadow-purple-500/30 transition-all transform hover:scale-105"
+                                                            className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-[#6000ca] text-white hover:shadow-lg hover:shadow-purple-500/30 transition-all transform hover:scale-105"
                                                         >
                                                             <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -191,7 +191,7 @@ export default function Index({ categorias }) {
                                                         <div className="flex justify-end gap-2">
                                                             <Link
                                                                 href={route('subcategorias.index', { categoria_id: categoria.id })}
-                                                                className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all text-xs font-medium"
+                                                                className="inline-flex items-center px-3 py-1.5 bg-[#6000ca] text-white rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all text-xs font-medium"
                                                             >
                                                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -200,7 +200,7 @@ export default function Index({ categorias }) {
                                                             </Link>
                                                             <Link
                                                                 href={route('categorias.edit', categoria.id)}
-                                                                className="inline-flex items-center px-3 py-1.5 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg hover:bg-[#40B0C2] hover:text-white transition-all text-xs font-medium"
+                                                                className="inline-flex items-center px-3 py-1.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg hover:bg-[#6000ca] hover:text-white transition-all text-xs font-medium"
                                                             >
                                                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -210,7 +210,7 @@ export default function Index({ categorias }) {
                                                             {auth.user.role === 'admin' && (
                                                                 <button
                                                                     onClick={() => openDeleteModal(categoria)}
-                                                                    className="inline-flex items-center px-3 py-1.5 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all text-xs font-medium"
+                                                                    className="admin-delete inline-flex items-center px-3 py-1.5 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all text-xs font-medium"
                                                                 >
                                                                     <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -239,7 +239,7 @@ export default function Index({ categorias }) {
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -264,7 +264,7 @@ export default function Index({ categorias }) {
                                 <button
                                     type="button"
                                     onClick={handleDelete}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    className="admin-delete w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
                                 >
                                     Eliminar
                                 </button>

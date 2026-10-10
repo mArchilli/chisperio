@@ -1,3 +1,4 @@
+import { Truck } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -47,7 +48,6 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             label: 'Pendientes',
             value: stats.pendientes_count,
             estado: 'pendiente',
-            color: 'from-yellow-400 to-yellow-500',
             icon: (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -59,7 +59,6 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             label: 'Despachados',
             value: stats.despachados_count,
             estado: 'despachado',
-            color: 'from-green-400 to-green-500',
             icon: (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -71,7 +70,6 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             label: 'Cancelados',
             value: stats.cancelados_count,
             estado: 'cancelado',
-            color: 'from-red-400 to-red-500',
             icon: (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -83,7 +81,6 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             label: 'Unidades vendidas',
             value: stats.unidades_vendidas.toLocaleString('es-AR'),
             estado: null,
-            color: 'from-[#40B0C2] to-[#3a9db0]',
             icon: (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -95,7 +92,6 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             label: 'Facturación',
             value: formatearPrecio(stats.facturacion),
             estado: null,
-            color: 'from-[#A72DAB] to-[#8f2591]',
             icon: (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .672-3 1.5S10.343 11 12 11s3 .672 3 1.5-1.343 1.5-3 1.5m0-6V6m0 9v1.5m0-9c1.11 0 2.08.402 2.599 1M9.401 15c.52.598 1.487 1 2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -145,7 +141,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             header={
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Pedidos
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">Gestiona los pedidos realizados por los clientes</p>
@@ -182,10 +178,10 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                             esClickeable
                                                 ? 'hover:shadow-2xl transform hover:-translate-y-1 active:scale-95 cursor-pointer'
                                                 : ''
-                                        } ${activa ? 'ring-2 ring-[#A72DAB]' : ''}`}
+                                        } ${activa ? 'ring-2 ring-[#6000ca]' : ''}`}
                                     >
                                         <div
-                                            className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br ${card.color} text-white mb-3 shadow-md`}
+                                            className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-[#6000ca]/10 text-[#6000ca] mb-3"
                                         >
                                             {card.icon}
                                         </div>
@@ -202,7 +198,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                     {/* Filtro por sucursal — solo admin (el vendedor queda fijado a la suya) */}
                     {puedeFiltrarSucursal && (
                         <div className="mb-4 px-4 sm:px-0">
-                            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                            <div className="admin-card bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Sucursal</p>
                                 <div className="flex flex-wrap gap-2 sm:gap-3">
                                     {sucursalTabs.map((tab) => (
@@ -211,7 +207,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                             onClick={() => filtrarPorSucursal(tab.value)}
                                             className={`inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                                 filtroSucursal === tab.value
-                                                    ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                    ? 'bg-[#6000ca] text-white shadow-lg'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                         >
@@ -225,7 +221,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
 
                     {/* Tabs de filtro por estado */}
                     <div className="mb-6 px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                             <div className="flex flex-wrap gap-2 sm:gap-3">
                                 {tabs.map((tab) => (
                                     <button
@@ -233,7 +229,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                         onClick={() => filtrarPor(tab.value)}
                                         className={`inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                             filtroEstado === tab.value
-                                                ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                ? 'bg-[#6000ca] text-white shadow-lg'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
@@ -256,8 +252,8 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                     {/* Grid de pedidos */}
                     <div className="px-4 sm:px-0">
                         {pedidos.data.length === 0 ? (
-                            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card bg-white rounded-2xl shadow-lg p-12 text-center">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#6000ca]/20 mb-4">
                                     <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                     </svg>
@@ -274,7 +270,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                     return (
                                         <div
                                             key={pedido.id}
-                                            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
+                                            className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
                                             style={{ animationDelay: `${index * 50}ms` }}
                                         >
                                             <div className="p-6">
@@ -290,7 +286,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                 <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
                                                     <Link
                                                         href={route('pedidos.show', pedido.id)}
-                                                        className="hover:text-[#40B0C2] transition-colors"
+                                                        className="hover:text-[#6000ca] transition-colors"
                                                     >
                                                         {pedido.cliente_nombre}
                                                     </Link>
@@ -327,7 +323,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                         )}
                                                         {tieneEnvioGratis && (
                                                             <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-bold text-green-800">
-                                                                🚚 Envío gratis
+                                                                <Truck aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Envío gratis
                                                             </span>
                                                         )}
                                                         {pedido.codigo_descuento_texto && (
@@ -337,11 +333,11 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                         )}
                                                     </div>
                                                 )}
-                                                <div className="flex items-center justify-between py-3 px-4 mb-4 bg-gradient-to-r from-[#40B0C2]/10 to-[#A72DAB]/10 rounded-xl">
+                                                <div className="flex items-center justify-between py-3 px-4 mb-4 bg-[#6000ca]/10 rounded-xl">
                                                     <div className="text-sm text-gray-600">
                                                         {pedido.items.length} {pedido.items.length === 1 ? 'item' : 'items'}
                                                     </div>
-                                                    <div className="text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                                    <div className="text-lg font-bold text-[#6000ca]">
                                                         {formatearPrecio(pedido.total)}
                                                     </div>
                                                 </div>
@@ -349,7 +345,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                 <div className="space-y-2">
                                                     <Link
                                                         href={route('pedidos.show', pedido.id)}
-                                                        className="w-full inline-flex items-center justify-center p-3 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+                                                        className="w-full inline-flex items-center justify-center p-3 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg hover:bg-[#6000ca] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
                                                     >
                                                         <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -370,7 +366,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                                 </button>
                                                                 <button
                                                                     onClick={() => setPedidoACancelar(pedido)}
-                                                                    className="inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                                                    className="admin-delete inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
                                                                 >
                                                                     Cancelar
                                                                 </button>
@@ -451,7 +447,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                     }
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                         link.active
-                                            ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                            ? 'bg-[#6000ca] text-white shadow-lg'
                                             : link.url
                                             ? 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                                             : 'bg-gray-50 text-gray-300 cursor-not-allowed border border-gray-100'
@@ -472,7 +468,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">

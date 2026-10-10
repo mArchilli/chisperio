@@ -2,7 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { Pencil, Trash2, Tag } from 'lucide-react';
+import { Pencil, Trash2, Tag, Check, X, Flame, Search, Star, TriangleAlert } from 'lucide-react';
 import { resolverPrecio } from '@/lib/pricing';
 import { UMBRAL_STOCK_BAJO } from '@/lib/stock';
 import AumentoPreciosModal from '@/Components/AumentoPreciosModal';
@@ -218,7 +218,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
             header={
                 <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Productos
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">Gestiona el catálogo de productos</p>
@@ -227,7 +227,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                         <button
                             type="button"
                             onClick={() => setShowAumentoModal(true)}
-                            className="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-[#A72DAB] rounded-xl font-semibold text-sm text-[#A72DAB] hover:bg-[#A72DAB] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                            className="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-[#6000ca] rounded-xl font-semibold text-sm text-[#6000ca] hover:bg-[#6000ca] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                         >
                             <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -236,7 +236,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                         </button>
                         <Link
                             href={route('productos.create')}
-                            className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                            className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                         >
                             <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -259,7 +259,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
 
                     {/* Barra de búsqueda y filtros */}
                     <div className="mb-6 px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                             {/* Barra de búsqueda */}
                             <div className="flex flex-col sm:flex-row gap-3 mb-4">
                                 <div className="flex-1 relative">
@@ -273,7 +273,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                         placeholder="Buscar productos por nombre o descripción..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all"
+                                        className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all"
                                     />
                                     {searchTerm && (
                                         <button
@@ -288,7 +288,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                 </div>
                                 <button
                                     onClick={() => setShowFilters(!showFilters)}
-                                    className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border-2 border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 relative"
+                                    className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border-2 border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 relative"
                                 >
                                     <svg 
                                         className={`h-5 w-5 mr-2 transition-transform duration-500 ${showFilters ? 'rotate-180' : 'rotate-0'}`} 
@@ -333,7 +333,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                     {/* Sección de Ordenamiento */}
                                     <div className="mb-6 pb-6 border-b border-gray-200">
                                         <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center">
-                                            <svg className="h-5 w-5 mr-2 text-[#A72DAB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                                             </svg>
                                             Ordenar por
@@ -343,7 +343,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 onClick={() => setOrdenamiento('alfabetico-asc')}
                                                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                                     ordenamiento === 'alfabetico-asc'
-                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        ? 'bg-[#6000ca] text-white shadow-lg'
                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                             >
@@ -353,7 +353,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 onClick={() => setOrdenamiento('alfabetico-desc')}
                                                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                                     ordenamiento === 'alfabetico-desc'
-                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        ? 'bg-[#6000ca] text-white shadow-lg'
                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                             >
@@ -363,7 +363,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 onClick={() => setOrdenamiento('precio-asc')}
                                                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                                     ordenamiento === 'precio-asc'
-                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        ? 'bg-[#6000ca] text-white shadow-lg'
                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                             >
@@ -373,7 +373,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 onClick={() => setOrdenamiento('precio-desc')}
                                                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                                                     ordenamiento === 'precio-desc'
-                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                        ? 'bg-[#6000ca] text-white shadow-lg'
                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                             >
@@ -384,7 +384,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
 
                                     {/* Filtros */}
                                     <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center">
-                                        <svg className="h-5 w-5 mr-2 text-[#A72DAB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                                         </svg>
                                         Filtros
@@ -401,7 +401,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                     handleFilterChange('categoria', e.target.value);
                                                     handleFilterChange('subcategoria', '');
                                                 }}
-                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                             >
                                                 <option value="">Todas las categorías</option>
                                                 {categorias.map(cat => (
@@ -419,7 +419,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 value={filters.subcategoria}
                                                 onChange={(e) => handleFilterChange('subcategoria', e.target.value)}
                                                 disabled={!filters.categoria}
-                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02] disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02] disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 <option value="">
                                                     {filters.categoria ? 'Todas las subcategorías' : 'Selecciona una categoría primero'}
@@ -438,7 +438,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                             <select
                                                 value={filters.estado}
                                                 onChange={(e) => handleFilterChange('estado', e.target.value)}
-                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                             >
                                                 <option value="todos">Todos</option>
                                                 <option value="activo">Activos</option>
@@ -454,7 +454,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                             <select
                                                 value={filters.destacado}
                                                 onChange={(e) => handleFilterChange('destacado', e.target.value)}
-                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                             >
                                                 <option value="todos">Todos</option>
                                                 <option value="destacado">Destacados</option>
@@ -472,7 +472,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 placeholder="$0.00"
                                                 value={filters.precioMin}
                                                 onChange={(e) => handleFilterChange('precioMin', e.target.value)}
-                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                                 min="0"
                                                 step="0.01"
                                             />
@@ -488,7 +488,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 placeholder="$9999.99"
                                                 value={filters.precioMax}
                                                 onChange={(e) => handleFilterChange('precioMax', e.target.value)}
-                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                                className="block w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                                 min="0"
                                                 step="0.01"
                                             />
@@ -518,8 +518,8 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                     Mostrando <span className="font-bold text-gray-900 transition-all duration-300">{productosFiltrados.length}</span> de <span className="font-bold text-gray-900">{productos.length}</span> productos
                                 </span>
                                 {(activeFiltersCount > 0 || searchTerm) && (
-                                    <span className="text-[#A72DAB] font-semibold animate-fadeIn flex items-center gap-2">
-                                        <span className="inline-block animate-pulse">🔍</span> Filtros activos
+                                    <span className="text-[#6000ca] font-semibold animate-fadeIn flex items-center gap-2">
+                                        <span className="inline-block animate-pulse"><Search aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /></span> Filtros activos
                                     </span>
                                 )}
                             </div>
@@ -529,8 +529,8 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                     {/* Vista de Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {productosFiltrados.length === 0 ? (
-                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#6000ca]/20 mb-4">
                                     <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
@@ -541,7 +541,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                 {(activeFiltersCount > 0 || searchTerm) && (
                                     <button
                                         onClick={resetFilters}
-                                        className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 animate-fadeIn"
+                                        className="mt-4 inline-flex items-center px-4 py-2 bg-[#6000ca] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 animate-fadeIn"
                                     >
                                         <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -560,11 +560,11 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                 return (
                                 <div
                                     key={producto.id}
-                                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
+                                    className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     {/* Header de la card con imagen/icono */}
-                                    <div className="relative aspect-[4/5] bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] overflow-hidden">
+                                    <div className="relative aspect-[4/5] bg-[#6000ca] overflow-hidden">
                                         {producto.imagen_principal ? (
                                             <img
                                                 src={`/${producto.imagen_principal.ruta}`}
@@ -606,7 +606,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                         <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col items-end gap-1 sm:gap-2 z-10">
                                             {sinStock && (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-lg animate-bounceIn">
-                                                    ⚠ Sin stock
+                                                    <TriangleAlert aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Sin stock
                                                 </span>
                                             )}
                                             {stockBajo && (
@@ -616,12 +616,12 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                             )}
                                             {producto.is_featured && (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-400 text-yellow-900 shadow-lg animate-bounceIn">
-                                                    ⭐ Destacado
+                                                    <Star aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Destacado
                                                 </span>
                                             )}
                                             {tieneOferta && (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-orange-400 to-red-500 text-white shadow-lg animate-bounceIn">
-                                                    🔥 {Math.round(precioInfo.ahorroTotalPorcentaje)}% OFF
+                                                    <Flame aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> {Math.round(precioInfo.ahorroTotalPorcentaje)}% OFF
                                                 </span>
                                             )}
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-lg ${
@@ -629,7 +629,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                     ? 'bg-green-400 text-green-900' 
                                                     : 'bg-red-400 text-red-900'
                                             }`}>
-                                                {producto.is_active ? '✓ Activo' : '✕ Inactivo'}
+                                                {producto.is_active ? <><Check aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0" />Activo</> : <><X aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0" />Inactivo</>}
                                             </span>
                                         </div>
                                     </div>
@@ -644,7 +644,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 {producto.categorias && producto.categorias.map((categoria) => (
                                                     <span
                                                         key={`cat-${categoria.id}`}
-                                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#40B0C2]/20 to-[#40B0C2]/30 text-[#40B0C2] border border-[#40B0C2]/40"
+                                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#6000ca]/20 to-[#6000ca]/30 text-[#6000ca] border border-[#6000ca]/40"
                                                     >
                                                         {categoria.nombre}
                                                     </span>
@@ -654,7 +654,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 {producto.subcategorias && producto.subcategorias.map((subcategoria) => (
                                                     <span
                                                         key={`sub-${subcategoria.id}`}
-                                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#A72DAB]/20 to-[#A72DAB]/30 text-[#A72DAB] border border-[#A72DAB]/40"
+                                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#6000ca]/20 to-[#6000ca]/30 text-[#6000ca] border border-[#6000ca]/40"
                                                     >
                                                         {subcategoria.nombre}
                                                     </span>
@@ -695,7 +695,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                     </span>
                                                 </>
                                             ) : (
-                                                <span className="text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                                <span className="text-lg font-bold text-[#6000ca]">
                                                     {formatearPrecio(producto.precio)}
                                                 </span>
                                             )}
@@ -740,7 +740,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                             {/* Botones de editar y eliminar */}
                                             <Link
                                                 href={route('productos.edit', producto.id)}
-                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-full hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-full hover:bg-[#6000ca] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                 title="Editar"
                                             >
                                                 <Pencil className="h-4 w-4" />
@@ -748,7 +748,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                             {auth.user.role === 'admin' && (
                                                 <button
                                                     onClick={() => openDeleteModal(producto)}
-                                                    className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                    className="admin-delete inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                     title="Eliminar"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -772,7 +772,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -800,7 +800,7 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                 <button
                                     type="button"
                                     onClick={handleDelete}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    className="admin-delete w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
                                 >
                                     Eliminar
                                 </button>

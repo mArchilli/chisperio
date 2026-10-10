@@ -19,7 +19,7 @@ export default function Edit({ plan }) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Editar Plan de Pago
                     </h2>
                     <Link
@@ -44,7 +44,7 @@ export default function Edit({ plan }) {
                         </div>
                     )}
 
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="admin-card bg-white rounded-2xl shadow-xl overflow-hidden">
                         <form onSubmit={handleSubmit} className="p-6 sm:p-8">
                             {/* Nombre */}
                             <div className="mb-6">
@@ -56,7 +56,7 @@ export default function Edit({ plan }) {
                                     id="nombre"
                                     value={data.nombre}
                                     onChange={e => setData('nombre', e.target.value)}
-                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                 />
                                 {errors.nombre && (
                                     <p className="mt-2 text-sm text-red-600">{errors.nombre}</p>
@@ -76,7 +76,7 @@ export default function Edit({ plan }) {
                                         step="1"
                                         value={data.cuotas}
                                         onChange={e => setData('cuotas', e.target.value)}
-                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                     />
                                     {errors.cuotas && (
                                         <p className="mt-2 text-sm text-red-600">{errors.cuotas}</p>
@@ -95,7 +95,7 @@ export default function Edit({ plan }) {
                                         min="0"
                                         value={data.recargo_porcentaje}
                                         onChange={e => setData('recargo_porcentaje', e.target.value)}
-                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                     />
                                     {errors.recargo_porcentaje && (
                                         <p className="mt-2 text-sm text-red-600">{errors.recargo_porcentaje}</p>
@@ -115,7 +115,7 @@ export default function Edit({ plan }) {
                                     step="1"
                                     value={data.orden}
                                     onChange={e => setData('orden', e.target.value)}
-                                    className="block w-full max-w-xs px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                    className="block w-full max-w-xs px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
                                     Define el orden en que se muestran los planes (menor primero)
@@ -132,7 +132,7 @@ export default function Edit({ plan }) {
                                         type="checkbox"
                                         checked={data.is_active}
                                         onChange={e => setData('is_active', e.target.checked)}
-                                        className="w-5 h-5 text-[#A72DAB] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#A72DAB] transition-all"
+                                        className="w-5 h-5 text-[#6000ca] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#6000ca] transition-all"
                                     />
                                     <span className="ml-3 text-sm font-semibold text-gray-900">
                                         Plan activo
@@ -154,7 +154,7 @@ export default function Edit({ plan }) {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {processing ? (
                                         <>

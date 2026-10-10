@@ -10,7 +10,7 @@ export const formatearPrecioLinea = (precio) =>
     }).format(precio);
 
 const inputClase =
-    'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-[#40B0C2] focus:ring-[#40B0C2]';
+    'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-[#6000ca] focus:ring-[#6000ca]';
 
 function Campo({ label, error, children, className = '' }) {
     return (
@@ -117,21 +117,21 @@ export default function NuevaLineaPedido({ linea, referencia, onChange, onQuitar
         });
 
     return (
-        <div className="rounded-xl border-2 border-dashed border-[#40B0C2]/60 bg-[#40B0C2]/[0.04] p-4">
+        <div className="rounded-xl border-2 border-dashed border-[#6000ca]/60 bg-[#6000ca]/[0.04] p-4">
             <div className="flex items-start gap-4">
-                <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
+                <div className="admin-card w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
                     {ruta && <img src={`/${ruta}`} alt={referencia.titulo} className="w-full h-full object-cover" />}
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-gray-900">
                         {referencia.titulo}
-                        <span className="ml-2 inline-flex items-center rounded-full bg-[#40B0C2] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                        <span className="ml-2 inline-flex items-center rounded-full bg-[#6000ca] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                             {esCombo ? 'Combo nuevo' : 'Nuevo'}
                         </span>
                     </div>
                     <div className="text-xs text-gray-500">Se suma al pedido al guardar.</div>
                 </div>
-                <button type="button" onClick={onQuitar} className="text-xs font-semibold text-red-600 hover:text-red-800">
+                <button type="button" onClick={onQuitar} className="admin-delete text-xs font-semibold text-red-600 hover:text-red-800">
                     Quitar
                 </button>
             </div>
@@ -200,7 +200,7 @@ export default function NuevaLineaPedido({ linea, referencia, onChange, onQuitar
                                                 type="checkbox"
                                                 checked={marcado}
                                                 onChange={() => alternarAddon(addon.id)}
-                                                className="h-4 w-4 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
+                                                className="h-4 w-4 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                                             />
                                             {addon.nombre} (+{formatearPrecioLinea(precioAddon)})
                                         </label>
@@ -245,7 +245,7 @@ export default function NuevaLineaPedido({ linea, referencia, onChange, onQuitar
                         <button
                             type="button"
                             onClick={() => onChange({ precio_manual: false })}
-                            className="mt-1 text-xs font-semibold text-[#40B0C2] hover:underline"
+                            className="mt-1 text-xs font-semibold text-[#6000ca] hover:underline"
                         >
                             Volver al precio de catálogo
                         </button>

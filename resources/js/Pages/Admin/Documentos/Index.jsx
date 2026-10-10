@@ -42,7 +42,7 @@ export default function Index({ documentos }) {
             header={
                 <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Documentación
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
@@ -52,7 +52,7 @@ export default function Index({ documentos }) {
                     {esAdmin && (
                         <Link
                             href={route('documentos.create')}
-                            className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                            className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                         >
                             <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -80,8 +80,8 @@ export default function Index({ documentos }) {
 
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {documentos.length === 0 ? (
-                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card col-span-full bg-white rounded-2xl shadow-lg p-12 text-center">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#6000ca]/20 mb-4">
                                     <FileText className="h-10 w-10 text-gray-400" />
                                 </div>
                                 <p className="text-gray-600 text-lg mb-2">
@@ -90,7 +90,7 @@ export default function Index({ documentos }) {
                                 {esAdmin && (
                                     <Link
                                         href={route('documentos.create')}
-                                        className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                        className="mt-4 inline-flex items-center px-4 py-2 bg-[#6000ca] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95"
                                     >
                                         Cargar el primer documento
                                     </Link>
@@ -100,11 +100,11 @@ export default function Index({ documentos }) {
                             documentos.map((documento) => (
                                 <div
                                     key={documento.id}
-                                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
+                                    className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
                                 >
                                     <div className="p-3 sm:p-6 flex-1 flex flex-col">
                                         <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 mb-3">
-                                            <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                                            <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-[#6000ca] flex items-center justify-center">
                                                 {documento.tipo === 'pdf' ? (
                                                     <FileText className="h-6 w-6 text-white" />
                                                 ) : (
@@ -141,7 +141,7 @@ export default function Index({ documentos }) {
                                             href={hrefDocumento(documento)}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg text-xs sm:text-sm font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
+                                            className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-[#6000ca] text-white rounded-lg text-xs sm:text-sm font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
                                         >
                                             <ExternalLink className="h-4 w-4" />
                                             {documento.tipo === 'pdf' ? 'Ver PDF' : 'Abrir link'}
@@ -159,14 +159,14 @@ export default function Index({ documentos }) {
                                             </button>
                                             <Link
                                                 href={route('documentos.edit', documento.id)}
-                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-full hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-full hover:bg-[#6000ca] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                 title="Editar"
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </Link>
                                             <button
                                                 onClick={() => openDeleteModal(documento)}
-                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                className="admin-delete inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                 title="Eliminar"
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -187,7 +187,7 @@ export default function Index({ documentos }) {
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -212,7 +212,7 @@ export default function Index({ documentos }) {
                                 <button
                                     type="button"
                                     onClick={handleDelete}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    className="admin-delete w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
                                 >
                                     Eliminar
                                 </button>

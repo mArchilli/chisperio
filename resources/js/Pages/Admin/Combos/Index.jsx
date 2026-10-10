@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Truck } from 'lucide-react';
 
 export default function Index({ combos }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -35,14 +35,14 @@ export default function Index({ combos }) {
             header={
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Combos
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">Paquetes de productos con precio propio</p>
                     </div>
                     <Link
                         href={route('combos.create')}
-                        className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] rounded-xl font-semibold text-sm text-white hover:shadow-lg transition-all"
+                        className="inline-flex items-center px-5 py-2.5 bg-[#6000ca] rounded-xl font-semibold text-sm text-white hover:shadow-lg transition-all"
                     >
                         <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -57,16 +57,16 @@ export default function Index({ combos }) {
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {combos.length === 0 ? (
-                        <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+                        <div className="admin-card bg-white rounded-2xl shadow-sm p-12 text-center">
                             <p className="text-gray-500">Todavía no hay combos creados.</p>
-                            <Link href={route('combos.create')} className="mt-4 inline-block text-[#A72DAB] font-semibold hover:underline">
+                            <Link href={route('combos.create')} className="mt-4 inline-block text-[#6000ca] font-semibold hover:underline">
                                 Crear el primero
                             </Link>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                             {combos.map((combo) => (
-                                <div key={combo.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden border border-gray-100">
+                                <div key={combo.id} className="admin-card bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden border border-gray-100">
                                     <div className="relative aspect-video bg-gray-100">
                                         {combo.imagen_principal ? (
                                             <img src={`/${combo.imagen_principal.ruta}`} alt={combo.titulo} className="w-full h-full object-cover" />
@@ -97,7 +97,7 @@ export default function Index({ combos }) {
                                         </p>
 
                                         <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
-                                            <span className="text-base sm:text-lg font-bold text-[#A72DAB]">{formatearPrecio(combo.precio)}</span>
+                                            <span className="text-base sm:text-lg font-bold text-[#6000ca]">{formatearPrecio(combo.precio)}</span>
                                             {combo.descuento_activo && (
                                                 <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700">Con descuento</span>
                                             )}
@@ -105,8 +105,8 @@ export default function Index({ combos }) {
 
                                         {combo.envio_gratis && (
                                             <div className="mb-3">
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-full bg-[#40B0C2]/10 text-[#2f8a99]">
-                                                    🚚 Envío gratis
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-full bg-[#6000ca]/10 text-[#6000ca]">
+                                                    <Truck aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Envío gratis
                                                 </span>
                                             </div>
                                         )}
@@ -121,7 +121,7 @@ export default function Index({ combos }) {
                                             <button
                                                 type="button"
                                                 onClick={() => openDeleteModal(combo)}
-                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                className="admin-delete p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                                 aria-label="Eliminar combo"
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -140,7 +140,7 @@ export default function Index({ combos }) {
                     <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeDeleteModal}></div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <h3 className="text-lg leading-6 font-medium text-gray-900">Eliminar Combo</h3>
                                 <p className="mt-2 text-sm text-gray-500">
@@ -151,7 +151,7 @@ export default function Index({ combos }) {
                                 <button
                                     type="button"
                                     onClick={handleDelete}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm"
+                                    className="admin-delete w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm"
                                 >
                                     Eliminar
                                 </button>

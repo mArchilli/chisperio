@@ -37,7 +37,7 @@ export function validarOfertaDescuento(data) {
     return { esValido: Object.keys(errores).length === 0, errores };
 }
 
-const inputClass = 'block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]';
+const inputClass = 'block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]';
 
 function ToggleOption({ activo, onClick, children }) {
     return (
@@ -47,7 +47,7 @@ function ToggleOption({ activo, onClick, children }) {
             onClick={onClick}
             className={`flex-1 px-4 py-3 rounded-xl border-2 text-left text-sm font-semibold transition-all duration-300 ${
                 activo
-                    ? 'border-[#40B0C2] bg-gradient-to-br from-[#40B0C2]/10 to-[#A72DAB]/10 text-[#A72DAB] shadow-md'
+                    ? 'border-[#6000ca] bg-[#6000ca]/10 text-[#6000ca] shadow-md'
                     : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
             }`}
         >

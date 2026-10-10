@@ -37,15 +37,15 @@ function Icon({ path, className = 'h-6 w-6' }) {
     );
 }
 
-function MetricCard({ href, params, label, value, sublabel, color, icon, alert, clickable = true }) {
+function MetricCard({ href, params, label, value, sublabel, icon, alert, clickable = true }) {
     const contenido = (
         <div
-            className={`h-full bg-white rounded-2xl shadow-lg p-4 sm:p-5 transition-all duration-300 ${
+            className={`admin-card h-full bg-white rounded-2xl shadow-lg p-4 sm:p-5 transition-all duration-300 ${
                 clickable ? 'hover:shadow-2xl transform hover:-translate-y-1' : ''
             } ${alert ? 'ring-2 ring-amber-300' : ''}`}
         >
             <div className="flex items-center justify-between mb-3">
-                <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br ${color} text-white shadow-md`}>
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-[#6000ca]/10 text-[#6000ca]">
                     <Icon path={icon} className="h-6 w-6" />
                 </div>
                 <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ function ChartTooltip({ active, payload }) {
     const { fecha, cantidad } = payload[0].payload;
 
     return (
-        <div className="rounded-lg bg-white shadow-lg border border-gray-100 px-3 py-2 text-sm">
+        <div className="admin-card rounded-lg bg-white shadow-lg border border-gray-100 px-3 py-2 text-sm">
             <div className="font-semibold text-gray-800 capitalize">{formatearFechaCompleta(fecha)}</div>
             <div className="text-gray-500">
                 {cantidad} {cantidad === 1 ? 'pedido' : 'pedidos'}
@@ -105,7 +105,7 @@ function GraficoPedidosPorDia({ datos }) {
     const total = datos.reduce((acc, d) => acc + d.cantidad, 0);
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Pedidos de los últimos 30 días</h3>
                 <div className="text-sm font-medium text-gray-500 tabular-nums">
@@ -118,12 +118,12 @@ function GraficoPedidosPorDia({ datos }) {
                     <AreaChart data={datos} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                         <defs>
                             <linearGradient id="fillPedidos" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#40B0C2" stopOpacity={0.35} />
-                                <stop offset="95%" stopColor="#A72DAB" stopOpacity={0.03} />
+                                <stop offset="5%" stopColor="#6000ca" stopOpacity={0.35} />
+                                <stop offset="95%" stopColor="#6000ca" stopOpacity={0.03} />
                             </linearGradient>
                             <linearGradient id="strokePedidos" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#40B0C2" />
-                                <stop offset="100%" stopColor="#A72DAB" />
+                                <stop offset="0%" stopColor="#6000ca" />
+                                <stop offset="100%" stopColor="#6000ca" />
                             </linearGradient>
                         </defs>
                         <CartesianGrid vertical={false} stroke="#f1f5f9" />
@@ -136,7 +136,7 @@ function GraficoPedidosPorDia({ datos }) {
                             interval={4}
                         />
                         <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={28} />
-                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#A72DAB', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#6000ca', strokeWidth: 1, strokeDasharray: '4 4' }} />
                         <Area
                             type="monotone"
                             dataKey="cantidad"
@@ -144,7 +144,7 @@ function GraficoPedidosPorDia({ datos }) {
                             strokeWidth={2.5}
                             fill="url(#fillPedidos)"
                             dot={false}
-                            activeDot={{ r: 5, fill: '#A72DAB', stroke: '#fff', strokeWidth: 2 }}
+                            activeDot={{ r: 5, fill: '#6000ca', stroke: '#fff', strokeWidth: 2 }}
                         />
                     </AreaChart>
                 </ResponsiveContainer>
@@ -169,7 +169,7 @@ export default function Dashboard({ stats }) {
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Dashboard
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">Hola, {auth.user.name.split(' ')[0]} · resumen operativo de la tienda</p>
@@ -189,7 +189,6 @@ export default function Dashboard({ stats }) {
                             label="Pedidos pendientes"
                             value={pedidos_pendientes_count}
                             alert={pedidos_pendientes_count > 0}
-                            color="from-yellow-400 to-yellow-500"
                             icon={ICONOS.reloj}
                         />
 
@@ -198,7 +197,6 @@ export default function Dashboard({ stats }) {
                             params={{ estado: 'despachado' }}
                             label="Despachados este mes"
                             value={pedidos_despachados_mes}
-                            color="from-green-400 to-green-500"
                             icon={ICONOS.check}
                         />
 
@@ -207,7 +205,6 @@ export default function Dashboard({ stats }) {
                             label="Productos activos"
                             value={productos_count}
                             sublabel={`${productos_total} en total`}
-                            color="from-[#40B0C2] to-[#3a9db0]"
                             icon={ICONOS.caja}
                         />
 
@@ -215,7 +212,6 @@ export default function Dashboard({ stats }) {
                             label="Producto más vendido"
                             value={producto_mas_vendido ? producto_mas_vendido.nombre : 'Sin datos'}
                             sublabel={producto_mas_vendido ? `${producto_mas_vendido.unidades} unidades vendidas` : null}
-                            color="from-[#A72DAB] to-[#8f2591]"
                             icon={ICONOS.estrella}
                             clickable={false}
                         />
@@ -228,7 +224,6 @@ export default function Dashboard({ stats }) {
                                 label="Productos sin stock"
                                 value={productos_sin_stock_count}
                                 alert
-                                color="from-red-500 to-red-600"
                                 icon={ICONOS.alerta}
                             />
                         )}

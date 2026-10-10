@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import ProductoPickerModal from '@/Components/ProductoPickerModal';
 
 /**
@@ -46,7 +47,7 @@ export default function ProductosCompatiblesSelector({
     return (
         <div className="mb-8">
             <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -102,10 +103,10 @@ export default function ProductosCompatiblesSelector({
                                 <button
                                     type="button"
                                     onClick={() => quitar(producto.id)}
-                                    className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                                    className="admin-delete rounded-lg p-1.5 text-red-500 hover:bg-red-50"
                                     aria-label={`Quitar ${producto.titulo}`}
                                 >
-                                    ✕
+                                    <X aria-hidden="true" className="h-4 w-4" />
                                 </button>
                             </div>
                         </li>
@@ -117,7 +118,7 @@ export default function ProductosCompatiblesSelector({
                 type="button"
                 onClick={() => setPickerAbierto(true)}
                 disabled={disponibles.length === 0}
-                className="inline-flex items-center rounded-xl border-2 border-dashed border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[#40B0C2] hover:text-[#40B0C2] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center rounded-xl border-2 border-dashed border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[#6000ca] hover:text-[#6000ca] disabled:cursor-not-allowed disabled:opacity-50"
             >
                 + Agregar producto compatible
             </button>
@@ -129,7 +130,7 @@ export default function ProductosCompatiblesSelector({
                     type="checkbox"
                     checked={sugerirSiempre}
                     onChange={(e) => onSugerirSiempreChange(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                 />
                 <span className="text-sm font-bold text-gray-700">
                     Sugerir siempre en el carrito

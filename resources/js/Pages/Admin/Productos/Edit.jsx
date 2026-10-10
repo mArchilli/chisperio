@@ -1,3 +1,4 @@
+import { Star } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import EscalasPrecioRepeater, { validarEscalasPrecio, limpiarEscalasParaEnviar } from '@/Components/EscalasPrecioRepeater';
 import VariantesColorRepeater, { validarVariantes, limpiarVariantesParaEnviar } from '@/Components/VariantesColorRepeater';
@@ -198,7 +199,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Editar Producto
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">Modifica los datos del producto "{producto.titulo}"</p>
@@ -209,20 +210,20 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
 
             <div className="py-8">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    <div className="admin-card overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-8">
                             <form onSubmit={handleSubmit}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div className="md:col-span-2">
                                         <label htmlFor="titulo" className="block text-sm font-bold text-gray-700 mb-2">
-                                            Título <span className="text-[#A72DAB]">*</span>
+                                            Título <span className="text-[#6000ca]">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             id="titulo"
                                             value={data.titulo}
                                             onChange={(e) => setData('titulo', e.target.value)}
-                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                             required
                                         />
                                         {errors.titulo && (
@@ -237,7 +238,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
 
                                     <div>
                                         <label htmlFor="precio" className="block text-sm font-bold text-gray-700 mb-2">
-                                            Precio <span className="text-[#A72DAB]">*</span>
+                                            Precio <span className="text-[#6000ca]">*</span>
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
@@ -248,7 +249,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 min="0"
                                                 value={data.precio}
                                                 onChange={(e) => setData('precio', e.target.value)}
-                                                className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                                 required
                                             />
                                         </div>
@@ -274,7 +275,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                             value={data.stock}
                                             onChange={(e) => setData('stock', e.target.value)}
                                             placeholder="Dejar vacío para stock ilimitado"
-                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                         />
                                         {errors.stock && (
                                             <div className="mt-2 flex items-center text-sm text-red-600">
@@ -337,7 +338,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                 {/* Sección Multimedia Moderna */}
                                 <div className="mb-8">
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                                        <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
                                         Multimedia
@@ -367,7 +368,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => eliminarMediaExistente(media.id)}
-                                                                    className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
+                                                                    className="admin-delete absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
                                                                 >
                                                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -375,7 +376,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 </button>
                                                                 {media.is_principal && (
                                                                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 text-xs font-bold rounded-full shadow-lg bg-gradient-to-r from-yellow-400 to-yellow-600 text-white scale-105">
-                                                                        ⭐ Principal
+                                                                        <Star aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Principal
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -383,7 +384,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <select
                                                                     value={media.varianteKey || ''}
                                                                     onChange={(e) => actualizarColorMediaExistente(media.id, e.target.value)}
-                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50"
                                                                 >
                                                                     <option value="">General (todos los colores)</option>
                                                                     {variantesVisibles.map((v) => (
@@ -411,16 +412,16 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                             />
                                             <label
                                                 htmlFor="imageUploadEdit"
-                                                className="flex flex-col items-center justify-center w-full h-48 border-3 border-dashed border-[#40B0C2]/40 rounded-2xl cursor-pointer bg-gradient-to-br from-[#40B0C2]/5 via-white to-[#A72DAB]/5 hover:from-[#40B0C2]/10 hover:to-[#A72DAB]/10 transition-all group"
+                                                className="flex flex-col items-center justify-center w-full h-48 border-3 border-dashed border-[#6000ca]/40 rounded-2xl cursor-pointer bg-gradient-to-br from-[#6000ca]/5 via-white to-[#6000ca]/5 hover:from-[#6000ca]/10 hover:to-[#6000ca]/10 transition-all group"
                                             >
                                                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                    <div className="p-4 bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] rounded-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                                    <div className="p-4 bg-[#6000ca] rounded-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg">
                                                         <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                         </svg>
                                                     </div>
                                                     <p className="mb-2 text-sm font-bold text-gray-700">
-                                                        <span className="bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">Haz clic para subir</span> o arrastra las imágenes aquí
+                                                        <span className="text-[#6000ca]">Haz clic para subir</span> o arrastra las imágenes aquí
                                                     </p>
                                                     <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 5MB</p>
                                                 </div>
@@ -444,7 +445,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => removeImagenNueva(index)}
-                                                                    className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
+                                                                    className="admin-delete absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
                                                                 >
                                                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -455,7 +456,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <select
                                                                     value={preview.varianteKey || ''}
                                                                     onChange={(e) => actualizarColorImagenNueva(index, e.target.value)}
-                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50"
                                                                 >
                                                                     <option value="">General (todos los colores)</option>
                                                                     {variantesVisibles.map((v) => (
@@ -484,10 +485,10 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Videos Actuales</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                                                     {mediaExistente.filter(m => m.tipo === 'video').map((media) => (
-                                                        <div key={media.id} className="p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
+                                                        <div key={media.id} className="p-4 bg-[#6000ca]/10 rounded-xl border-2 border-[#6000ca]/30 group hover:shadow-lg transition-all">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center flex-1 min-w-0">
-                                                                    <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
+                                                                    <div className="flex-shrink-0 p-3 bg-[#6000ca] rounded-lg">
                                                                         <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -498,7 +499,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => eliminarMediaExistente(media.id)}
-                                                                    className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                                                    className="admin-delete ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                                                                 >
                                                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -509,7 +510,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <select
                                                                     value={media.varianteKey || ''}
                                                                     onChange={(e) => actualizarColorMediaExistente(media.id, e.target.value)}
-                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50"
                                                                 >
                                                                     <option value="">General (todos los colores)</option>
                                                                     {variantesVisibles.map((v) => (
@@ -537,16 +538,16 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                             />
                                             <label
                                                 htmlFor="videoUploadEdit"
-                                                className="flex flex-col items-center justify-center w-full h-40 border-3 border-dashed border-[#A72DAB]/40 rounded-2xl cursor-pointer bg-gradient-to-br from-[#A72DAB]/5 via-white to-[#40B0C2]/5 hover:from-[#A72DAB]/10 hover:to-[#40B0C2]/10 transition-all group"
+                                                className="flex flex-col items-center justify-center w-full h-40 border-3 border-dashed border-[#6000ca]/40 rounded-2xl cursor-pointer bg-gradient-to-br from-[#6000ca]/5 via-white to-[#6000ca]/5 hover:from-[#6000ca]/10 hover:to-[#6000ca]/10 transition-all group"
                                             >
                                                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                    <div className="p-4 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                                                    <div className="p-4 bg-[#6000ca] rounded-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg">
                                                         <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                                         </svg>
                                                     </div>
                                                     <p className="mb-2 text-sm font-bold text-gray-700">
-                                                        <span className="bg-gradient-to-r from-[#A72DAB] to-[#40B0C2] bg-clip-text text-transparent">Haz clic para subir</span> o arrastra videos aquí
+                                                        <span className="text-[#6000ca]">Haz clic para subir</span> o arrastra videos aquí
                                                     </p>
                                                     <p className="text-xs text-gray-500">MP4, MOV, AVI hasta 50MB</p>
                                                 </div>
@@ -558,10 +559,10 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                 <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Nuevos Videos</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     {videosPreview.map((preview, index) => (
-                                                        <div key={index} className="p-4 bg-gradient-to-r from-[#A72DAB]/10 to-[#40B0C2]/10 rounded-xl border-2 border-[#A72DAB]/30 group hover:shadow-lg transition-all">
+                                                        <div key={index} className="p-4 bg-[#6000ca]/10 rounded-xl border-2 border-[#6000ca]/30 group hover:shadow-lg transition-all">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center flex-1 min-w-0">
-                                                                    <div className="flex-shrink-0 p-3 bg-gradient-to-br from-[#A72DAB] to-[#40B0C2] rounded-lg">
+                                                                    <div className="flex-shrink-0 p-3 bg-[#6000ca] rounded-lg">
                                                                         <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -572,7 +573,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => removeVideoNuevo(index)}
-                                                                    className="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                                                    className="admin-delete ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                                                                 >
                                                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -583,7 +584,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 <select
                                                                     value={preview.varianteKey || ''}
                                                                     onChange={(e) => actualizarColorVideoNuevo(index, e.target.value)}
-                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                                                    className="mt-3 block w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50"
                                                                 >
                                                                     <option value="">General (todos los colores)</option>
                                                                     {variantesVisibles.map((v) => (
@@ -604,7 +605,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                 {/* Categorías y Subcategorías */}
                                 <div className="mb-8">
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                                        <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                         </svg>
                                         Categorización
@@ -624,21 +625,21 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                         onClick={() => toggleCategoria(categoria.id)}
                                                         className={`relative p-4 rounded-xl border-2 text-left transition-all transform hover:scale-105 ${
                                                             data.categorias.includes(categoria.id)
-                                                                ? 'border-[#40B0C2] bg-gradient-to-br from-[#40B0C2]/10 to-[#40B0C2]/5 shadow-lg shadow-[#40B0C2]/20'
-                                                                : 'border-gray-200 bg-white hover:border-[#40B0C2]/50'
+                                                                ? 'border-[#6000ca] bg-gradient-to-br from-[#6000ca]/10 to-[#6000ca]/5 shadow-lg shadow-[#6000ca]/20'
+                                                                : 'border-gray-200 bg-white hover:border-[#6000ca]/50'
                                                         }`}
                                                     >
                                                         <div className="flex items-start justify-between">
                                                             <div className="flex-1">
                                                                 <p className={`font-semibold text-sm ${
-                                                                    data.categorias.includes(categoria.id) ? 'text-[#40B0C2]' : 'text-gray-700'
+                                                                    data.categorias.includes(categoria.id) ? 'text-[#6000ca]' : 'text-gray-700'
                                                                 }`}>
                                                                     {categoria.nombre}
                                                                 </p>
                                                             </div>
                                                             {data.categorias.includes(categoria.id) && (
                                                                 <div className="flex-shrink-0 ml-2">
-                                                                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                                                                    <div className="h-6 w-6 rounded-full bg-[#6000ca] flex items-center justify-center">
                                                                         <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                                                         </svg>
@@ -675,7 +676,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                                 onClick={() => toggleSubcategoria(subcategoria.id)}
                                                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                                                                     data.subcategorias.includes(subcategoria.id)
-                                                                        ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-md'
+                                                                        ? 'bg-[#6000ca] text-white shadow-md'
                                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                                                                 }`}
                                                             >
@@ -703,14 +704,14 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                 {/* Configuración de Visibilidad */}
                                 <div className="mb-8">
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                                        <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                                         </svg>
                                         Configuración del Producto
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Toggle Activo */}
-                                        <div className="flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-[#40B0C2] transition-all">
+                                        <div className="admin-card flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-[#6000ca] transition-all">
                                             <div className="flex items-center">
                                                 <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
                                                     <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -730,12 +731,12 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                     onChange={(e) => setData('is_active', e.target.checked)}
                                                     className="sr-only peer"
                                                 />
-                                                <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#40B0C2]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-600"></div>
+                                                <div className="admin-card w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#6000ca]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-600"></div>
                                             </label>
                                         </div>
 
                                         {/* Toggle Destacado */}
-                                        <div className="flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-yellow-500 transition-all">
+                                        <div className="admin-card flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-yellow-500 transition-all">
                                             <div className="flex items-center">
                                                 <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
                                                     <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -755,7 +756,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                                     onChange={(e) => setData('is_featured', e.target.checked)}
                                                     className="sr-only peer"
                                                 />
-                                                <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-yellow-400 peer-checked:to-yellow-600"></div>
+                                                <div className="admin-card w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-yellow-400 peer-checked:to-yellow-600"></div>
                                             </label>
                                         </div>
                                     </div>
@@ -774,7 +775,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                                        className="inline-flex items-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
                                     >
                                         <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

@@ -1,3 +1,4 @@
+import { Truck, CreditCard } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ImageLightbox from '@/Components/ImageLightbox';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -84,7 +85,7 @@ export default function Show({ pedido }) {
                     <div>
                         <Link
                             href={route('pedidos.index')}
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-[#40B0C2] transition-colors mb-2"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-[#6000ca] transition-colors mb-2"
                         >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -92,7 +93,7 @@ export default function Show({ pedido }) {
                             Volver a Pedidos
                         </Link>
                         <div className="flex flex-wrap items-center gap-3">
-                            <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                            <h2 className="text-2xl font-bold text-[#6000ca]">
                                 Pedido #{pedido.id}
                             </h2>
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${estadoInfo.badge}`}>
@@ -105,7 +106,7 @@ export default function Show({ pedido }) {
                             )}
                             {tieneEnvioGratis && (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-100 px-3 py-1 text-xs font-bold text-green-800">
-                                    🚚 Envío gratis
+                                    <Truck aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Envío gratis
                                 </span>
                             )}
                             {pedido.editado_at && (
@@ -152,7 +153,7 @@ export default function Show({ pedido }) {
 
                     {/* Datos del cliente */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
                                 <h3 className="text-lg font-bold text-gray-900">Datos del cliente</h3>
                                 {telefonoWhatsApp && (
@@ -196,7 +197,7 @@ export default function Show({ pedido }) {
 
                     {/* Productos del pedido */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden">
                             <div className="p-6 pb-0">
                                 <h3 className="text-lg font-bold text-gray-900 mb-1">Productos del pedido</h3>
                             </div>
@@ -222,7 +223,7 @@ export default function Show({ pedido }) {
                                                                 type="button"
                                                                 onClick={() => ruta && setLightboxSrc(`/${ruta}`)}
                                                                 disabled={!ruta}
-                                                                className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 border border-gray-200 flex items-center justify-center disabled:cursor-default"
+                                                                className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-[#6000ca]/20 border border-gray-200 flex items-center justify-center disabled:cursor-default"
                                                                 title={ruta ? 'Ver imagen' : undefined}
                                                             >
                                                                 {ruta ? (
@@ -241,14 +242,14 @@ export default function Show({ pedido }) {
                                                                 <div className="text-sm font-medium text-gray-900">
                                                                     {item.titulo}
                                                                     {item.combo_id && (
-                                                                        <span className="ml-2 inline-flex items-center rounded-full bg-[#40B0C2]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#40B0C2]">
+                                                                        <span className="ml-2 inline-flex items-center rounded-full bg-[#6000ca]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6000ca]">
                                                                             Combo
                                                                         </span>
                                                                     )}
                                                                 </div>
                                                                 {item.combo_id && item.envio_gratis && (
                                                                     envioGratisPorCombo ? (
-                                                                        <div className="mt-1 text-xs font-semibold text-green-700">🚚 Este combo incluye envío gratis</div>
+                                                                        <div className="mt-1 text-xs font-semibold text-green-700"><Truck aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Este combo incluye envío gratis</div>
                                                                     ) : (
                                                                         <div className="mt-1 text-xs text-gray-400">
                                                                             Combo con envío gratis solo si se compra solo (acá hay otros ítems)
@@ -319,7 +320,7 @@ export default function Show({ pedido }) {
                                         {tieneEnvioGratis && (
                                             <tr className="bg-green-50">
                                                 <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-green-800 text-right">
-                                                    🚚 Envío gratis
+                                                    <Truck aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Envío gratis
                                                     {envioGratisPorMonto && (
                                                         <span className="block text-xs font-normal text-green-700">
                                                             El subtotal superó el monto de {formatearPrecio(pedido.envio_gratis_monto_minimo)}
@@ -359,7 +360,7 @@ export default function Show({ pedido }) {
                                         )}
                                         <tr className="bg-gray-50">
                                             <td colSpan={3} className="px-6 py-4 text-base font-bold text-gray-900 text-right">Total</td>
-                                            <td className="px-6 py-4 text-base font-bold text-right whitespace-nowrap bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                                            <td className="px-6 py-4 text-base font-bold text-right whitespace-nowrap text-[#6000ca]">
                                                 {formatearPrecio(pedido.plan_pago_tarjeta_id ? pedido.total_con_recargo : pedido.total)}
                                             </td>
                                         </tr>
@@ -371,10 +372,10 @@ export default function Show({ pedido }) {
 
                     {/* Forma de pago */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Forma de pago</h3>
                             {pedido.plan_pago_tarjeta_id ? (
-                                <div className="rounded-xl border-2 border-[#40B0C2] bg-[#40B0C2]/[0.06] p-5">
+                                <div className="rounded-xl border-2 border-[#6000ca] bg-[#6000ca]/[0.06] p-5">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div>
                                             <p className="text-sm font-bold text-gray-900">
@@ -388,11 +389,11 @@ export default function Show({ pedido }) {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/70 border border-[#40B0C2]/30 px-4 py-3">
+                                    <div className="admin-card mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/70 border border-[#6000ca]/30 px-4 py-3">
                                         <span className="text-xs font-bold uppercase tracking-wider text-gray-600">
-                                            👉 Generar link de pago en Mercado Pago por
+                                            <CreditCard aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Generar link de pago en Mercado Pago por
                                         </span>
-                                        <span className="text-lg font-black text-[#40B0C2]">
+                                        <span className="text-lg font-black text-[#6000ca]">
                                             {formatearPrecio(pedido.total_con_recargo)}
                                         </span>
                                     </div>
@@ -405,13 +406,13 @@ export default function Show({ pedido }) {
 
                     {/* Acciones */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones</h3>
                             {pedido.estado === 'pendiente' && (
                                 <div className="flex flex-wrap gap-3">
                                     <Link
                                         href={route('pedidos.edit', pedido.id)}
-                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg text-sm font-semibold hover:bg-[#40B0C2] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-semibold hover:bg-[#6000ca] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
                                     >
                                         Editar pedido
                                     </Link>
@@ -433,7 +434,7 @@ export default function Show({ pedido }) {
                                 <div className="flex flex-wrap gap-3">
                                     <Link
                                         href={route('pedidos.edit', pedido.id)}
-                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg text-sm font-semibold hover:bg-[#40B0C2] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-semibold hover:bg-[#6000ca] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
                                     >
                                         Editar pedido
                                     </Link>
@@ -490,7 +491,7 @@ export default function Show({ pedido }) {
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">

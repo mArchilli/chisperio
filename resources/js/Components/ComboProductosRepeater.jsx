@@ -63,7 +63,7 @@ function ProductoPreview({ producto, onElegir }) {
             <button
                 type="button"
                 onClick={onElegir}
-                className="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-gray-300 p-2.5 text-left hover:border-[#40B0C2] hover:bg-[#40B0C2]/5 transition-all"
+                className="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-gray-300 p-2.5 text-left hover:border-[#6000ca] hover:bg-[#6000ca]/5 transition-all"
             >
                 <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,7 +81,7 @@ function ProductoPreview({ producto, onElegir }) {
         <button
             type="button"
             onClick={onElegir}
-            className="group flex w-full items-center gap-3 rounded-xl border-2 border-gray-200 bg-white p-2.5 text-left hover:border-[#40B0C2] transition-all"
+            className="group flex w-full items-center gap-3 rounded-xl border-2 border-gray-200 bg-white p-2.5 text-left hover:border-[#6000ca] transition-all"
         >
             <span className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50">
                 {ruta ? (
@@ -94,9 +94,9 @@ function ProductoPreview({ producto, onElegir }) {
             </span>
             <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-gray-800">{producto.titulo}</span>
-                <span className="block text-xs font-semibold text-[#A72DAB]">{formatearPrecio(producto.precio)}</span>
+                <span className="block text-xs font-semibold text-[#6000ca]">{formatearPrecio(producto.precio)}</span>
             </span>
-            <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wide text-gray-400 group-hover:text-[#40B0C2]">
+            <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wide text-gray-400 group-hover:text-[#6000ca]">
                 Cambiar
             </span>
         </button>
@@ -175,10 +175,10 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
     return (
         <div className="mb-8">
             <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12V8H4v4m16 0v8H4v-8m16 0h-2.5m-13.5 0H4M12 3v5m0 0L9.5 5.5M12 8l2.5-2.5" />
                 </svg>
-                Productos del combo <span className="text-[#A72DAB]">*</span>
+                Productos del combo <span className="text-[#6000ca]">*</span>
             </h3>
             <p className="text-sm text-gray-500 mb-4">
                 Elegí qué productos entran en el combo, cuántas unidades de cada uno, y opcionalmente fijá un color puntual —
@@ -221,7 +221,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
                             const errorVariante = errors[`items.${posicionActual}.producto_variante_id`];
 
                             return (
-                                <div key={item.id ?? item.clave ?? index} className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                                <div key={item.id ?? item.clave ?? index} className="admin-card p-4 bg-white border-2 border-gray-200 rounded-xl">
                                     <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1.5fr_auto] gap-3 items-start">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">
@@ -241,7 +241,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
                                                 step="1"
                                                 value={item.cantidad}
                                                 onChange={(e) => actualizar(index, 'cantidad', e.target.value)}
-                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                             />
                                             {errorCantidad && <p className="mt-1 text-xs text-red-600">{errorCantidad}</p>}
                                         </div>
@@ -254,7 +254,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
                                                 <select
                                                     value={item.producto_variante_id || ''}
                                                     onChange={(e) => actualizar(index, 'producto_variante_id', e.target.value)}
-                                                    className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                    className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                                 >
                                                     <option value="">El comprador elige</option>
                                                     {variantesDelProducto.map((v) => (
@@ -274,7 +274,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
                                                 type="button"
                                                 onClick={() => subir(index)}
                                                 disabled={posicionActual === 0}
-                                                className="p-1 text-gray-400 hover:text-[#40B0C2] disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-1 text-gray-400 hover:text-[#6000ca] disabled:opacity-30 disabled:cursor-not-allowed"
                                                 aria-label="Subir item"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -285,7 +285,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
                                                 type="button"
                                                 onClick={() => bajar(index)}
                                                 disabled={posicionActual === itemsVisibles.length - 1}
-                                                className="p-1 text-gray-400 hover:text-[#40B0C2] disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-1 text-gray-400 hover:text-[#6000ca] disabled:opacity-30 disabled:cursor-not-allowed"
                                                 aria-label="Bajar item"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -295,7 +295,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
                                             <button
                                                 type="button"
                                                 onClick={() => quitar(index)}
-                                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                                className="admin-delete p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                                                 aria-label="Quitar item"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,7 +318,7 @@ export default function ComboProductosRepeater({ items, onChange, errors = {}, p
             <button
                 type="button"
                 onClick={() => setPickerPara('nuevo')}
-                className="inline-flex items-center px-4 py-2 bg-white border-2 border-dashed border-[#40B0C2]/50 rounded-xl font-semibold text-sm text-[#40B0C2] hover:bg-[#40B0C2]/5 transition-all"
+                className="inline-flex items-center px-4 py-2 bg-white border-2 border-dashed border-[#6000ca]/50 rounded-xl font-semibold text-sm text-[#6000ca] hover:bg-[#6000ca]/5 transition-all"
             >
                 <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

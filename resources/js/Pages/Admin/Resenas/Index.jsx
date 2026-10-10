@@ -41,7 +41,7 @@ export default function Index({ resenas }) {
             header={
                 <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Reseñas
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
@@ -52,7 +52,7 @@ export default function Index({ resenas }) {
                     </div>
                     <Link
                         href={route('resenas.create')}
-                        className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                        className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                     >
                         <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -79,14 +79,14 @@ export default function Index({ resenas }) {
 
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {resenas.length === 0 ? (
-                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card col-span-full bg-white rounded-2xl shadow-lg p-12 text-center">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#6000ca]/20 mb-4">
                                     <MessageSquareQuote className="h-10 w-10 text-gray-400" />
                                 </div>
                                 <p className="text-gray-600 text-lg mb-2">Todavía no cargaste ninguna reseña</p>
                                 <Link
                                     href={route('resenas.create')}
-                                    className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                    className="mt-4 inline-flex items-center px-4 py-2 bg-[#6000ca] text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95"
                                 >
                                     Cargar la primera reseña
                                 </Link>
@@ -95,7 +95,7 @@ export default function Index({ resenas }) {
                             resenas.map((resena) => (
                                 <div
                                     key={resena.id}
-                                    className={`bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl ${
+                                    className={`admin-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl ${
                                         resena.is_active ? '' : 'opacity-70'
                                     }`}
                                 >
@@ -153,7 +153,7 @@ export default function Index({ resenas }) {
                                         </button>
                                         <Link
                                             href={route('resenas.edit', resena.id)}
-                                            className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-full hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                            className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-full hover:bg-[#6000ca] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                             title="Editar"
                                         >
                                             <Pencil className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function Index({ resenas }) {
                                         {esAdmin && (
                                             <button
                                                 onClick={() => setResenaAEliminar(resena)}
-                                                className="inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                className="admin-delete inline-flex items-center justify-center h-9 w-9 flex-shrink-0 bg-white border-2 border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                 title="Eliminar"
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -196,7 +196,7 @@ export default function Index({ resenas }) {
                                 type="button"
                                 onClick={eliminar}
                                 disabled={eliminando}
-                                className="px-4 py-2 bg-red-600 rounded-lg text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                className="admin-delete px-4 py-2 bg-red-600 rounded-lg text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                             >
                                 {eliminando ? 'Eliminando…' : 'Eliminar'}
                             </button>

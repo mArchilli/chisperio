@@ -45,11 +45,25 @@ class ResenaTest extends TestCase
 
     /* ─── Carga inicial ─────────────────────────────────────────────────────── */
 
-    public function test_la_migracion_carga_las_10_resenas_que_estaban_en_la_landing(): void
+    public function test_las_migraciones_cargan_las_resenas_historicas_y_las_opiniones_adicionales(): void
     {
         $resenas = Resena::recientesPrimero()->get();
 
-        $this->assertCount(10, $resenas);
+        $this->assertCount(76, $resenas);
+        $this->assertTrue($resenas->every(fn (Resena $r) => $r->is_active && $r->puntuacion === 5));
+        $this->assertTrue($resenas->every(fn (Resena $r) => trim((string) $r->texto) !== ''));
+
+        $adicionales = $resenas->slice(10)->values();
+        $this->assertSame('heber abrego', $adicionales->first()->nombre);
+        $this->assertSame('Nelson Rubio', $adicionales->last()->nombre);
+        $this->assertSame('2026-04-09', $adicionales->first()->fecha->toDateString());
+        $this->assertSame('Local Guide · 34 opiniones', $adicionales->firstWhere('nombre', 'Anto Valenzuela')->meta);
+        $this->assertSame("Excelente servicio.\nTodo entregado en tiempo y forma.\nSoy de Santiago del estero y los contacte por redes. Super confiables", $adicionales->firstWhere('nombre', 'Eugenia Soriasbernj')->texto);
+        $this->assertTrue($adicionales->every(fn (Resena $r) => in_array($r->color_avatar, Resena::COLORES, true)));
+        $this->assertStringNotContainsString('(propietario)', $adicionales->pluck('nombre')->implode('\n'));
+        $this->assertStringNotContainsString('Foto 1 de la opinión', $adicionales->pluck('texto')->implode('\n'));
+
+        $resenas = $resenas->take(10);
         $this->assertSame(
             ['daniel Morales', 'Sonitus Sonido', 'ale Gutiérrez', 'omar grecco', 'Hernan Kohan', 'Alejandra Ramacciotti', 'Marcelo Alonso', 'Daiana Rocha', 'EDUARDO MARTIN PAIGES', 'Marcos Buet'],
             $resenas->pluck('nombre')->all()

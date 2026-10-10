@@ -143,7 +143,7 @@ export default function EscalasPrecioRepeater({ escalas, onChange, precioBase, e
     return (
         <div className="mb-8">
             <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3v-3m-3 3v-3m9-9H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2z" />
                 </svg>
                 Precios por Cantidad
@@ -201,7 +201,7 @@ export default function EscalasPrecioRepeater({ escalas, onChange, precioBase, e
                             const advertencia = !errorPrecio ? advertenciaFila(visibleIndex) : null;
 
                             return (
-                                <div key={escala.id ?? index} className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                                <div key={escala.id ?? index} className="admin-card p-4 bg-white border-2 border-gray-200 rounded-xl">
                                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-start">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">
@@ -213,7 +213,7 @@ export default function EscalasPrecioRepeater({ escalas, onChange, precioBase, e
                                                 step="1"
                                                 value={escala.cantidad_minima}
                                                 onChange={(e) => actualizar(index, 'cantidad_minima', e.target.value)}
-                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                             />
                                             {errorCantidad && (
                                                 <p className="mt-1 text-xs text-red-600">{errorCantidad}</p>
@@ -231,7 +231,7 @@ export default function EscalasPrecioRepeater({ escalas, onChange, precioBase, e
                                                     step="0.01"
                                                     value={escala.precio_unitario}
                                                     onChange={(e) => actualizar(index, 'precio_unitario', e.target.value)}
-                                                    className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                    className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                                 />
                                             </div>
                                             {errorPrecio && (
@@ -241,7 +241,7 @@ export default function EscalasPrecioRepeater({ escalas, onChange, precioBase, e
                                         <button
                                             type="button"
                                             onClick={() => quitar(index)}
-                                            className="mt-6 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                            className="admin-delete mt-6 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                                             aria-label="Quitar escala"
                                         >
                                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -267,7 +267,7 @@ export default function EscalasPrecioRepeater({ escalas, onChange, precioBase, e
             <button
                 type="button"
                 onClick={agregar}
-                className="inline-flex items-center px-4 py-2 bg-white border-2 border-dashed border-[#40B0C2]/50 rounded-xl font-semibold text-sm text-[#40B0C2] hover:bg-[#40B0C2]/5 transition-all"
+                className="inline-flex items-center px-4 py-2 bg-white border-2 border-dashed border-[#6000ca]/50 rounded-xl font-semibold text-sm text-[#6000ca] hover:bg-[#6000ca]/5 transition-all"
             >
                 <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

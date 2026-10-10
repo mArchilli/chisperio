@@ -1,3 +1,4 @@
+import { Check, X } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
@@ -92,14 +93,14 @@ export default function Index({ ofertas }) {
             header={
                 <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
                     <div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold text-[#6000ca]">
                             Ofertas
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">Gestiona las ofertas de productos</p>
                     </div>
                     <Link
                         href={route('ofertas.create')}
-                        className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                        className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
                     >
                         <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -115,7 +116,7 @@ export default function Index({ ofertas }) {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Barra de búsqueda */}
                     <div className="mb-6 px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,7 +128,7 @@ export default function Index({ ofertas }) {
                                     placeholder="Buscar por producto..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all"
+                                    className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all"
                                 />
                                 {searchTerm && (
                                     <button
@@ -146,8 +147,8 @@ export default function Index({ ofertas }) {
                     {/* Grid de Cards de Ofertas */}
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 px-4 sm:px-0 cards-2-impar">
                         {ofertasFiltradas.length === 0 ? (
-                            <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card col-span-full bg-white rounded-2xl shadow-lg p-12 text-center animate-fadeIn">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#6000ca]/20 mb-4">
                                     <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                     </svg>
@@ -160,7 +161,7 @@ export default function Index({ ofertas }) {
                             ofertasFiltradas.map((oferta, index) => (
                                 <div 
                                     key={oferta.id} 
-                                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
+                                    className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 animate-fadeInUp"
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     {/* Header con producto */}
@@ -173,12 +174,12 @@ export default function Index({ ofertas }) {
                                         <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col gap-1 sm:gap-2">
                                             {estaVigente(oferta) && (
                                                 <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-green-400 text-green-900 shadow-lg animate-bounceIn">
-                                                    ✓ Vigente
+                                                    <Check aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Vigente
                                                 </span>
                                             )}
                                             {!oferta.is_active && (
                                                 <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-gray-400 text-gray-900 shadow-lg">
-                                                    ✕ Inactiva
+                                                    <X aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> Inactiva
                                                 </span>
                                             )}
                                         </div>
@@ -242,7 +243,7 @@ export default function Index({ ofertas }) {
                                             </button>
                                             <Link
                                                 href={route('ofertas.edit', oferta.id)}
-                                                className="inline-flex items-center justify-center p-3 bg-white border-2 border-[#40B0C2] text-[#40B0C2] rounded-lg hover:bg-[#40B0C2] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                className="inline-flex items-center justify-center p-3 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg hover:bg-[#6000ca] hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                 title="Editar"
                                             >
                                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -252,7 +253,7 @@ export default function Index({ ofertas }) {
                                             {auth.user.role === 'admin' && (
                                                 <button
                                                     onClick={() => openDeleteModal(oferta)}
-                                                    className="inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
+                                                    className="admin-delete inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95"
                                                     title="Eliminar"
                                                 >
                                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -277,7 +278,7 @@ export default function Index({ ofertas }) {
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="admin-card inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -302,7 +303,7 @@ export default function Index({ ofertas }) {
                                 <button
                                     type="button"
                                     onClick={handleDelete}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    className="admin-delete w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
                                 >
                                     Eliminar
                                 </button>

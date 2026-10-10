@@ -16,7 +16,7 @@ export default function Edit({ categoria }) {
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Editar Categoría
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">Modifica los datos de la categoría</p>
@@ -27,19 +27,19 @@ export default function Edit({ categoria }) {
 
             <div className="py-8">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-xl sm:rounded-2xl">
+                    <div className="admin-card overflow-hidden bg-white shadow-xl sm:rounded-2xl">
                         <div className="p-8">
                             <form onSubmit={handleSubmit}>
                                 <div className="mb-6">
                                     <label htmlFor="nombre" className="block text-sm font-bold text-gray-700 mb-2">
-                                        Nombre <span className="text-[#A72DAB]">*</span>
+                                        Nombre <span className="text-[#6000ca]">*</span>
                                     </label>
                                     <input
                                         type="text"
                                         id="nombre"
                                         value={data.nombre}
                                         onChange={(e) => setData('nombre', e.target.value)}
-                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                         placeholder="Ingresa el nombre de la categoría"
                                         required
                                     />
@@ -62,7 +62,7 @@ export default function Edit({ categoria }) {
                                         value={data.descripcion}
                                         onChange={(e) => setData('descripcion', e.target.value)}
                                         rows="4"
-                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                         placeholder="Descripción opcional de la categoría"
                                     />
                                     {errors.descripcion && (
@@ -88,7 +88,7 @@ export default function Edit({ categoria }) {
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#A72DAB] focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                                        className="inline-flex items-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
                                     >
                                         <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

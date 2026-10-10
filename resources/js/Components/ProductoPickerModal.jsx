@@ -51,7 +51,7 @@ export default function ProductoPickerModal({ show, productos, onSelect, onClose
                         value={busqueda}
                         onChange={(e) => setBusqueda(e.target.value)}
                         placeholder={placeholder}
-                        className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                        className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                     />
                 </div>
 
@@ -69,7 +69,7 @@ export default function ProductoPickerModal({ show, productos, onSelect, onClose
                                         key={producto.id}
                                         type="button"
                                         onClick={() => elegir(producto)}
-                                        className="group flex flex-col overflow-hidden rounded-xl border-2 border-gray-200 bg-white text-left transition-all hover:border-[#40B0C2] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#40B0C2]"
+                                        className="group flex flex-col overflow-hidden rounded-xl border-2 border-gray-200 bg-white text-left transition-all hover:border-[#6000ca] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
                                     >
                                         <div className="aspect-square w-full bg-gray-50 overflow-hidden">
                                             {ruta ? (
@@ -88,7 +88,7 @@ export default function ProductoPickerModal({ show, productos, onSelect, onClose
                                         </div>
                                         <div className="p-2.5">
                                             <p className="line-clamp-2 text-xs font-bold leading-snug text-gray-800">{producto.titulo}</p>
-                                            <p className="mt-1 text-xs font-extrabold text-[#A72DAB]">{formatearPrecio(producto.precio)}</p>
+                                            <p className="mt-1 text-xs font-extrabold text-[#6000ca]">{formatearPrecio(producto.precio)}</p>
                                         </div>
                                     </button>
                                 );

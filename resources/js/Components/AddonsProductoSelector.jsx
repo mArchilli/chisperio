@@ -65,7 +65,7 @@ export default function AddonsProductoSelector({ addonsDisponibles, seleccionado
     return (
         <div className="mb-8">
             <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3a1 1 0 112 0v1.05a7.002 7.002 0 015.95 5.95H20a1 1 0 110 2h-1.05a7.002 7.002 0 01-5.95 5.95V19a1 1 0 11-2 0v-1.05A7.002 7.002 0 015.05 12H4a1 1 0 110-2h1.05A7.002 7.002 0 0111 4.05V3z" />
                 </svg>
                 Add-ons disponibles
@@ -94,7 +94,7 @@ export default function AddonsProductoSelector({ addonsDisponibles, seleccionado
                             <div
                                 key={addon.id}
                                 className={`p-4 rounded-xl border-2 transition-all ${
-                                    seleccionado ? 'border-[#40B0C2] bg-[#40B0C2]/5' : 'border-gray-200 bg-white'
+                                    seleccionado ? 'border-[#6000ca] bg-[#6000ca]/5' : 'border-gray-200 bg-white'
                                 }`}
                             >
                                 <label className="flex items-start gap-3 cursor-pointer">
@@ -102,7 +102,7 @@ export default function AddonsProductoSelector({ addonsDisponibles, seleccionado
                                         type="checkbox"
                                         checked={!!seleccionado}
                                         onChange={() => toggleAddon(addon)}
-                                        className="mt-1 h-5 w-5 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
+                                        className="mt-1 h-5 w-5 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                                     />
                                     <div className="flex-1">
                                         <p className="font-semibold text-sm text-gray-800">{addon.nombre}</p>
@@ -126,7 +126,7 @@ export default function AddonsProductoSelector({ addonsDisponibles, seleccionado
                                                     value={seleccionado.precio_override}
                                                     onChange={(e) => actualizar(addon.id, 'precio_override', e.target.value)}
                                                     placeholder={precioDefecto}
-                                                    className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                    className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                                 />
                                             </div>
                                             {errorPrecio && <p className="mt-1 text-xs text-red-600">{errorPrecio}</p>}
@@ -141,7 +141,7 @@ export default function AddonsProductoSelector({ addonsDisponibles, seleccionado
                                                 step="1"
                                                 value={seleccionado.orden}
                                                 onChange={(e) => actualizar(addon.id, 'orden', e.target.value)}
-                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                             />
                                         </div>
                                     </div>

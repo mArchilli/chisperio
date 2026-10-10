@@ -8,6 +8,62 @@ body {
     font-family: 'Montserrat', sans-serif;
 }
 
+/* El panel comparte la tipografía y el morado del sitio, también en sus modales. */
+body[data-admin-panel] {
+    font-family: 'Montserrat', sans-serif;
+}
+
+body[data-admin-panel] svg:not(.recharts-surface):not(.admin-delete svg) {
+    color: #6000ca;
+}
+
+/* Los iconos acompañan el color del texto para contrastar con el fondo del botón. */
+body[data-admin-panel] :is(a, button)[class~="text-white"] svg:not(.recharts-surface),
+body[data-admin-panel] :is(a, button):hover svg:not(.recharts-surface) {
+    color: inherit;
+}
+
+body[data-admin-panel] svg[class~="text-[#dadce0]"] {
+    opacity: 0.25;
+}
+
+body[data-admin-panel] button:disabled svg {
+    opacity: 0.45;
+}
+
+body[data-admin-panel] .admin-delete {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}
+
+body[data-admin-panel] .admin-delete:not(:disabled):hover {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+    color: #fff;
+}
+
+body[data-admin-panel] .admin-delete svg {
+    color: #fff;
+    background-color: transparent;
+    padding: 0;
+}
+
+body[data-admin-panel] .admin-delete:disabled {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+    opacity: 0.5;
+}
+
+body[data-admin-panel] .admin-delete:disabled svg {
+    opacity: 1;
+}
+
+body[data-admin-panel] .admin-card {
+    border: 1px solid #6000ca;
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

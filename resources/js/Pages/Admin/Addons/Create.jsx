@@ -21,7 +21,7 @@ export default function Create() {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Nuevo Add-on
                     </h2>
                     <Link
@@ -40,7 +40,7 @@ export default function Create() {
 
             <div className="py-8">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="admin-card bg-white rounded-2xl shadow-xl overflow-hidden">
                         <form onSubmit={handleSubmit} className="p-6 sm:p-8">
                             {/* Nombre */}
                             <div className="mb-6">
@@ -53,7 +53,7 @@ export default function Create() {
                                     value={data.nombre}
                                     onChange={e => setData('nombre', e.target.value)}
                                     placeholder="Ej: Grabado personalizado"
-                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                 />
                                 {errors.nombre && (
                                     <p className="mt-2 text-sm text-red-600">{errors.nombre}</p>
@@ -70,7 +70,7 @@ export default function Create() {
                                     rows={3}
                                     value={data.descripcion}
                                     onChange={e => setData('descripcion', e.target.value)}
-                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300"
+                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300"
                                 />
                                 {errors.descripcion && (
                                     <p className="mt-2 text-sm text-red-600">{errors.descripcion}</p>
@@ -89,7 +89,7 @@ export default function Create() {
                                     min="0"
                                     value={data.precio}
                                     onChange={e => setData('precio', e.target.value)}
-                                    className="block w-full max-w-xs px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                    className="block w-full max-w-xs px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                 />
                                 {errors.precio && (
                                     <p className="mt-2 text-sm text-red-600">{errors.precio}</p>
@@ -103,7 +103,7 @@ export default function Create() {
                                         type="checkbox"
                                         checked={data.requiere_texto}
                                         onChange={e => setData('requiere_texto', e.target.checked)}
-                                        className="w-5 h-5 text-[#A72DAB] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#A72DAB] transition-all"
+                                        className="w-5 h-5 text-[#6000ca] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#6000ca] transition-all"
                                     />
                                     <span className="ml-3 text-sm font-semibold text-gray-900">
                                         Requiere que el cliente escriba un texto
@@ -126,7 +126,7 @@ export default function Create() {
                                             value={data.placeholder_texto}
                                             onChange={e => setData('placeholder_texto', e.target.value)}
                                             placeholder="Ej: Escribí el nombre a grabar"
-                                            className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                            className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                         />
                                         {errors.placeholder_texto && (
                                             <p className="mt-2 text-sm text-red-600">{errors.placeholder_texto}</p>
@@ -144,7 +144,7 @@ export default function Create() {
                                             step="1"
                                             value={data.max_caracteres}
                                             onChange={e => setData('max_caracteres', e.target.value)}
-                                            className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                            className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                         />
                                         {errors.max_caracteres && (
                                             <p className="mt-2 text-sm text-red-600">{errors.max_caracteres}</p>
@@ -160,7 +160,7 @@ export default function Create() {
                                         type="checkbox"
                                         checked={data.is_active}
                                         onChange={e => setData('is_active', e.target.checked)}
-                                        className="w-5 h-5 text-[#A72DAB] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#A72DAB] transition-all"
+                                        className="w-5 h-5 text-[#6000ca] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#6000ca] transition-all"
                                     />
                                     <span className="ml-3 text-sm font-semibold text-gray-900">
                                         Add-on activo
@@ -182,7 +182,7 @@ export default function Create() {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {processing ? (
                                         <>

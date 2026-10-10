@@ -33,7 +33,7 @@ export default function TablaPreciosPreview({ filas, titulo = 'Vista previa' }) 
                                                 <span className="line-through text-gray-400 mr-2">
                                                     ${fila.precioOriginal.toFixed(2)}
                                                 </span>
-                                                <span className="font-bold text-[#A72DAB]">
+                                                <span className="font-bold text-[#6000ca]">
                                                     ${fila.precioFinal.toFixed(2)}
                                                 </span>
                                             </>

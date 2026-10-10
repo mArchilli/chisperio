@@ -44,7 +44,7 @@ export function StarRating({ compact = false, value = 5 }) {
  */
 export function ReviewCard({ review, className = '' }) {
     return (
-        <article className={`flex flex-col rounded-xl border border-[#dadce0] bg-white p-5 ${className}`}>
+        <article className={`admin-card flex flex-col rounded-xl border border-[#dadce0] bg-white p-5 ${className}`}>
             <div className="flex items-start gap-3">
                 <div
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"

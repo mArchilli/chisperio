@@ -165,7 +165,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                             value={filtros.busqueda}
                             onChange={(e) => cambiarFiltro({ busqueda: e.target.value })}
                             placeholder="Buscar producto por nombre o descripción..."
-                            className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                            className="block w-full rounded-xl border-gray-300 pl-10 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50"
                         />
                     </div>
 
@@ -221,7 +221,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                         type="button"
                         onClick={alternarTodos}
                         disabled={visibles.length === 0}
-                        className="inline-flex items-center rounded-lg border-2 border-[#40B0C2] bg-white px-4 py-2 text-sm font-semibold text-[#40B0C2] transition-colors hover:bg-[#40B0C2] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex items-center rounded-lg border-2 border-[#6000ca] bg-white px-4 py-2 text-sm font-semibold text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                         {todosLosVisiblesSeleccionados
                             ? hayFiltros
@@ -243,7 +243,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                             <button
                                 type="button"
                                 onClick={() => setFiltros(FILTROS_VACIOS)}
-                                className="font-semibold text-[#A72DAB] underline underline-offset-2"
+                                className="font-semibold text-[#6000ca] underline underline-offset-2"
                             >
                                 Limpiar filtros
                             </button>
@@ -267,14 +267,14 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                     <li key={producto.id}>
                                         <label
                                             className={`flex cursor-pointer items-center gap-3 px-5 py-3 transition-colors sm:px-6 ${
-                                                marcado ? 'bg-[#40B0C2]/[0.07]' : 'hover:bg-gray-50'
+                                                marcado ? 'bg-[#6000ca]/[0.07]' : 'hover:bg-gray-50'
                                             }`}
                                         >
                                             <input
                                                 type="checkbox"
                                                 checked={marcado}
                                                 onChange={() => alternarUno(producto.id)}
-                                                className="h-5 w-5 flex-shrink-0 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
+                                                className="h-5 w-5 flex-shrink-0 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                                             />
                                             <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                                                 {ruta ? (
@@ -293,7 +293,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                                         <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-600">Inactivo</span>
                                                     )}
                                                     {cantidadEscalas > 0 && (
-                                                        <span className="rounded-full bg-[#40B0C2]/10 px-2 py-0.5 text-[10px] font-bold uppercase text-[#2f8a99]">
+                                                        <span className="rounded-full bg-[#6000ca]/10 px-2 py-0.5 text-[10px] font-bold uppercase text-[#2f8a99]">
                                                             {cantidadEscalas} {cantidadEscalas === 1 ? 'escala' : 'escalas'}
                                                         </span>
                                                     )}
@@ -364,7 +364,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                                     setValor('');
                                                 }}
                                                 className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
-                                                    tipoAumento === key ? 'bg-white text-[#A72DAB] shadow' : 'text-gray-500 hover:text-gray-700'
+                                                    tipoAumento === key ? 'bg-white text-[#6000ca] shadow' : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                             >
                                                 {label}
@@ -383,14 +383,14 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                         simbolo={tipoAumento === 'porcentaje' ? '%' : '$'}
                                         simboloAlFinal={tipoAumento === 'porcentaje'}
                                         placeholder={tipoAumento === 'porcentaje' ? '10' : '1.000'}
-                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50"
+                                        className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50"
                                     />
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setConfirmando(true)}
                                     disabled={!puedeAplicar}
-                                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex items-center justify-center rounded-xl bg-[#6000ca] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Aplicar aumento
                                 </button>

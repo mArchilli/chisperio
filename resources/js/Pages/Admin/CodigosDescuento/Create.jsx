@@ -21,7 +21,7 @@ export default function Create() {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Nuevo Código de Descuento
                     </h2>
                     <Link
@@ -40,7 +40,7 @@ export default function Create() {
 
             <div className="py-8">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="admin-card bg-white rounded-2xl shadow-xl overflow-hidden">
                         <form onSubmit={handleSubmit} className="p-6 sm:p-8">
                             {/* Código */}
                             <div className="mb-6">
@@ -53,7 +53,7 @@ export default function Create() {
                                     value={data.codigo}
                                     onChange={e => setData('codigo', e.target.value.toUpperCase())}
                                     placeholder="Ej: VERANO10"
-                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02] uppercase"
+                                    className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02] uppercase"
                                 />
                                 {errors.codigo && (
                                     <p className="mt-2 text-sm text-red-600">{errors.codigo}</p>
@@ -73,7 +73,7 @@ export default function Create() {
                                         id="tipo_descuento"
                                         value={data.tipo_descuento}
                                         onChange={e => setData('tipo_descuento', e.target.value)}
-                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300"
+                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300"
                                     >
                                         <option value="porcentaje">Porcentaje</option>
                                         <option value="fijo">Monto fijo</option>
@@ -95,7 +95,7 @@ export default function Create() {
                                         max={data.tipo_descuento === 'porcentaje' ? 100 : undefined}
                                         value={data.valor_descuento}
                                         onChange={e => setData('valor_descuento', e.target.value)}
-                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                     />
                                     {errors.valor_descuento && (
                                         <p className="mt-2 text-sm text-red-600">{errors.valor_descuento}</p>
@@ -114,7 +114,7 @@ export default function Create() {
                                         id="vigente_desde"
                                         value={data.vigente_desde}
                                         onChange={e => setData('vigente_desde', e.target.value)}
-                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                     />
                                     {errors.vigente_desde && (
                                         <p className="mt-2 text-sm text-red-600">{errors.vigente_desde}</p>
@@ -134,7 +134,7 @@ export default function Create() {
                                         value={data.vigente_hasta}
                                         onChange={e => setData('vigente_hasta', e.target.value)}
                                         min={data.vigente_desde}
-                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                        className="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                     />
                                     {errors.vigente_hasta && (
                                         <p className="mt-2 text-sm text-red-600">{errors.vigente_hasta}</p>
@@ -158,7 +158,7 @@ export default function Create() {
                                     value={data.limite_usos}
                                     onChange={e => setData('limite_usos', e.target.value)}
                                     placeholder="Sin límite"
-                                    className="block w-full max-w-xs px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
+                                    className="block w-full max-w-xs px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300 focus:scale-[1.02]"
                                 />
                                 {errors.limite_usos && (
                                     <p className="mt-2 text-sm text-red-600">{errors.limite_usos}</p>
@@ -175,7 +175,7 @@ export default function Create() {
                                         type="checkbox"
                                         checked={data.activo}
                                         onChange={e => setData('activo', e.target.checked)}
-                                        className="w-5 h-5 text-[#A72DAB] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#A72DAB] transition-all"
+                                        className="w-5 h-5 text-[#6000ca] border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#6000ca] transition-all"
                                     />
                                     <span className="ml-3 text-sm font-semibold text-gray-900">
                                         Código activo
@@ -197,7 +197,7 @@ export default function Create() {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center justify-center px-6 py-3 bg-[#6000ca] border border-transparent rounded-xl font-semibold text-sm text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {processing ? (
                                         <>

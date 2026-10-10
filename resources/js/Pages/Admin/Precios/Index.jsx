@@ -1,3 +1,4 @@
+import { Flame } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -20,8 +21,8 @@ function PillButton({ active, onClick, children }) {
             onClick={onClick}
             className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-200 transform hover:scale-105 active:scale-95 ${
                 active
-                    ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] border-transparent text-white shadow-lg shadow-purple-500/30'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-[#A72DAB]/50 hover:text-[#A72DAB]'
+                    ? 'bg-[#6000ca] border-transparent text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-[#6000ca]/50 hover:text-[#6000ca]'
             }`}
         >
             {children}
@@ -38,11 +39,11 @@ function ProductoCard({ producto }) {
     const addons = producto.addons_activos || [];
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+        <div className="admin-card bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
             <div className="p-5">
                 {/* Encabezado: imagen + título + estado */}
                 <div className="flex items-start gap-3 mb-3">
-                    <div className="h-14 w-14 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] flex items-center justify-center">
+                    <div className="h-14 w-14 flex-shrink-0 rounded-xl overflow-hidden bg-[#6000ca] flex items-center justify-center">
                         {producto.imagen_principal ? (
                             <img
                                 src={`/${producto.imagen_principal.ruta}`}
@@ -69,7 +70,7 @@ function ProductoCard({ producto }) {
                             </span>
                             {tieneOferta && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-orange-400 to-red-500 text-white">
-                                    🔥 {Math.round(precioInfo.ahorroTotalPorcentaje)}% OFF
+                                    <Flame aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 shrink-0 align-middle" /> {Math.round(precioInfo.ahorroTotalPorcentaje)}% OFF
                                 </span>
                             )}
                             {sinStock && (
@@ -92,7 +93,7 @@ function ProductoCard({ producto }) {
                         {producto.subcategorias.map((sub) => (
                             <span
                                 key={sub.id}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#A72DAB]/15 to-[#A72DAB]/25 text-[#A72DAB] border border-[#A72DAB]/30"
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gradient-to-r from-[#6000ca]/15 to-[#6000ca]/25 text-[#6000ca] border border-[#6000ca]/30"
                             >
                                 {sub.nombre}
                             </span>
@@ -115,7 +116,7 @@ function ProductoCard({ producto }) {
                                 </span>
                             </>
                         ) : (
-                            <span className="text-lg font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                            <span className="text-lg font-bold text-[#6000ca]">
                                 {formatearPrecio(producto.precio)}
                             </span>
                         )}
@@ -171,7 +172,7 @@ function ProductoCard({ producto }) {
                                     <span className="text-gray-700 truncate">
                                         {addon.nombre}
                                         {addon.requiere_texto && (
-                                            <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#A72DAB]">
+                                            <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#6000ca]">
                                                 (con texto)
                                             </span>
                                         )}
@@ -257,7 +258,7 @@ export default function Index({ productos, categorias }) {
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Precios
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">
@@ -272,7 +273,7 @@ export default function Index({ productos, categorias }) {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Barra de búsqueda y filtros */}
                     <div className="mb-6 px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                             <div className="relative mb-4">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -284,7 +285,7 @@ export default function Index({ productos, categorias }) {
                                     placeholder="Buscar producto por nombre..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#A72DAB] focus:border-transparent transition-all"
+                                    className="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all"
                                 />
                                 {searchTerm && (
                                     <button
@@ -359,8 +360,8 @@ export default function Index({ productos, categorias }) {
                     {/* Listado agrupado por categoría */}
                     <div className="px-4 sm:px-0 space-y-10">
                         {grupos.length === 0 ? (
-                            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 mb-4">
+                            <div className="admin-card bg-white rounded-2xl shadow-lg p-12 text-center">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#6000ca]/20 mb-4">
                                     <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
@@ -369,7 +370,7 @@ export default function Index({ productos, categorias }) {
                                 {hayFiltrosActivos && (
                                     <button
                                         onClick={resetFiltros}
-                                        className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg font-medium hover:shadow-lg transition-all"
+                                        className="mt-4 inline-flex items-center px-4 py-2 bg-[#6000ca] text-white rounded-lg font-medium hover:shadow-lg transition-all"
                                     >
                                         Limpiar búsqueda y filtros
                                     </button>
@@ -380,7 +381,7 @@ export default function Index({ productos, categorias }) {
                                 <section key={categoria.id}>
                                     <div className="flex items-center gap-3 mb-4">
                                         <h3 className="text-xl font-bold text-gray-900">{categoria.nombre}</h3>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-[#40B0C2]/15 to-[#A72DAB]/15 text-[#A72DAB]">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#6000ca]/15 text-[#6000ca]">
                                             {productosCategoria.length}
                                         </span>
                                     </div>

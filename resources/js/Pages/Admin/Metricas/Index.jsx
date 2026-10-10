@@ -61,10 +61,10 @@ const ICONOS = {
     ),
 };
 
-function KpiCard({ label, value, sublabel, color, icon }) {
+function KpiCard({ label, value, sublabel, icon }) {
     return (
-        <div className="h-full bg-white rounded-2xl shadow-lg p-4 sm:p-5">
-            <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br ${color} text-white mb-3 shadow-md`}>
+        <div className="admin-card h-full bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+            <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-[#6000ca]/10 text-[#6000ca] mb-3">
                 <Icon path={icon} />
             </div>
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</div>
@@ -83,7 +83,7 @@ function ChartTooltip({ active, payload, periodo }) {
     const etiqueta = periodo === 'mensual' ? formatearFechaCorta(punto.fecha) : `${paddear(punto.hora)}:00 hs`;
 
     return (
-        <div className="rounded-lg bg-white shadow-lg border border-gray-100 px-3 py-2 text-sm">
+        <div className="admin-card rounded-lg bg-white shadow-lg border border-gray-100 px-3 py-2 text-sm">
             <div className="font-semibold text-gray-800 capitalize">{etiqueta}</div>
             <div className="text-gray-500">{formatearPrecio(punto.total)}</div>
         </div>
@@ -95,7 +95,7 @@ function GraficoFacturacion({ periodo, fecha, serie }) {
     const total = serie.reduce((acc, punto) => acc + punto.total, 0);
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-4">
                 <h3 className="text-lg font-bold text-gray-900">
                     Facturación {periodo === 'mensual' ? 'por día' : 'por hora'}
@@ -108,12 +108,12 @@ function GraficoFacturacion({ periodo, fecha, serie }) {
                     <AreaChart key={`${periodo}-${fecha}`} data={serie} margin={{ top: 8, right: 8, left: -4, bottom: 0 }}>
                         <defs>
                             <linearGradient id="fillFacturacion" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#40B0C2" stopOpacity={0.35} />
-                                <stop offset="95%" stopColor="#A72DAB" stopOpacity={0.03} />
+                                <stop offset="5%" stopColor="#6000ca" stopOpacity={0.35} />
+                                <stop offset="95%" stopColor="#6000ca" stopOpacity={0.03} />
                             </linearGradient>
                             <linearGradient id="strokeFacturacion" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#40B0C2" />
-                                <stop offset="100%" stopColor="#A72DAB" />
+                                <stop offset="0%" stopColor="#6000ca" />
+                                <stop offset="100%" stopColor="#6000ca" />
                             </linearGradient>
                         </defs>
                         <CartesianGrid vertical={false} stroke="#f1f5f9" />
@@ -134,7 +134,7 @@ function GraficoFacturacion({ periodo, fecha, serie }) {
                         />
                         <Tooltip
                             content={<ChartTooltip periodo={periodo} />}
-                            cursor={{ stroke: '#A72DAB', strokeWidth: 1, strokeDasharray: '4 4' }}
+                            cursor={{ stroke: '#6000ca', strokeWidth: 1, strokeDasharray: '4 4' }}
                         />
                         <Area
                             type="monotone"
@@ -143,7 +143,7 @@ function GraficoFacturacion({ periodo, fecha, serie }) {
                             strokeWidth={2.5}
                             fill="url(#fillFacturacion)"
                             dot={false}
-                            activeDot={{ r: 5, fill: '#A72DAB', stroke: '#fff', strokeWidth: 2 }}
+                            activeDot={{ r: 5, fill: '#6000ca', stroke: '#fff', strokeWidth: 2 }}
                         />
                     </AreaChart>
                 </ResponsiveContainer>
@@ -156,7 +156,7 @@ function TopProductos({ productos }) {
     const max = Math.max(...productos.map((p) => p.monto), 1);
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Top 5 productos por facturación</h3>
 
             {productos.length === 0 ? (
@@ -166,7 +166,7 @@ function TopProductos({ productos }) {
                     {productos.map((producto, index) => (
                         <li key={`${producto.nombre}-${index}`}>
                             <div className="flex items-center gap-3">
-                                <span className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-[#40B0C2] to-[#A72DAB] text-white text-xs font-bold">
+                                <span className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#6000ca] text-white text-xs font-bold">
                                     {index + 1}
                                 </span>
                                 <span className="flex-1 text-sm font-medium text-gray-800 truncate">{producto.nombre}</span>
@@ -174,7 +174,7 @@ function TopProductos({ productos }) {
                             </div>
                             <div className="mt-1.5 ml-10 h-1.5 rounded-full bg-gray-100 overflow-hidden">
                                 <div
-                                    className="h-full rounded-full bg-gradient-to-r from-[#40B0C2] to-[#A72DAB]"
+                                    className="h-full rounded-full bg-[#6000ca]"
                                     style={{ width: `${(producto.monto / max) * 100}%` }}
                                 />
                             </div>
@@ -217,7 +217,7 @@ export default function Index({ periodo, fecha, stats }) {
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Métricas
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">Facturación y ventas de la tienda</p>
@@ -230,7 +230,7 @@ export default function Index({ periodo, fecha, stats }) {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
                     {/* Selector de período */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 flex flex-wrap items-center gap-3 justify-between">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-4 sm:p-5 flex flex-wrap items-center gap-3 justify-between">
                             <div className="flex gap-2">
                                 {[
                                     { value: 'mensual', label: 'Mensual' },
@@ -241,7 +241,7 @@ export default function Index({ periodo, fecha, stats }) {
                                         onClick={() => irA(tab.value, fecha)}
                                         className={`px-4 py-2 min-h-[40px] rounded-lg font-medium text-sm transition-all duration-200 ${
                                             periodo === tab.value
-                                                ? 'bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white shadow-lg'
+                                                ? 'bg-[#6000ca] text-white shadow-lg'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
@@ -253,7 +253,7 @@ export default function Index({ periodo, fecha, stats }) {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => navegarFecha(-1)}
-                                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-[#A72DAB] transition-colors"
+                                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-[#6000ca] transition-colors"
                                     aria-label="Período anterior"
                                 >
                                     <Icon
@@ -267,20 +267,20 @@ export default function Index({ periodo, fecha, stats }) {
                                         type="month"
                                         value={fecha.slice(0, 7)}
                                         onChange={(e) => irA('mensual', `${e.target.value}-01`)}
-                                        className="rounded-lg border-gray-300 text-sm focus:border-[#40B0C2] focus:ring-[#40B0C2]"
+                                        className="rounded-lg border-gray-300 text-sm focus:border-[#6000ca] focus:ring-[#6000ca]"
                                     />
                                 ) : (
                                     <input
                                         type="date"
                                         value={fecha}
                                         onChange={(e) => irA('diario', e.target.value)}
-                                        className="rounded-lg border-gray-300 text-sm focus:border-[#40B0C2] focus:ring-[#40B0C2]"
+                                        className="rounded-lg border-gray-300 text-sm focus:border-[#6000ca] focus:ring-[#6000ca]"
                                     />
                                 )}
 
                                 <button
                                     onClick={() => navegarFecha(1)}
-                                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-[#A72DAB] transition-colors"
+                                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-[#6000ca] transition-colors"
                                     aria-label="Período siguiente"
                                 >
                                     <Icon
@@ -298,21 +298,18 @@ export default function Index({ periodo, fecha, stats }) {
                         <KpiCard
                             label="Facturación total"
                             value={formatearPrecio(facturacion_total)}
-                            color="from-[#40B0C2] to-[#3a9db0]"
                             icon={ICONOS.facturacion}
                         />
 
                         <KpiCard
                             label="Pedidos"
                             value={cantidad_pedidos}
-                            color="from-[#A72DAB] to-[#8f2591]"
                             icon={ICONOS.pedidos}
                         />
 
                         <KpiCard
                             label="Ticket promedio"
                             value={formatearPrecio(ticket_promedio)}
-                            color="from-teal-400 to-teal-500"
                             icon={ICONOS.ticket}
                         />
 
@@ -328,7 +325,6 @@ export default function Index({ periodo, fecha, stats }) {
                                     </span>
                                 )
                             }
-                            color={variacionPct === null ? 'from-gray-300 to-gray-400' : tendenciaPositiva ? 'from-green-400 to-green-500' : 'from-red-400 to-red-500'}
                             icon={
                                 <path
                                     strokeLinecap="round"

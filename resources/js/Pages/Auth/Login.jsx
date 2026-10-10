@@ -23,7 +23,7 @@ export default function Login({ status, canResetPassword }) {
             <Head title="Iniciar sesión" />
 
             <div className="mb-6 text-center">
-                <h1 className="text-2xl font-black tracking-tight text-[#1c1b1b]">
+                <h1 className="text-2xl font-black tracking-tight text-[#6000ca]">
                     Bienvenido de nuevo
                 </h1>
                 <p className="mt-1 text-sm text-[#4b4356]">
@@ -54,7 +54,7 @@ export default function Login({ status, canResetPassword }) {
                         autoComplete="username"
                         autoFocus
                         onChange={(e) => setData('email', e.target.value)}
-                        className="mt-1.5 block w-full rounded-xl border-gray-200 bg-gray-50 text-[#1c1b1b] shadow-sm transition-colors focus:border-[#6000ca] focus:bg-white focus:ring-[#6000ca]"
+                        className="mt-1.5 block w-full rounded-xl border-[#6000ca]/20 bg-white px-4 py-3 text-[#1c1b1b] shadow-sm transition-colors focus:border-[#6000ca] focus:ring-[#6000ca]"
                     />
 
                     <InputError message={errors.email} className="mt-2" />
@@ -75,13 +75,13 @@ export default function Login({ status, canResetPassword }) {
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
                         containerClassName="mt-1.5"
-                        className="block w-full rounded-xl border-gray-200 bg-gray-50 text-[#1c1b1b] shadow-sm transition-colors focus:border-[#6000ca] focus:bg-white focus:ring-[#6000ca]"
+                        className="block w-full rounded-xl border-[#6000ca]/20 bg-white px-4 py-3 text-[#1c1b1b] shadow-sm transition-colors focus:border-[#6000ca] focus:ring-[#6000ca]"
                     />
 
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                     <label className="flex items-center gap-2">
                         <input
                             type="checkbox"
@@ -110,7 +110,7 @@ export default function Login({ status, canResetPassword }) {
                 <button
                     type="submit"
                     disabled={processing}
-                    className="mt-2 w-full rounded-full bg-[#FF00D4] px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-pink-500/30 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+                    className="mt-2 w-full rounded-full bg-[#6000ca] px-7 py-3.5 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/20 transition-all hover:bg-[#4f00a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     Iniciar sesión
                 </button>

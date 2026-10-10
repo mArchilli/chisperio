@@ -158,7 +158,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
     return (
         <div className="mb-8">
             <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                <svg className="h-5 w-5 mr-2 text-[#40B0C2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 mr-2 text-[#6000ca]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm10 0a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4z" />
                 </svg>
                 Variantes de Color
@@ -207,7 +207,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                             const sinImagenPropia = variante.clave && !clavesConImagenPropia.has(variante.clave);
 
                             return (
-                                <div key={variante.id ?? index} className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                                <div key={variante.id ?? index} className="admin-card p-4 bg-white border-2 border-gray-200 rounded-xl">
                                     <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto] gap-3 items-start">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">
@@ -218,7 +218,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 value={variante.nombre}
                                                 onChange={(e) => actualizar(index, 'nombre', e.target.value)}
                                                 placeholder="Ej: Rojo"
-                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                             />
                                             {errorNombre && <p className="mt-1 text-xs text-red-600">{errorNombre}</p>}
                                         </div>
@@ -241,7 +241,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                     onChange={(e) => actualizar(index, 'color_hex', e.target.value)}
                                                     placeholder="#FF0000"
                                                     maxLength={7}
-                                                    className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                    className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                                 />
                                             </div>
                                         </div>
@@ -258,7 +258,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                     step="0.01"
                                                     value={variante.precio_adicional}
                                                     onChange={(e) => actualizar(index, 'precio_adicional', e.target.value)}
-                                                    className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                    className="block w-full pl-8 rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                                 />
                                             </div>
                                             {errorPrecio && <p className="mt-1 text-xs text-red-600">{errorPrecio}</p>}
@@ -275,7 +275,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 value={variante.stock ?? ''}
                                                 onChange={(e) => actualizar(index, 'stock', e.target.value)}
                                                 placeholder="Ilimitado"
-                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#A72DAB] focus:ring focus:ring-[#A72DAB] focus:ring-opacity-50 transition-all"
+                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
                                             />
                                             {errorStock && <p className="mt-1 text-xs text-red-600">{errorStock}</p>}
                                         </div>
@@ -288,7 +288,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 type="checkbox"
                                                 checked={variante.is_active ?? true}
                                                 onChange={(e) => actualizar(index, 'is_active', e.target.checked)}
-                                                className="mt-2 h-5 w-5 rounded border-gray-300 text-[#40B0C2] focus:ring-[#40B0C2]"
+                                                className="mt-2 h-5 w-5 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                                             />
                                         </div>
 
@@ -297,7 +297,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 type="button"
                                                 onClick={() => subir(index)}
                                                 disabled={posicionActual === 0}
-                                                className="p-1 text-gray-400 hover:text-[#40B0C2] disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-1 text-gray-400 hover:text-[#6000ca] disabled:opacity-30 disabled:cursor-not-allowed"
                                                 aria-label="Subir variante"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,7 +308,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 type="button"
                                                 onClick={() => bajar(index)}
                                                 disabled={posicionActual === variantesVisibles.length - 1}
-                                                className="p-1 text-gray-400 hover:text-[#40B0C2] disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-1 text-gray-400 hover:text-[#6000ca] disabled:opacity-30 disabled:cursor-not-allowed"
                                                 aria-label="Bajar variante"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,7 +318,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                             <button
                                                 type="button"
                                                 onClick={() => quitar(index)}
-                                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
+                                                className="admin-delete p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                                                 aria-label="Quitar variante"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -334,7 +334,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 type="checkbox"
                                                 checked={!!variante.es_color_personalizado}
                                                 onChange={(e) => actualizar(index, 'es_color_personalizado', e.target.checked)}
-                                                className="h-4 w-4 rounded border-gray-300 text-[#A72DAB] focus:ring-[#A72DAB]"
+                                                className="h-4 w-4 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca]"
                                             />
                                             <span className="text-sm font-semibold text-gray-700">
                                                 Es un color a elección del cliente
@@ -365,7 +365,7 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
             <button
                 type="button"
                 onClick={agregar}
-                className="inline-flex items-center px-4 py-2 bg-white border-2 border-dashed border-[#40B0C2]/50 rounded-xl font-semibold text-sm text-[#40B0C2] hover:bg-[#40B0C2]/5 transition-all"
+                className="inline-flex items-center px-4 py-2 bg-white border-2 border-dashed border-[#6000ca]/50 rounded-xl font-semibold text-sm text-[#6000ca] hover:bg-[#6000ca]/5 transition-all"
             >
                 <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

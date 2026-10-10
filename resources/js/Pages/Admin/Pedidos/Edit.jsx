@@ -16,7 +16,7 @@ const formatearPrecio = (precio) =>
 const redondear = (valor) => Math.round((Number(valor) + Number.EPSILON) * 100) / 100;
 
 const inputClase =
-    'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-[#40B0C2] focus:ring-[#40B0C2]';
+    'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-[#6000ca] focus:ring-[#6000ca]';
 
 function Campo({ label, error, children, className = '' }) {
     return (
@@ -179,14 +179,14 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
                 <div>
                     <Link
                         href={route('pedidos.show', pedido.id)}
-                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-[#40B0C2] transition-colors mb-2"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-[#6000ca] transition-colors mb-2"
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                         </svg>
                         Volver al pedido
                     </Link>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold text-[#6000ca]">
                         Editar pedido #{pedido.id}
                     </h2>
                 </div>
@@ -216,7 +216,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
 
                     {/* Datos del cliente */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-5">Datos del cliente</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                 <Campo label="Nombre" error={errors.cliente_nombre}>
@@ -249,7 +249,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
 
                     {/* Productos */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900">Productos del pedido</h3>
                             <p className="mt-1 mb-5 text-sm text-gray-500">
                                 Podés cambiar cantidades y colores, quitar productos o sumar otros que el cliente haya
@@ -277,14 +277,14 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
                                             className={`rounded-xl border p-4 ${item.quitado ? 'border-red-200 bg-red-50/50 opacity-70' : 'border-gray-200'}`}
                                         >
                                             <div className="flex items-start gap-4">
-                                                <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#40B0C2]/20 to-[#A72DAB]/20 border border-gray-200 flex items-center justify-center">
+                                                <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-[#6000ca]/20 border border-gray-200 flex items-center justify-center">
                                                     {ruta && <img src={`/${ruta}`} alt={guardado.titulo} className="w-full h-full object-cover" />}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
                                                     <div className="text-sm font-semibold text-gray-900">
                                                         {guardado.titulo}
                                                         {esCombo && (
-                                                            <span className="ml-2 inline-flex items-center rounded-full bg-[#40B0C2]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#40B0C2]">
+                                                            <span className="ml-2 inline-flex items-center rounded-full bg-[#6000ca]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6000ca]">
                                                                 Combo
                                                             </span>
                                                         )}
@@ -298,7 +298,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
                                                     onClick={() => actualizarItem(indice, { quitado: !item.quitado })}
                                                     disabled={!item.quitado && totalLineas <= 1}
                                                     title={!item.quitado && totalLineas <= 1 ? 'El pedido necesita al menos un producto' : undefined}
-                                                    className="text-xs font-semibold text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-300"
+                                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed ${item.quitado ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'admin-delete'}`}
                                                 >
                                                     {item.quitado ? 'Restaurar' : 'Quitar'}
                                                 </button>
@@ -442,7 +442,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
                                     type="button"
                                     onClick={() => setSelectorAbierto('producto')}
                                     disabled={productosCatalogo.length === 0}
-                                    className="inline-flex items-center rounded-lg border-2 border-dashed border-[#40B0C2] px-4 py-2.5 text-sm font-semibold text-[#40B0C2] transition-colors hover:bg-[#40B0C2] hover:text-white disabled:opacity-40"
+                                    className="inline-flex items-center rounded-lg border-2 border-dashed border-[#6000ca] px-4 py-2.5 text-sm font-semibold text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white disabled:opacity-40"
                                 >
                                     + Sumar producto
                                 </button>
@@ -450,7 +450,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
                                     <button
                                         type="button"
                                         onClick={() => setSelectorAbierto('combo')}
-                                        className="inline-flex items-center rounded-lg border-2 border-dashed border-[#A72DAB] px-4 py-2.5 text-sm font-semibold text-[#A72DAB] transition-colors hover:bg-[#A72DAB] hover:text-white"
+                                        className="inline-flex items-center rounded-lg border-2 border-dashed border-[#6000ca] px-4 py-2.5 text-sm font-semibold text-[#6000ca] transition-colors hover:bg-[#6000ca] hover:text-white"
                                     >
                                         + Sumar combo
                                     </button>
@@ -477,7 +477,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
 
                     {/* Totales */}
                     <div className="px-4 sm:px-0">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                        <div className="admin-card bg-white rounded-2xl shadow-lg p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Totales con los cambios</h3>
                             <dl className="space-y-2 text-sm">
                                 <div className="flex justify-between">
@@ -528,7 +528,7 @@ export default function Edit({ pedido, variantesPorProducto, productosCatalogo =
                         <button
                             type="submit"
                             disabled={processing}
-                            className="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-[#40B0C2] to-[#A72DAB] text-white rounded-lg text-sm font-semibold transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50"
+                            className="inline-flex items-center px-6 py-2.5 bg-[#6000ca] text-white rounded-lg text-sm font-semibold transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50"
                         >
                             {processing ? 'Guardando…' : 'Guardar cambios'}
                         </button>
