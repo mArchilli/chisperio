@@ -17,7 +17,7 @@ export default function Welcome({ canLogin, productosDestacados = [], categorias
             <Head title="Chispas frías, fuegos artificiales y efectos para eventos" />
             <LandingHeader canLogin={canLogin} />
             <main>
-                <HeroSection />
+                <HeroSection categorias={categorias} />
                 <TrustBanner />
                 <CategoriesSection categorias={categorias} />
                 <OutstandingProducts productos={productosDestacados} />

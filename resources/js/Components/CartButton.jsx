@@ -152,8 +152,6 @@ export default function CartButton() {
         quitarCodigoDescuento,
     } = useCart();
     const { configuracionEnvio } = usePage().props;
-    // En mobile el botón flotante queda oculto (el ícono del navbar dispara este mismo
-    // drawer — ver LandingHeader); en desktop está siempre visible.
 
     useNotificacionEnvioGratis(subtotal, configuracionEnvio?.montoMinimo, () => {
         toast.success('¡Desbloqueaste envío gratis! 🎉');
@@ -318,12 +316,12 @@ export default function CartButton() {
                 )}
             </div>
 
-            {/* Botón flotante: solo desktop (en mobile el ícono del navbar abre este
-                mismo drawer, ver LandingHeader) y recién visible tras scrollear un poco. */}
+            {/* Siempre visible, incluso vacío; arriba de WhatsApp en mobile. */}
             <button
+                type="button"
                 onClick={toggleCartDrawer}
                 aria-label={cartDrawerOpen ? 'Cerrar carrito' : 'Abrir carrito'}
-                className="fixed bottom-8 right-[6.5rem] z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] transition-all duration-200 hover:scale-110 hover:bg-[#5000aa] active:scale-95 md:flex"
+                className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#6000ca] shadow-[0_4px_24px_rgba(96,0,202,0.4)] transition-all duration-200 hover:scale-110 hover:bg-[#5000aa] active:scale-95 md:bottom-8 md:right-[6.5rem]"
             >
                 <ShoppingCart className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden="true" />
 

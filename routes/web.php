@@ -72,7 +72,7 @@ Route::get('/', function () {
         ->get()
         ->each(fn ($producto) => $producto->setAttribute('tiene_variantes', $producto->variantes_activas_count > 0));
 
-    $categorias = \App\Models\Categoria::all();
+    $categorias = \App\Models\Categoria::with('subcategorias')->get();
 
     // Reseñas visibles, de la más nueva a la más vieja (se gestionan desde admin/resenas).
     $resenas = \App\Models\Resena::activas()

@@ -61,7 +61,7 @@ export default function WhatsAppButton() {
             {/* Leyenda: aparece sola un instante después de que el botón se muestra,
                 se puede cerrar con la cruz y queda cerrada por el resto de la sesión. */}
             {showCallout && (
-                <div className="absolute bottom-full right-0 mb-3 flex w-56 items-start gap-2 rounded-2xl border border-gray-100 bg-white py-2.5 pl-4 pr-2 text-gray-800 shadow-xl [animation:chisperio-callout-enter_220ms_ease-out] motion-reduce:[animation:none]">
+                <div className="absolute bottom-[calc(100%+4.5rem)] right-0 mb-3 flex w-56 items-start gap-2 rounded-2xl border border-gray-100 bg-white py-2.5 pl-4 pr-2 text-gray-800 shadow-xl [animation:chisperio-callout-enter_220ms_ease-out] motion-reduce:[animation:none] md:bottom-full">
                     <button
                         type="button"
                         onClick={() => abrirSelectorWhatsApp(WHATSAPP_MESSAGE)}

@@ -1,7 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
-import { useCart } from '@/Context/CartContext';
+import NavbarSearch from '@/Components/NavbarSearch';
 
 const TOPBAR_MESSAGES = [
     {
@@ -96,46 +95,6 @@ function Logo({ invert = false, className = '' }) {
     );
 }
 
-function CartButton({ cartCount, invert = false, onOpenDrawer }) {
-    const baseClasses = `relative flex h-11 w-11 items-center justify-center rounded-full border transition-all ${
-        invert
-            ? 'border-white/20 bg-white/10 text-white hover:bg-white/15'
-            : 'border-[#6000ca] bg-[#6000ca] text-white hover:bg-[#4f00a8]'
-    }`;
-
-    const badge = cartCount > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF00D4] px-1 text-[10px] font-bold leading-none text-white">
-            {cartCount > 99 ? '99+' : cartCount}
-        </span>
-    );
-
-    return (
-        <>
-            {/* Mobile: abre el drawer flotante del carrito en vez de navegar — hay
-                menos espacio para tener además el botón flotante propio. */}
-            <button
-                type="button"
-                onClick={onOpenDrawer}
-                className={`${baseClasses} flex md:hidden`}
-                aria-label="Abrir carrito"
-            >
-                <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
-                {badge}
-            </button>
-
-            {/* Desktop: navega a la página completa del carrito, como siempre. */}
-            <Link
-                href={route('carrito.index')}
-                className={`${baseClasses} hidden md:flex`}
-                aria-label="Carrito de compras"
-            >
-                <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
-                {badge}
-            </Link>
-        </>
-    );
-}
-
 function DesktopNavLink({ item, currentUrl, currentHash }) {
     const isActive = item.active(currentUrl, currentHash);
     const className = `border-b-2 pb-1 text-[13px] font-medium uppercase tracking-[0.12em] transition-colors ${
@@ -180,7 +139,6 @@ function MobileNavLink({ item, onNavigate }) {
 export default function LandingHeader() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [currentHash, setCurrentHash] = useState('');
-    const { cartCount, openCartDrawer } = useCart();
     const { url, props } = usePage();
 
     // El monto lo fija el admin; en 0 el envío gratis por monto está desactivado y no se muestra.
@@ -293,7 +251,7 @@ export default function LandingHeader() {
                             <button
                                 type="button"
                                 onClick={() => setMenuOpen(true)}
-                                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#6000ca]/10 bg-white text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06]"
+                                className="flex h-11 items-center justify-center gap-2 rounded-full border border-[#6000ca]/10 bg-white px-3 text-[#6000ca] transition-colors hover:bg-[#6000ca]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-2"
                                 aria-label="Abrir menú"
                                 aria-expanded={menuOpen}
                                 aria-controls="mobile-navigation"
@@ -301,6 +259,7 @@ export default function LandingHeader() {
                                 <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
                                 </svg>
+                                <span className="text-xs font-bold tracking-wide">MENU</span>
                             </button>
                         </div>
 
@@ -314,8 +273,8 @@ export default function LandingHeader() {
                             <Logo className="h-[3.75rem] md:h-[4.5rem]" />
                         </Link>
 
-                        <div className="flex justify-end">
-                            <CartButton cartCount={cartCount} onOpenDrawer={openCartDrawer} />
+                        <div className="flex min-w-0 justify-end">
+                            <NavbarSearch currentUrl={url} initialQuery={props.filters?.q ?? ''} />
                         </div>
                     </div>
                 </div>

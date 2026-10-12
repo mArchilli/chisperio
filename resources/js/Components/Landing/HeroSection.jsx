@@ -5,18 +5,35 @@ const AUTOPLAY_DELAY = 7000;
 
 const SLIDES = [
     {
-        id: 'maletines',
+        id: 'catalogo',
+        image: '/images/img-hero-efectos.png',
+        mobileImage: '/images/img-hero-efectos-mobile.png',
+        imageAlt: 'Bengalas, chispas frías y efectos visuales para eventos',
+        imagePosition: 'object-center md:object-left',
+        layout: 'right',
+        title: [
+            { text: 'CONOCÉ NUESTRO', color: 'text-[#1c1b1b]' },
+            { text: 'CATÁLOGO', color: 'text-[#6000ca]' },
+            { text: 'COMPLETO', color: 'text-[#6000ca]' },
+        ],
+        description: 'Contamos con chispas, equipamiento, detonadores, accesorios, fuegos artificiales y mucho más. Hacé clic en el botón y conocé nuestro catálogo completo.',
+        buttonLabel: 'Ir al catálogo',
+        showLogo: false,
+    },
+    {
+        id: 'detonadores',
         image: '/images/img-hero-maletin.png',
         mobileImage: '/images/img-hero-maletin-mobile.png',
-        imageAlt: 'Maletín Chisperio para efectos especiales',
+        imageAlt: 'Detonadores inalámbricos Chisperio con chispas para eventos',
         imagePosition: 'object-center md:object-right',
         layout: 'left',
         title: [
-            { text: 'Combo de maletines', color: 'text-[#1c1b1b]' },
-            { text: 'para tu evento.', color: 'text-[#6000ca]' },
+            { text: 'PACK DE', color: 'text-[#1c1b1b]' },
+            { text: 'DETONADORES', color: 'text-[#6000ca]' },
+            { text: 'INALÁMBRICOS', color: 'text-[#6000ca]' },
         ],
-        description: 'Maletín con 6 bases inalámbricas, 2 controles remotos ya configurados y un cargador para 4 bases a la vez. Listo para usar.',
-        buttonLabel: 'Ver combos',
+        description: 'Comprá packs de 2, 4, 6, 8, 12 o la cantidad que vos quieras. ¡Cuantos más lleves, mejor el precio! A partir de 6 unidades, incluimos un maletín de regalo para transportar tus detonadores.',
+        buttonLabel: 'Ver packs',
         showLogo: true,
     },
     {
@@ -27,36 +44,21 @@ const SLIDES = [
         imagePosition: 'object-center md:object-left',
         layout: 'right',
         title: [
-            { text: 'Encendé la pista.', color: 'text-[#1c1b1b]' },
-            { text: 'Sorprendé a todos.', color: 'text-[#6000ca]' },
+            { text: 'Una entrada', color: 'text-[#1c1b1b]' },
+            { text: 'que impacta.', color: 'text-[#6000ca]' },
         ],
-        description: 'Sumá impacto visual a tus sets con pistolas AK-47 y bastones tirachispas. Ideales para DJs, fiestas y boliches.',
-        buttonLabel: 'Ver productos',
+        description: 'Realzá una entrada o ese instante especial con nuestras pistolas de chispas. Sumá luz, emoción y un impacto visual que todos van a recordar.',
+        buttonLabel: 'Ver pistolas',
         showLogo: true,
-    },
-    {
-        id: 'efectos',
-        image: '/images/img-hero-efectos.png',
-        mobileImage: '/images/img-hero-efectos-mobile.png',
-        imageAlt: 'Bengalas, chispas frías y efectos visuales para eventos',
-        imagePosition: 'object-center',
-        layout: 'top',
-        title: [
-            { text: 'Ese momento especial', color: 'text-[#1c1b1b]' },
-            { text: 'merece un gran efecto', color: 'text-[#6000ca]' },
-        ],
-        description: 'Chispas frías, fuegos artificiales, equipamiento y cotillón para cumpleaños, casamientos, entradas y cada celebración.',
-        buttonLabel: 'Ver efectos para eventos',
-        showLogo: false,
     },
 ];
 
-function SlideContent({ slide, index, isActive }) {
+function SlideContent({ slide, index, isActive, catalogHref }) {
     const Heading = index === 0 ? 'h1' : 'h2';
     const isTopLayout = slide.layout === 'top';
 
     const containerClassName = {
-        left: 'absolute inset-x-0 top-0 flex w-full justify-center px-5 pb-16 pt-5 sm:px-8 sm:pt-6 md:bottom-0 md:left-0 md:right-auto md:w-1/2 md:items-center md:justify-start md:px-0 md:py-8 md:pl-20 md:pr-8 lg:pl-28 xl:pl-36',
+        left: 'absolute inset-x-0 top-0 flex w-full justify-center px-5 pb-16 pt-5 sm:px-8 sm:pt-6 md:bottom-0 md:left-0 md:right-auto md:w-1/2 md:items-center md:justify-start md:px-0 md:py-8 md:pl-16 md:pr-8 lg:pl-20 xl:pl-24',
         right: 'absolute inset-x-0 top-0 flex w-full justify-center px-5 pb-16 pt-5 sm:px-8 sm:pt-6 md:bottom-0 md:left-auto md:right-0 md:w-1/2 md:items-center md:justify-end md:px-0 md:py-8 md:pl-8 md:pr-20 lg:pr-28 xl:pr-36',
         top: 'absolute inset-x-0 top-0 flex w-full justify-center px-5 pb-16 pt-5 sm:px-8 sm:pt-6 md:px-16 md:pt-7 lg:pt-9',
     }[slide.layout];
@@ -69,21 +71,25 @@ function SlideContent({ slide, index, isActive }) {
 
     const headingClassName = isTopLayout
         ? 'w-full text-[clamp(1.75rem,8.2vw,2.15rem)] font-black uppercase leading-[0.96] tracking-tight md:text-[clamp(2rem,4.2vw,4.75rem)]'
-        : index === 0
-            ? 'w-full text-[clamp(2rem,10vw,2.6rem)] font-black uppercase leading-[0.95] tracking-tight md:text-[clamp(3.75rem,4.5vw,6rem)]'
-            : 'w-full text-[clamp(2.1rem,11vw,2.9rem)] font-black uppercase leading-[0.95] tracking-tight [text-wrap:balance] md:text-[clamp(3.25rem,4.2vw,5.5rem)]';
+        : slide.id === 'catalogo'
+            ? 'w-[calc(100%+2.5rem)] text-[clamp(2.4rem,11.5vw,3.8rem)] font-black uppercase leading-[0.95] tracking-tight sm:w-[calc(100%+4rem)] md:w-full md:text-[clamp(3.25rem,4.2vw,5.5rem)]'
+            : slide.id === 'detonadores'
+                ? 'w-full text-[clamp(2rem,10vw,3.25rem)] font-black uppercase leading-[0.95] tracking-tight md:text-[clamp(2.3rem,4.6vw,6rem)]'
+                : 'w-full text-[clamp(2.1rem,11vw,2.9rem)] font-black uppercase leading-[0.95] tracking-tight [text-wrap:balance] md:text-[clamp(3.25rem,4.2vw,5.5rem)]';
 
     const descriptionClassName = isTopLayout
         ? 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-4xl sm:text-base md:mt-4 md:text-base lg:text-lg'
-        : index === 0
-            ? 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-xl sm:text-base md:mt-6 md:text-lg'
+        : slide.id === 'catalogo' || slide.id === 'detonadores'
+            ? 'mt-3 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:text-base md:mt-6 md:max-w-[26rem] md:text-xl'
             : 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-xl sm:text-base md:mt-5 md:max-w-2xl md:text-base lg:text-lg';
 
     const buttonClassName = isTopLayout
         ? 'mt-5 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-9 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-5 md:px-10 md:py-4 md:text-base'
-        : index <= 1
-            ? 'mt-5 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-10 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-8 md:px-12 md:py-5 md:text-lg'
-            : 'mt-4 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-8 py-3 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 sm:text-sm md:mt-8 md:px-12 md:py-5 md:text-lg';
+        : slide.id === 'catalogo' || slide.id === 'detonadores'
+            ? 'mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-[#6000ca] px-10 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-8 md:px-12 md:py-5 md:text-lg'
+            : slide.id === 'pistolas'
+                ? 'mt-5 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-10 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-8 md:px-12 md:py-5 md:text-lg'
+                : 'mt-4 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-8 py-3 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 sm:text-sm md:mt-8 md:px-12 md:py-5 md:text-lg';
 
     return (
         <div className={containerClassName}>
@@ -92,9 +98,14 @@ function SlideContent({ slide, index, isActive }) {
                     {slide.title.map((line, lineIndex) => (
                         <span
                             key={line.text}
-                            className={`${lineIndex > 0 ? 'mt-1 ' : ''}block ${line.color}`}
+                            className={`${lineIndex > 0 ? 'mt-1 ' : ''}block ${slide.id === 'catalogo' ? 'md:flex md:justify-end' : ''} ${line.color}`}
                         >
-                            {line.text}
+                            <span className={slide.id === 'catalogo'
+                                ? `inline-block origin-center whitespace-nowrap md:shrink-0 md:origin-right md:scale-x-100 ${lineIndex > 0 ? 'scale-x-100' : 'scale-x-[0.8]'}`
+                                : undefined}
+                            >
+                                {line.text}
+                            </span>
                         </span>
                     ))}
                 </Heading>
@@ -104,7 +115,7 @@ function SlideContent({ slide, index, isActive }) {
                 </p>
 
                 <Link
-                    href={route('tienda.index')}
+                    href={catalogHref}
                     className={buttonClassName}
                     tabIndex={isActive ? 0 : -1}
                 >
@@ -133,7 +144,24 @@ function DirectionIcon({ direction }) {
     );
 }
 
-export default function HeroSection() {
+export default function HeroSection({ categorias = [] }) {
+    const subcategorias = categorias
+        .flatMap((categoria) => (categoria.subcategorias ?? []).map((subcategoria) => ({
+            categoria: categoria.id,
+            subcategoria: subcategoria.id,
+            nombre: subcategoria.nombre,
+        })));
+    const filteredCatalogHref = (term) => {
+        const subcategoria = subcategorias.find((item) => item.nombre.toLowerCase().includes(term));
+        return `${route('tienda.index', subcategoria
+            ? { categoria: subcategoria.categoria, subcategoria: subcategoria.subcategoria }
+            : { q: term })}#productos`;
+    };
+    const catalogHrefs = {
+        catalogo: route('tienda.index'),
+        detonadores: filteredCatalogHref('detonador'),
+        pistolas: filteredCatalogHref('pistola'),
+    };
     const carouselRef = useRef(null);
     const [activeSlide, setActiveSlide] = useState(0);
     const [autoplayPaused, setAutoplayPaused] = useState(false);
@@ -271,7 +299,7 @@ export default function HeroSection() {
                             />
                         </picture>
 
-                        <SlideContent slide={slide} index={index} isActive={activeSlide === index} />
+                        <SlideContent slide={slide} index={index} isActive={activeSlide === index} catalogHref={catalogHrefs[slide.id]} />
                     </article>
                 ))}
             </div>

@@ -108,7 +108,7 @@ function InstagramVideo({ name, enabled }) {
     return (
         <div
             ref={cardRef}
-            className="relative aspect-[9/16] w-full overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-[#1c1b1b] shadow-[0_18px_45px_-30px_rgba(28,27,27,0.45)] lg:rounded-[2rem]"
+            className="relative mx-auto aspect-[9/16] w-[85%] overflow-hidden rounded-[1.5rem] border border-black/[0.06] bg-[#1c1b1b] shadow-[0_18px_45px_-30px_rgba(28,27,27,0.45)] lg:rounded-[2rem]"
         >
             <img
                 src={`/videos/posters/${name}.webp`}
@@ -292,19 +292,15 @@ export default function SocialSection() {
                 </div>
             </div>
 
-            <div className="flex justify-center lg:hidden" aria-label="Elegir video">
-                {VIDEOS.map((name, index) => (
-                    <button
-                        key={name}
-                        type="button"
-                        aria-label={`Ver video ${index + 1} de ${VIDEOS.length}`}
-                        aria-pressed={activeVideo === index}
-                        onClick={() => carousel?.scrollTo(index)}
-                        className="flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca]"
-                    >
-                        <span className={`h-2.5 rounded-full transition-all motion-reduce:transition-none ${activeVideo === index ? 'w-6 bg-[#6000ca]' : 'w-2.5 bg-[#6000ca]/25'}`} aria-hidden="true" />
-                    </button>
-                ))}
+            <div className="mt-4 flex justify-center md:mt-6">
+                <a
+                    href={INSTAGRAM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#6000ca] px-8 py-4 text-sm font-bold text-white shadow-lg shadow-[#6000ca]/25 transition-colors hover:bg-[#4f00a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6000ca] focus-visible:ring-offset-4 md:text-base"
+                >
+                    Ir al Instagram
+                </a>
             </div>
         </section>
     );
