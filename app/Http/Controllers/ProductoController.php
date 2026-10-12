@@ -67,6 +67,38 @@ class ProductoController extends Controller
     }
 
     /**
+     * Baja masiva de precios: lo inverso de aumentarPrecios (mismo modal y mismo alcance).
+     */
+    public function bajarPrecios(Request $request, AumentoPreciosService $aumentoPrecios)
+    {
+        $validated = $request->validate([
+            'producto_ids' => 'required|array|min:1|max:5000',
+            'producto_ids.*' => 'integer|distinct|exists:productos,id',
+            'tipo' => ['required', Rule::enum(TipoDescuento::class)],
+            'valor' => 'required|numeric|gt:0|max:99999999.99',
+        ], [
+            'producto_ids.required' => 'Elegí al menos un producto.',
+            'producto_ids.min' => 'Elegí al menos un producto.',
+            'valor.required' => 'Ingresá el valor de la baja.',
+            'valor.gt' => 'La baja tiene que ser mayor a 0.',
+            'valor.numeric' => 'El valor de la baja debe ser un número.',
+        ]);
+
+        $tipo = TipoDescuento::from($validated['tipo']);
+
+        // Bajar 100% o más dejaría los precios en cero o negativos.
+        if ($tipo === TipoDescuento::Porcentaje && (float) $validated['valor'] >= 100) {
+            throw ValidationException::withMessages(['valor' => 'El porcentaje tiene que ser menor a 100%.']);
+        }
+
+        $cantidad = $aumentoPrecios->aplicar($validated['producto_ids'], $tipo, (float) $validated['valor'], bajar: true);
+
+        return back()->with('success', $cantidad === 1
+            ? 'Se actualizó el precio de 1 producto.'
+            : "Se actualizaron los precios de {$cantidad} productos.");
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()

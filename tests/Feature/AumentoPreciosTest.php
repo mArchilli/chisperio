@@ -124,6 +124,67 @@ class AumentoPreciosTest extends TestCase
         $this->assertSame(99999999.0, (float) $enorme->fresh()->precio);
     }
 
+    private function bajar(array $datos, ?User $usuario = null)
+    {
+        return $this->actingAs($usuario ?? User::factory()->create())
+            ->post(route('productos.baja-precios'), $datos);
+    }
+
+    public function test_baja_porcentual_actualiza_precio_base_y_escalas_solo_de_los_elegidos(): void
+    {
+        $elegido = Producto::factory()->create(['precio' => 1000]);
+        $escala = $this->escala($elegido, 10, 800);
+        $otro = Producto::factory()->create(['precio' => 1000]);
+
+        $this->bajar(['producto_ids' => [$elegido->id], 'tipo' => 'porcentaje', 'valor' => 10])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Se actualizó el precio de 1 producto.');
+
+        $this->assertSame(900.0, (float) $elegido->fresh()->precio);
+        $this->assertSame(720.0, (float) $escala->fresh()->precio_unitario);
+        $this->assertSame(1000.0, (float) $otro->fresh()->precio);
+    }
+
+    public function test_baja_fija_resta_el_monto_a_cada_precio(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+        $escala = $this->escala($producto, 5, 900);
+
+        $this->bajar(['producto_ids' => [$producto->id], 'tipo' => 'fijo', 'valor' => 150.25])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(849.75, (float) $producto->fresh()->precio);
+        $this->assertSame(749.75, (float) $escala->fresh()->precio_unitario);
+    }
+
+    public function test_la_baja_no_puede_dejar_un_precio_en_cero_ni_negativo(): void
+    {
+        $normal = Producto::factory()->create(['precio' => 1000, 'titulo' => 'Normal']);
+        $barato = Producto::factory()->create(['precio' => 100, 'titulo' => 'Barato']);
+
+        $this->bajar(['producto_ids' => [$normal->id, $barato->id], 'tipo' => 'fijo', 'valor' => 100])
+            ->assertSessionHasErrors('valor');
+        $this->bajar(['producto_ids' => [$normal->id], 'tipo' => 'porcentaje', 'valor' => 100])
+            ->assertSessionHasErrors('valor');
+        $this->bajar(['producto_ids' => [$normal->id], 'tipo' => 'fijo', 'valor' => 0])
+            ->assertSessionHasErrors('valor');
+
+        $this->assertSame(1000.0, (float) $normal->fresh()->precio);
+        $this->assertSame(100.0, (float) $barato->fresh()->precio);
+    }
+
+    public function test_un_vendedor_no_puede_bajar_precios(): void
+    {
+        $producto = Producto::factory()->create(['precio' => 1000]);
+
+        $this->bajar(
+            ['producto_ids' => [$producto->id], 'tipo' => 'porcentaje', 'valor' => 10],
+            User::factory()->vendedor()->create()
+        )->assertForbidden();
+
+        $this->assertSame(1000.0, (float) $producto->fresh()->precio);
+    }
+
     public function test_el_listado_manda_las_categorias_con_subcategorias_para_los_filtros(): void
     {
         Categoria::create(['nombre' => 'Bengalas']);

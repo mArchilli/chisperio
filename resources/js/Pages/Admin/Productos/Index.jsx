@@ -17,6 +17,7 @@ function soloSinStockInicialDesdeUrl() {
 export default function Index({ productos, categorias: categoriasCatalogo }) {
     const { auth, flash } = usePage().props;
     const [showAumentoModal, setShowAumentoModal] = useState(false);
+    const [showBajaModal, setShowBajaModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [productoToDelete, setProductoToDelete] = useState(null);
     const [deleteError, setDeleteError] = useState(null);
@@ -233,6 +234,16 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                             </svg>
                             Aumentar precios
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowBajaModal(true)}
+                            className="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-[#6000ca] rounded-xl font-semibold text-sm text-[#6000ca] hover:bg-[#6000ca] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#6000ca] focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                        >
+                            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />
+                            </svg>
+                            Bajar precios
                         </button>
                         <Link
                             href={route('productos.create')}
@@ -820,6 +831,13 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
             <AumentoPreciosModal
                 show={showAumentoModal}
                 onClose={() => setShowAumentoModal(false)}
+                productos={productos}
+                categorias={categoriasCatalogo ?? []}
+            />
+            <AumentoPreciosModal
+                modo="bajar"
+                show={showBajaModal}
+                onClose={() => setShowBajaModal(false)}
                 productos={productos}
                 categorias={categoriasCatalogo ?? []}
             />

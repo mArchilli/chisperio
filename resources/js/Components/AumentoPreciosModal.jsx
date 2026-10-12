@@ -48,7 +48,34 @@ function coincideConFiltros(producto, { busqueda, tipo, categoria, subcategoria 
     return true;
 }
 
-export default function AumentoPreciosModal({ show, onClose, productos, categorias }) {
+export default function AumentoPreciosModal({ show, onClose, productos, categorias, modo = 'aumentar' }) {
+    const bajar = modo === 'bajar';
+    // Textos y ruta según el modo; el cálculo y el alcance son los mismos, con el signo invertido.
+    const textos = bajar
+        ? {
+              titulo: 'Bajar precios',
+              intro: 'Elegí los productos y la baja. Se actualizan el precio base y los precios por cantidad de cada producto.',
+              tipo: 'Tipo de baja',
+              porcentaje: 'Porcentaje de baja',
+              fijo: 'Monto a restar a cada precio',
+              aplicar: 'Aplicar baja',
+              verbo: 'bajar',
+              confirmar: 'Confirmar baja',
+              color: 'text-red-700',
+          }
+        : {
+              titulo: 'Aumentar precios',
+              intro: 'Elegí los productos y el aumento. Se actualizan el precio base y los precios por cantidad de cada producto.',
+              tipo: 'Tipo de aumento',
+              porcentaje: 'Porcentaje de aumento',
+              fijo: 'Monto a sumar a cada precio',
+              aplicar: 'Aplicar aumento',
+              verbo: 'aumentar',
+              confirmar: 'Confirmar aumento',
+              color: 'text-green-700',
+          };
+    const rutaAplicar = bajar ? 'productos.baja-precios' : 'productos.aumento-precios';
+
     const [filtros, setFiltros] = useState(FILTROS_VACIOS);
     const [seleccionados, setSeleccionados] = useState(() => new Set());
     const [tipoAumento, setTipoAumento] = useState('porcentaje');
@@ -105,7 +132,9 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
 
     const cambiarFiltro = (cambios) => setFiltros((previo) => ({ ...previo, ...cambios }));
 
-    const valorValido = precioConAumento(1, tipoAumento, valor) !== null;
+    // Bajar 100% o más dejaría los precios en cero o negativos (el backend también lo rechaza).
+    const valorValido =
+        precioConAumento(1, tipoAumento, valor, bajar) !== null && !(bajar && tipoAumento === 'porcentaje' && Number(valor) >= 100);
     const textoAumento = valorValido
         ? tipoAumento === 'porcentaje'
             ? `${formatearValor(valor)}%`
@@ -115,7 +144,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
 
     const aplicar = () => {
         router.post(
-            route('productos.aumento-precios'),
+            route(rutaAplicar),
             { producto_ids: [...seleccionados], tipo: tipoAumento, valor },
             {
                 preserveScroll: true,
@@ -136,10 +165,8 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                 {/* Encabezado */}
                 <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5 sm:p-6">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900">Aumentar precios</h3>
-                        <p className="mt-0.5 text-sm text-gray-500">
-                            Elegí los productos y el aumento. Se actualizan el precio base y los precios por cantidad de cada producto.
-                        </p>
+                        <h3 className="text-lg font-bold text-gray-900">{textos.titulo}</h3>
+                        <p className="mt-0.5 text-sm text-gray-500">{textos.intro}</p>
                     </div>
                     <button
                         type="button"
@@ -260,7 +287,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                             {visibles.map((producto) => {
                                 const marcado = seleccionados.has(producto.id);
                                 const ruta = producto.imagen_principal?.ruta;
-                                const nuevoPrecio = marcado ? precioConAumento(producto.precio, tipoAumento, valor) : null;
+                                const nuevoPrecio = marcado ? precioConAumento(producto.precio, tipoAumento, valor, bajar) : null;
                                 const cantidadEscalas = producto.escalas_precio?.length ?? 0;
 
                                 return (
@@ -303,7 +330,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                                     <ul className="mt-1.5 flex flex-wrap gap-1.5">
                                                         {producto.escalas_precio.map((escala) => {
                                                             const nuevaEscala = marcado
-                                                                ? precioConAumento(escala.precio_unitario, tipoAumento, valor)
+                                                                ? precioConAumento(escala.precio_unitario, tipoAumento, valor, bajar)
                                                                 : null;
 
                                                             return (
@@ -315,7 +342,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                                                     {nuevaEscala !== null ? (
                                                                         <>
                                                                             <span className="text-gray-400 line-through">{formatearPrecio(escala.precio_unitario)}</span>{' '}
-                                                                            <span className="font-bold text-green-700">{formatearPrecio(nuevaEscala)}</span>
+                                                                            <span className={`font-bold ${textos.color}`}>{formatearPrecio(nuevaEscala)}</span>
                                                                         </>
                                                                     ) : (
                                                                         formatearPrecio(escala.precio_unitario)
@@ -330,7 +357,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                                 {nuevoPrecio !== null ? (
                                                     <>
                                                         <p className="text-xs text-gray-400 line-through">{formatearPrecio(producto.precio)}</p>
-                                                        <p className="font-bold text-green-700">{formatearPrecio(nuevoPrecio)}</p>
+                                                        <p className={`font-bold ${textos.color}`}>{formatearPrecio(nuevoPrecio)}</p>
                                                     </>
                                                 ) : (
                                                     <p className="font-semibold text-gray-900">{formatearPrecio(producto.precio)}</p>
@@ -350,7 +377,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                         <>
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                                 <div>
-                                    <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">Tipo de aumento</span>
+                                    <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">{textos.tipo}</span>
                                     <div className="inline-flex rounded-xl bg-gray-100 p-1">
                                         {[
                                             { key: 'porcentaje', label: 'Porcentaje' },
@@ -374,7 +401,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                 </div>
                                 <div className="flex-1 sm:max-w-[16rem]">
                                     <label htmlFor="valor-aumento" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                        {tipoAumento === 'porcentaje' ? 'Porcentaje de aumento' : 'Monto a sumar a cada precio'}
+                                        {tipoAumento === 'porcentaje' ? textos.porcentaje : textos.fijo}
                                     </label>
                                     <InputPesos
                                         id="valor-aumento"
@@ -392,7 +419,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                     disabled={!puedeAplicar}
                                     className="inline-flex items-center justify-center rounded-xl bg-[#6000ca] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                    Aplicar aumento
+                                    {textos.aplicar}
                                 </button>
                             </div>
                             <InputError message={errores.valor || errores.producto_ids || errores.tipo} />
@@ -400,7 +427,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                     ) : (
                         <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
                             <p className="text-sm font-bold text-amber-900">
-                                Vas a aumentar {textoAumento} el precio de {seleccionados.size}{' '}
+                                Vas a {textos.verbo} {textoAumento} el precio de {seleccionados.size}{' '}
                                 {seleccionados.size === 1 ? 'producto' : 'productos'}.
                             </p>
                             <p className="mt-1 text-xs text-amber-800">
@@ -423,7 +450,7 @@ export default function AumentoPreciosModal({ show, onClose, productos, categori
                                     disabled={procesando}
                                     className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
                                 >
-                                    {procesando ? 'Aplicando…' : 'Confirmar aumento'}
+                                    {procesando ? 'Aplicando…' : textos.confirmar}
                                 </button>
                             </div>
                         </div>

@@ -5,12 +5,13 @@
  * tipo: 'porcentaje' | 'fijo'. `valor` en el formato del InputPesos ("1250.5").
  * Devuelve null si el valor todavía no es un aumento válido (vacío o <= 0).
  */
-export function precioConAumento(precio, tipo, valor) {
+export function precioConAumento(precio, tipo, valor, bajar = false) {
     const numero = Number(valor);
     if (!valor || !Number.isFinite(numero) || numero <= 0) return null;
 
     const base = Number(precio);
-    const nuevo = tipo === 'porcentaje' ? base * (1 + numero / 100) : base + numero;
+    const signo = bajar ? -1 : 1;
+    const nuevo = tipo === 'porcentaje' ? base * (1 + (signo * numero) / 100) : base + signo * numero;
 
     return Math.round((nuevo + Number.EPSILON) * 100) / 100;
 }

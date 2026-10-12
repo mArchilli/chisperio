@@ -147,6 +147,7 @@ Route::middleware('auth')->group(function () {
         ]);
 
         Route::post('admin/productos/aumento-precios', [ProductoController::class, 'aumentarPrecios'])->name('productos.aumento-precios');
+        Route::post('admin/productos/baja-precios', [ProductoController::class, 'bajarPrecios'])->name('productos.baja-precios');
         Route::resource('admin/productos', ProductoController::class)->names([
             'index' => 'productos.index',
             'create' => 'productos.create',
