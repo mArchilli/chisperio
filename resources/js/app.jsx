@@ -26,6 +26,14 @@ router.on('navigate', (event) => {
     }
 });
 
+// PWA: el service worker (public/sw.js) habilita la instalación y la pantalla offline.
+// Solo en producción para que no interfiera con el HMR de Vite en desarrollo.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
+
 createInertiaApp({
     // Cada página pasa solo su nombre en <Head title="…">; acá se le agrega la
     // marca una sola vez. Sin título (caso raro), la pestaña muestra solo "Chisperío".
