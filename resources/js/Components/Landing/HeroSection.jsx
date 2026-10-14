@@ -72,16 +72,18 @@ function SlideContent({ slide, index, isActive, catalogHref }) {
     const headingClassName = isTopLayout
         ? 'w-full text-[clamp(1.75rem,8.2vw,2.15rem)] font-black uppercase leading-[0.96] tracking-tight md:text-[clamp(2rem,4.2vw,4.75rem)]'
         : slide.id === 'catalogo'
-            ? 'w-[calc(100%+2.5rem)] text-[clamp(2.4rem,11.5vw,3.8rem)] font-black uppercase leading-[0.95] tracking-tight sm:w-[calc(100%+4rem)] md:w-full md:text-[clamp(3.25rem,4.2vw,5.5rem)]'
+            ? 'w-[calc(100%+2.5rem)] text-[clamp(2rem,9.5vw,3.2rem)] font-black uppercase leading-[0.95] tracking-tight sm:w-[calc(100%+4rem)] md:w-full md:text-[clamp(2.75rem,3.6vw,4.75rem)]'
             : slide.id === 'detonadores'
                 ? 'w-full text-[clamp(2rem,10vw,3.25rem)] font-black uppercase leading-[0.95] tracking-tight md:text-[clamp(2.3rem,4.6vw,6rem)]'
                 : 'w-full text-[clamp(2.1rem,11vw,2.9rem)] font-black uppercase leading-[0.95] tracking-tight [text-wrap:balance] md:text-[clamp(3.25rem,4.2vw,5.5rem)]';
 
     const descriptionClassName = isTopLayout
         ? 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-4xl sm:text-base md:mt-4 md:text-base lg:text-lg'
-        : slide.id === 'catalogo' || slide.id === 'detonadores'
-            ? 'mt-3 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:text-base md:mt-6 md:max-w-[26rem] md:text-xl'
-            : 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-xl sm:text-base md:mt-5 md:max-w-2xl md:text-base lg:text-lg';
+        : slide.id === 'catalogo'
+            ? 'mt-3 w-full max-w-[22rem] text-sm font-medium leading-relaxed text-[#3a3344] sm:text-[0.95rem] md:mt-6 md:max-w-[26rem] md:text-lg'
+            : slide.id === 'detonadores'
+                ? 'mt-3 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:text-base md:mt-6 md:max-w-[26rem] md:text-xl'
+                : 'mt-4 w-full max-w-[22rem] text-[0.95rem] font-medium leading-relaxed text-[#3a3344] sm:max-w-xl sm:text-base md:mt-5 md:max-w-2xl md:text-base lg:text-lg';
 
     const buttonClassName = isTopLayout
         ? 'mt-5 inline-flex items-center justify-center rounded-full bg-[#6000ca] px-9 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-lg shadow-[#6000ca]/25 transition-all hover:bg-[#4f00a8] hover:shadow-xl active:scale-95 md:mt-5 md:px-10 md:py-4 md:text-base'
