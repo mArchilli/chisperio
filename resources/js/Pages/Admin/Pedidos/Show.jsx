@@ -111,6 +111,18 @@ export default function Show({ pedido }) {
                                     Editado
                                 </span>
                             )}
+                            {pedido.rukoz_ref && (
+                                <span
+                                    className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-800"
+                                    title={`Referencia en el Sistema Central: ${pedido.rukoz_ref}`}
+                                >
+                                    {pedido.rukoz_estado === 'cancelado'
+                                        ? 'Reserva liberada en el Central'
+                                        : pedido.rukoz_estado === 'cancelacion_pendiente'
+                                            ? 'Liberando reserva en el Central…'
+                                            : 'Stock reservado en el Central'}
+                                </span>
+                            )}
                             {SUCURSAL_LABELS[pedido.sucursal] && (
                                 <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${SUCURSAL_BADGE[pedido.sucursal] ?? 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
                                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -448,6 +460,14 @@ export default function Show({ pedido }) {
                                     <p className="text-sm text-gray-500 mb-4">
                                         Este pedido fue <strong>cancelado</strong>, no hay más acciones disponibles.
                                     </p>
+                                    {pedido.motivo_cancelacion && (
+                                        <p className="text-sm text-gray-500 mb-4">Motivo: {pedido.motivo_cancelacion}</p>
+                                    )}
+                                    {pedido.rukoz_estado === 'cancelacion_pendiente' && (
+                                        <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                            El Sistema Central no respondió: la liberación de la reserva quedó pendiente y se reintenta sola cada pocos minutos.
+                                        </p>
+                                    )}
                                     {pedido.movimientos_stock?.length > 0 && (
                                         <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                                             <p className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2">
@@ -502,7 +522,9 @@ export default function Show({ pedido }) {
                                                 ¿Estás seguro de que deseas cancelar el pedido de "<strong>{pedido.cliente_nombre}</strong>"?
                                             </p>
                                             <p className="text-sm text-gray-500">
-                                                Se va a reponer el stock de todos los productos de este pedido. Esta acción no se puede deshacer.
+                                                {pedido.rukoz_ref
+                                                    ? 'Se va a liberar el stock que este pedido tiene reservado en el Sistema Central. Esta acción no se puede deshacer.'
+                                                    : 'Se va a reponer el stock de todos los productos de este pedido. Esta acción no se puede deshacer.'}
                                             </p>
                                         </div>
                                     </div>

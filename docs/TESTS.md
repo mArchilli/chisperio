@@ -36,3 +36,10 @@ Si está pedido pero MySQL no responde, el test se saltea en vez de fallar.
 `POST /checkout` para varios carritos. Se escribió antes de extraer el cálculo a `CalculadoraPedido`
 y tiene que seguir en verde sin cambios: si falla después de tocar el checkout, se movió el
 comportamiento, no el test.
+
+## Tests de la integración con el Central (11.3)
+
+`tests/Feature/Rukoz/*` habla con el cliente **real** del paquete (idempotencia, circuito, compensaciones) contra
+`tests/Support/CentralDePrueba`, un Central falso con estado detrás de `Http::fake`. Cada body que recibe se valida contra el
+contrato 0.1.1 (`tests/Support/ContratoPedidoCentral`, fixtures copiados del Central en `tests/fixtures/rukoz/`); un test que
+termina con un body inválido falla en `tearDown`. No hay llamadas reales: `Http::preventStrayRequests()`.

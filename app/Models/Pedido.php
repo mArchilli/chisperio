@@ -42,7 +42,19 @@ class Pedido extends Model
         'editado_at',
         'codigo_descuento_consumido_at',
         'codigo_descuento_liberado_at',
+        'rukoz_ref',
+        'rukoz_version',
+        'rukoz_estado',
+        'motivo_cancelacion',
     ];
+
+    /** Estados de la reserva en el Central (`pedidos.rukoz_estado`). */
+    public const RESERVA_RESERVADA = 'reservado';
+
+    public const RESERVA_CANCELADA = 'cancelado';
+
+    /** El pedido local ya está cancelado pero el Central no respondió: la cancelación quedó en las compensaciones del paquete. */
+    public const RESERVA_CANCELACION_PENDIENTE = 'cancelacion_pendiente';
 
     protected $casts = [
         'estado' => EstadoPedido::class,
@@ -53,6 +65,7 @@ class Pedido extends Model
         'editado_at' => 'datetime',
         'codigo_descuento_consumido_at' => 'datetime',
         'codigo_descuento_liberado_at' => 'datetime',
+        'rukoz_version' => 'integer',
         'envio_gratis' => 'boolean',
         'envio_gratis_monto_minimo' => 'decimal:2',
         // Snapshot histórico del tipo de descuento usado, no el estado actual del código
@@ -67,6 +80,25 @@ class Pedido extends Model
         'recargo_monto' => 'decimal:2',
         'total_con_recargo' => 'decimal:2',
     ];
+
+    /**
+     * ¿El stock de este pedido lo lleva el Central (reservó al crearse)? Los pedidos sin `rukoz_ref` son los de
+     * siempre: descuentan y reponen stock local, aunque el interruptor del checkout esté encendido.
+     */
+    public function usaCentral(): bool
+    {
+        return $this->rukoz_ref !== null;
+    }
+
+    /**
+     * Pedido con reserva viva en el Central y todavía sin confirmar: se edita con `editarReserva` y se cancela con
+     * `cancelarReserva`. Hoy (11.3) ninguno se confirma; la 11.4 suma los estados de la venta.
+     */
+    public function tieneReservaAbierta(): bool
+    {
+        return $this->usaCentral()
+            && in_array($this->rukoz_estado, [self::RESERVA_RESERVADA, 'requiere_revision'], true);
+    }
 
     public function items(): HasMany
     {

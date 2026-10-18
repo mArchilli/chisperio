@@ -7,23 +7,39 @@ use App\Enums\MotivoMovimientoStock;
 use App\Enums\Sucursal;
 use App\Exceptions\StockInsuficienteException;
 use App\Exceptions\VarianteRequeridaException;
+use App\DataTransferObjects\CalculoPedido;
 use App\Models\Combo;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
+use App\Rukoz\CheckoutCentral;
+use App\Rukoz\ErroresDelCentral;
+use App\Rukoz\EspejoStock;
+use App\Rukoz\PedidoArmado;
+use App\Rukoz\PedidoParaCentral;
+use App\Rukoz\ReservaDePedido;
 use App\Services\CalculadoraPedido;
 use App\Services\CodigoDescuentoService;
 use App\Services\ComboPedidoResolver;
 use App\Services\PedidoEdicionService;
 use App\Services\PricingService;
 use App\Services\StockService;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Rukoz\CoreClient\Errores\CentralNoDisponibleException;
+use Rukoz\CoreClient\Errores\RukozException;
+use Rukoz\CoreClient\Errores\SinStockException;
+use Rukoz\CoreClient\Facades\Rukoz;
 
 class PedidoController extends Controller
 {
@@ -233,12 +249,13 @@ class PedidoController extends Controller
     /**
      * Update the estado of the specified resource.
      */
-    public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService, CodigoDescuentoService $codigoDescuentoService)
+    public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService, CodigoDescuentoService $codigoDescuentoService, ReservaDePedido $reservaDePedido)
     {
         $this->autorizarSucursal($request, $pedido);
 
         $validated = $request->validate([
             'estado' => ['required', new Enum(EstadoPedido::class)],
+            'motivo' => ['nullable', 'string', 'max:500'],
         ]);
 
         $estadoActual = $pedido->estado;
@@ -259,7 +276,12 @@ class PedidoController extends Controller
             ]);
         };
 
-        if ($estadoDestino === EstadoPedido::Cancelado) {
+        if ($estadoDestino === EstadoPedido::Cancelado && $pedido->usaCentral()) {
+            // El stock lo tiene reservado el Central: se cancela la reserva allá (HTTP, sin transacción abierta) y después
+            // se cancela el pedido local liberando el cupón. No se repone stock local (nunca se descontó). Si el Central no
+            // responde, la cancelación queda en las compensaciones del paquete y el pedido local queda cancelado igual.
+            $reservaDePedido->cancelar($pedido, $validated['motivo'] ?? 'Cancelado desde el panel de Chisperío');
+        } elseif ($estadoDestino === EstadoPedido::Cancelado) {
             // reponer() y liberarUso() dentro de la misma transacción que el update: si
             // por lo que sea algo falla, el estado no queda cambiado a medias (rollback
             // también del estado). La protección contra doble cancelación es la
@@ -408,6 +430,20 @@ class PedidoController extends Controller
             $this->abortarPorStockInsuficiente($faltantes);
         }
 
+        // Con el checkout del Central activo el pedido reserva ALLÁ antes de guardarse y la web no toca su stock; si no,
+        // es el flujo de siempre (stock local, todo en una transacción).
+        if (CheckoutCentral::activo()) {
+            return $this->storeConReserva($validated, $calculadora, $codigoDescuentoService, $stockService);
+        }
+
+        return $this->storeLocal($validated, $calculadora, $codigoDescuentoService, $stockService);
+    }
+
+    /**
+     * Flujo de siempre: el pedido, el cupón y el descuento de stock local en una sola transacción.
+     */
+    private function storeLocal(array $validated, CalculadoraPedido $calculadora, CodigoDescuentoService $codigoDescuentoService, StockService $stockService): JsonResponse
+    {
         try {
             $pedido = DB::transaction(function () use ($validated, $calculadora, $stockService, $codigoDescuentoService) {
                 // Todo el cálculo (precios, escalas, ofertas, combos, cupón, recargo, envío
@@ -469,6 +505,153 @@ class PedidoController extends Controller
         // El envío del mensaje de WhatsApp lo dispara el frontend con esta respuesta (ver
         // resources/js/Pages/Checkout.jsx): no hay ningún envío del lado del servidor que
         // pueda fallar después de este punto y requerir revertir la venta.
+        return response()->json([
+            'id' => $pedido->id,
+            'total' => $pedido->total,
+        ], 201);
+    }
+
+    /**
+     * Checkout con el Central (11.3). Orden:
+     *  1. CalculadoraPedido: precios, cupón validado SIN consumir (ni lockear), ítems y totales.
+     *  2. La referencia externa (`rukoz_ref`) se genera ANTES de reservar y es la clave de idempotencia: un doble clic o un
+     *     reintento reutiliza el mismo intento (ver CheckoutCentral) y no crea dos reservas.
+     *  3. Rukoz::reservar() — HTTP, afuera de toda transacción.
+     *  4. Reserva OK → transacción local (con HTTP prohibido): se revalida el cupón con lock, se crea el pedido con su
+     *     `rukoz_ref` y se consume el cupo. NO se descuenta stock local: lo reservó el Central. Si la transacción falla,
+     *     el paquete cancela la reserva (o la deja en compensaciones) y vuelve a lanzar la excepción.
+     */
+    private function storeConReserva(array $validated, CalculadoraPedido $calculadora, CodigoDescuentoService $codigoDescuentoService, StockService $stockService): JsonResponse
+    {
+        $calculo = $calculadora->calcular($validated);
+        $armador = app(PedidoParaCentral::class);
+
+        $datosPedido = [
+            'cliente_nombre' => $validated['cliente_nombre'],
+            'cliente_dni' => $validated['cliente_dni'] ?? null,
+            'cliente_telefono' => $validated['cliente_telefono'] ?? null,
+            'cliente_email' => $validated['cliente_email'] ?? null,
+            'cliente_provincia' => $validated['cliente_provincia'] ?? null,
+            'cliente_ciudad' => $validated['cliente_ciudad'] ?? null,
+            'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
+            'observaciones' => $validated['observaciones'] ?? null,
+            'estado' => EstadoPedido::Pendiente,
+            'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::BuenosAires,
+            ...$calculo->atributosPedido(),
+        ];
+
+        // Modelos en memoria: sirven para armar el pedido del Central antes de que exista en la base.
+        $pedidoEnMemoria = new Pedido($datosPedido);
+        $itemsEnMemoria = collect($calculo->items)->map(fn (array $item) => new PedidoItem($item));
+
+        $contenido = $armador->armar($pedidoEnMemoria, $itemsEnMemoria, now())->payload;
+        unset($contenido['creado_at']);
+        $huella = CheckoutCentral::huella($contenido);
+
+        try {
+            return Cache::lock(CheckoutCentral::claveLock($huella), 90)->block(
+                30,
+                fn () => $this->reservarYCrear($validated, $calculo, $datosPedido, $pedidoEnMemoria, $itemsEnMemoria, $huella, $codigoDescuentoService, $calculadora, $stockService)
+            );
+        } catch (LockTimeoutException) {
+            // El mismo pedido sigue en curso en otro request (un doble clic): no se hace nada de más.
+            return response()->json(['message' => 'Tu pedido ya se está procesando. Esperá unos segundos.'], 409);
+        }
+    }
+
+    private function reservarYCrear(array $validated, CalculoPedido $calculo, array $datosPedido, Pedido $pedidoEnMemoria, Collection $itemsEnMemoria, string $huella, CodigoDescuentoService $codigoDescuentoService, CalculadoraPedido $calculadora, StockService $stockService): JsonResponse
+    {
+        $intento = CheckoutCentral::intento($huella);
+
+        // Este mismo pedido ya se creó (doble envío): se devuelve el que ya existe, sin reservar de nuevo.
+        $existente = Pedido::query()
+            ->when(
+                $intento['pedido_id'] !== null,
+                fn ($query) => $query->whereKey($intento['pedido_id']),
+                fn ($query) => $query->where('rukoz_ref', $intento['ref'])
+            )
+            ->first();
+
+        if ($existente !== null) {
+            return response()->json(['id' => $existente->id, 'total' => $existente->total], 201);
+        }
+
+        $armador = app(PedidoParaCentral::class);
+        $creadoAt = Carbon::parse($intento['creado_at']);
+        $armado = $armador->armar($pedidoEnMemoria, $itemsEnMemoria, $creadoAt);
+
+        try {
+            $reserva = Rukoz::reservar($intento['ref'], $armado->payload, function (array $central) use ($validated, $calculo, $datosPedido, $intento, $creadoAt, $codigoDescuentoService) {
+                // Dentro de la transacción del paquete: solo base local, nada de HTTP.
+                // El cupón se revalida AHORA con lock: el límite de usos se decide bajo el mismo lock que su consumo. Si
+                // en el medio cambió (se agotó, venció, otro checkout se llevó el último uso), se aborta y el paquete
+                // cancela la reserva que se acababa de hacer.
+                $descuento = $codigoDescuentoService->resolverParaCheckout(
+                    $validated['codigo_descuento'] ?? null,
+                    $calculo->subtotal,
+                    bloquear: true
+                );
+
+                if (round((float) $descuento['descuento_monto'], 2) !== round((float) $calculo->descuento['descuento_monto'], 2)) {
+                    throw ValidationException::withMessages([
+                        'codigo_descuento' => 'El descuento del código cambió mientras confirmábamos el pedido. Revisá el carrito e intentá de nuevo.',
+                    ]);
+                }
+
+                $pedido = new Pedido($datosPedido + [
+                    'rukoz_ref' => $intento['ref'],
+                    'rukoz_version' => $central['version'] ?? null,
+                    'rukoz_estado' => $central['estado'] ?? Pedido::RESERVA_RESERVADA,
+                ]);
+                // Lo que el Central recibió como `creado_at`: así un PUT posterior manda la misma hora.
+                $pedido->created_at = $creadoAt;
+                $pedido->save();
+
+                $pedido->items()->createMany($calculo->items);
+
+                // Sin StockService::descontar(): el stock lo reservó el Central.
+                $codigoDescuentoService->consumirUso($pedido);
+
+                return $pedido;
+            });
+        } catch (SinStockException $e) {
+            CheckoutCentral::olvidarIntento($huella);
+            // El espejo estaba desactualizado: se relee el stock de esos ítems para que la tienda deje de ofrecerlos.
+            EspejoStock::refrescar(ErroresDelCentral::paresParaRefrescar($e, $armado));
+
+            $mensajes = [];
+
+            foreach (ErroresDelCentral::sinStock($e, $armado) as $falta) {
+                $mensajes[$falta['clave']][] = $falta['mensaje'];
+            }
+
+            throw ValidationException::withMessages($mensajes);
+        } catch (CentralNoDisponibleException $e) {
+            // Caído, timeout o circuito abierto: no se sabe si reservó. El intento (y su ref) se conserva: el reintento del
+            // cliente es idempotente.
+            if (CheckoutCentral::permiteVenderSinReserva()) {
+                return $this->storeLocal($validated, $calculadora, $codigoDescuentoService, $stockService);
+            }
+
+            return response()->json([
+                'message' => ErroresDelCentral::MENSAJE_CENTRAL_CAIDO,
+                'central_no_disponible' => true,
+            ], 503);
+        } catch (RukozException $e) {
+            // Sin vincular, selección inválida, validación, etc.: es un problema de catálogo, no de quien compra.
+            CheckoutCentral::olvidarIntento($huella);
+            ErroresDelCentral::registrar($e, 'reservar el pedido');
+
+            throw ValidationException::withMessages([
+                'pedido' => 'Uno de los productos no está disponible por el momento. Escribinos por WhatsApp y lo resolvemos.',
+            ]);
+        }
+
+        /** @var Pedido $pedido */
+        $pedido = $reserva->local;
+
+        CheckoutCentral::intentoCompletado($huella, $intento, $pedido->id);
+
         return response()->json([
             'id' => $pedido->id,
             'total' => $pedido->total,

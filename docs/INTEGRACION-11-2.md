@@ -36,9 +36,9 @@ Con stock 0 o bajo (antes todo era NULL y casi no se había probado):
 - **Arreglado:** el listado `/tienda` ignoraba las variantes: un producto con todos los colores en 0 no se marcaba «Sin stock» ni iba al final. Ahora sí (`TiendaController::index`, `Tienda.jsx`).
 - **Arreglado:** el mensaje del checkout no nombraba el color y dos colores del mismo producto sin stock se pisaban el mensaje.
 
-## Limitación temporal (hasta la 11.3)
+## Limitación temporal (resuelta en la 11.3)
 
-**El checkout sigue descontando stock local.** La reserva en el Central es de la 11.3. Con el espejo activo, el próximo evento del Central pisa ese descuento. Por eso: **en producción no se enciende `INTEGRACION_STOCK` sin `INTEGRACION_CHECKOUT`.**
+**Sin `INTEGRACION_CHECKOUT` el checkout sigue descontando stock local.** Con el espejo activo, el próximo evento del Central pisa ese descuento. Por eso: **en producción no se enciende `INTEGRACION_STOCK` sin `INTEGRACION_CHECKOUT`.** Desde la 11.3 el checkout reserva en el Central y no descuenta stock local (ver `docs/INTEGRACION-11-3.md`).
 
 ## Recepción de eventos: webhook y feed
 

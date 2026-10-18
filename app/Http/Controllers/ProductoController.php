@@ -26,7 +26,10 @@ class ProductoController extends Controller
      */
     public function index()
     {
-        $productos = Producto::with(['categorias', 'subcategorias', 'imagenPrincipal', 'ofertaVigente', 'escalasPrecio'])->get();
+        $productos = Producto::with(['categorias', 'subcategorias', 'imagenPrincipal', 'ofertaVigente', 'escalasPrecio', 'variantes:id,producto_id,stock,is_active'])->get();
+
+        // «Sin stock» mira también las variantes: un producto con todos sus colores en 0 está sin stock (ver Producto::estaSinStock).
+        $productos->each(fn (Producto $producto) => $producto->setAttribute('sin_stock', $producto->estaSinStock()));
 
         return Inertia::render('Admin/Productos/Index', [
             'productos' => $productos,

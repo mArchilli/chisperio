@@ -2,9 +2,15 @@
 
 namespace App\Rukoz;
 
+use App\Models\Producto;
+use App\Models\ProductoVariante;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Rukoz\CoreClient\Eventos\StockActualizado;
+use Rukoz\CoreClient\Facades\Rukoz;
+use Rukoz\CoreClient\Stock\CacheDeStock;
 use Rukoz\CoreClient\Stock\StockItem;
+use Throwable;
 
 /**
  * Espejo del stock del Central en las columnas de Chisperío (`productos.stock` y `producto_variantes.stock`).
@@ -164,6 +170,103 @@ final class EspejoStock
     public static function gestionado(string $tipo, int $id): bool
     {
         return in_array($id, self::gestionados($tipo, [$id]), true);
+    }
+
+    /**
+     * Relee del Central el stock de unos ítems puntuales (`GET /stock?tipo=&ids[]=`), lo guarda en `rukoz_stock` por versión
+     * y lo vuelca a las columnas (el listener de `StockActualizado` hace el volcado). Se usa cuando el Central rechaza una
+     * reserva por falta de stock: el espejo estaba desactualizado, y así la tienda deja de ofrecer lo que no hay sin esperar
+     * al próximo evento. Nunca lanza: es un intento de mejora, no puede romper el checkout.
+     *
+     * @param  list<array{0: string, 1: string}>  $items  `[tipo, id]` con tipo `producto`, `variante` o `combo`.
+     */
+    public static function refrescar(array $items): void
+    {
+        if (! self::activo() || $items === []) {
+            return;
+        }
+
+        $porTipo = [];
+
+        foreach ($items as [$tipo, $id]) {
+            $porTipo[$tipo][(string) $id] = (string) $id;
+        }
+
+        foreach ($porTipo as $tipo => $ids) {
+            try {
+                $pagina = Rukoz::stock(['tipo' => $tipo, 'ids' => array_values($ids)]);
+                $version = (int) ($pagina['version'] ?? 0);
+                $items = (array) ($pagina['items'] ?? []);
+                $aplicado = app(CacheDeStock::class)->aplicar($items, $version);
+
+                if ($aplicado['cambiados'] !== []) {
+                    event(new StockActualizado($aplicado['cambiados'], $version, StockActualizado::ORIGEN_SYNC));
+                }
+
+                // También se vuelca lo que el caché ya tenía bien: si la que estaba atrasada era la columna (no el caché), el
+                // evento de arriba no la alcanza. Es lo que acaba de decir el Central y escribir lo mismo dos veces no cambia nada.
+                if (self::activo()) {
+                    (new self)->aplicar($items);
+                }
+            } catch (Throwable $e) {
+                Log::warning('No se pudo refrescar el espejo de stock tras un rechazo del Central: '.$e::class);
+            }
+        }
+    }
+
+    /**
+     * Qué productos y variantes ACTIVOS no tienen espejo: sin fila en `rukoz_stock`, o con un stock local distinto del
+     * que informó el Central. Lo usan `chisperio:stock-sin-espejo` y `chisperio:integracion-estado`.
+     *
+     * @return array{revisados: int, sin_vincular: int, problemas: list<array{0: string, 1: int, 2: string, 3: int|null, 4: int|null, 5: string}>}
+     *                                                                                                       cada problema: [tipo, id, nombre, local, espejo, motivo]
+     */
+    public static function auditar(): array
+    {
+        $filas = StockItem::query()
+            ->whereIn('tipo', array_keys(self::TABLAS))
+            ->get()
+            ->keyBy(fn (StockItem $fila) => $fila->tipo.':'.$fila->external_id);
+
+        $problemas = [];
+        $sinVincular = 0;
+        $revisados = 0;
+
+        // Un producto con variantes no tiene número propio (lo informan sus variantes): se revisan sus variantes activas.
+        $items = Producto::query()->where('is_active', true)->whereDoesntHave('variantes')->orderBy('id')->get()
+            ->map(fn (Producto $p) => ['producto', $p->id, $p->titulo, $p->stock])
+            ->concat(
+                ProductoVariante::query()->with('producto')->where('is_active', true)
+                    ->whereHas('producto', fn ($q) => $q->where('is_active', true))
+                    ->orderBy('producto_id')->orderBy('id')->get()
+                    ->map(fn (ProductoVariante $v) => ['variante', $v->id, $v->producto->titulo.' — '.$v->nombre, $v->stock])
+            );
+
+        foreach ($items as [$tipo, $id, $nombre, $local]) {
+            $revisados++;
+            $fila = $filas->get($tipo.':'.$id);
+            $local = $local === null ? null : (int) $local;
+
+            if ($fila === null) {
+                $problemas[] = [$tipo, $id, $nombre, $local, null, 'sin fila en rukoz_stock'];
+
+                continue;
+            }
+
+            $esperado = self::valorDe($fila->paraLaWeb());
+
+            if ($esperado === null) {
+                $sinVincular++; // el Central no lo tiene vinculado: sigue con su stock local, no es un error de espejo
+
+                continue;
+            }
+
+            if ($esperado['stock'] !== $local) {
+                $problemas[] = [$tipo, $id, $nombre, $local, $esperado['stock'], 'el stock local difiere del espejo'];
+            }
+        }
+
+        return ['revisados' => $revisados, 'sin_vincular' => $sinVincular, 'problemas' => $problemas];
     }
 
     /**

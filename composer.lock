@@ -3425,11 +3425,11 @@
         },
         {
             "name": "rukoz/core-client",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../rukoz-core-client",
-                "reference": "388af58a7280c165cf49e25a70a2481512fde5cc"
+                "reference": "b16ee893e52a3086afd86a3273e426475652a219"
             },
             "require": {
                 "ext-json": "*",

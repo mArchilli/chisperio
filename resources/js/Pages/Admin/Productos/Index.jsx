@@ -172,8 +172,9 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                 if (!tieneSubcategoria) return false;
             }
 
-            // Filtro rápido: solo sin stock (stock === 0; null es ilimitado, no cuenta)
-            if (filters.soloSinStock && producto.stock !== 0) {
+            // Filtro rápido: solo sin stock. El servidor lo calcula (sin_stock): un producto con variantes está sin
+            // stock cuando todas sus variantes activas están en 0; null es ilimitado y no cuenta.
+            if (filters.soloSinStock && !producto.sin_stock) {
                 return false;
             }
 
@@ -565,8 +566,11 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                             productosFiltrados.map((producto, index) => {
                                 const precioInfo = resolverPrecio(producto, 1);
                                 const tieneOferta = precioInfo.precioFinal < precioInfo.precioBase;
-                                const sinStock = producto.stock === 0;
-                                const stockBajo = producto.stock !== null && producto.stock > 0 && producto.stock <= UMBRAL_STOCK_BAJO;
+                                // Con variantes manda el stock de cada color (el del producto se ignora).
+                                const variantesActivas = (producto.variantes ?? []).filter((v) => v.is_active);
+                                const tieneVariantes = (producto.variantes ?? []).length > 0;
+                                const sinStock = Boolean(producto.sin_stock);
+                                const stockBajo = !tieneVariantes && producto.stock !== null && producto.stock > 0 && producto.stock <= UMBRAL_STOCK_BAJO;
 
                                 return (
                                 <div
@@ -718,9 +722,15 @@ export default function Index({ productos, categorias: categoriasCatalogo }) {
                                                 sinStock ? 'text-red-600' : stockBajo ? 'text-amber-600' : 'text-gray-500'
                                             }`}
                                         >
-                                            {producto.stock === null
-                                                ? 'Stock ilimitado'
-                                                : `Stock: ${producto.stock} ${producto.stock === 1 ? 'unidad' : 'unidades'}`}
+                                            {tieneVariantes
+                                                ? sinStock
+                                                    ? 'Sin stock en ningún color'
+                                                    : variantesActivas.some((v) => v.stock === null)
+                                                        ? 'Stock ilimitado en algún color'
+                                                        : `Stock total: ${variantesActivas.reduce((suma, v) => suma + (v.stock ?? 0), 0)} unidades (por color)`
+                                                : producto.stock === null
+                                                    ? 'Stock ilimitado'
+                                                    : `Stock: ${producto.stock} ${producto.stock === 1 ? 'unidad' : 'unidades'}`}
                                         </p>
 
                                         {/* Botones de acción */}

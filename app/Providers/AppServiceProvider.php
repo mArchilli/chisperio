@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Pedido;
 use App\Rukoz\CatalogoDeChisperio;
+use App\Rukoz\CheckoutCentral;
 use App\Rukoz\EspejoStock;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -10,7 +12,9 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Rukoz\CoreClient\Compensaciones\Compensacion;
 use Rukoz\CoreClient\Contratos\ProveedorCatalogo;
+use Rukoz\CoreClient\Eventos\CompensacionResuelta;
 use Rukoz\CoreClient\Eventos\StockActualizado;
 
 class AppServiceProvider extends ServiceProvider
@@ -40,6 +44,24 @@ class AppServiceProvider extends ServiceProvider
         if (config('integracion.stock')) {
             Event::listen(StockActualizado::class, [EspejoStock::class, 'alActualizarse']);
         }
+
+        // 11.3 — Combinación inválida (checkout sin stock o sin integración): el checkout no usa el Central y queda el aviso.
+        CheckoutCentral::advertir();
+
+        // 11.3 — Cuando el paquete logra cancelar en el Central una reserva que había quedado en compensaciones, el pedido
+        // local (ya cancelado) pasa de `cancelacion_pendiente` a `cancelado`. Corre dentro de la transacción del paquete: solo
+        // una escritura local.
+        // Se registra siempre: el evento solo existe con la integración encendida y la escritura solo toca pedidos esperando.
+        Event::listen(CompensacionResuelta::class, function (CompensacionResuelta $evento) {
+            if ($evento->tipo !== Compensacion::CANCELAR) {
+                return;
+            }
+
+            Pedido::query()
+                ->where('rukoz_ref', $evento->ref)
+                ->where('rukoz_estado', Pedido::RESERVA_CANCELACION_PENDIENTE)
+                ->update(['rukoz_estado' => Pedido::RESERVA_CANCELADA]);
+        });
     }
 
     /**

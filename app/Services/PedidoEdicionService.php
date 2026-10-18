@@ -11,9 +11,16 @@ use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
+use App\Rukoz\EspejoStock;
+use App\Rukoz\ErroresDelCentral;
+use App\Rukoz\PedidoArmado;
+use App\Rukoz\PedidoParaCentral;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Rukoz\CoreClient\Errores\RukozException;
+use Rukoz\CoreClient\Errores\SinStockException;
+use Rukoz\CoreClient\Facades\Rukoz;
 
 /**
  * Edición de un pedido ya recibido por parte de admin/vendedor (cambió una variante,
@@ -23,6 +30,12 @@ use Illuminate\Validation\ValidationException;
  * recalcula, desde los snapshots del pedido, es todo lo derivado: subtotal,
  * descuento del código, recargo de tarjeta, total y envío gratis. El stock se ajusta
  * solo por la diferencia.
+ *
+ * PEDIDOS CON RESERVA EN EL CENTRAL (`rukoz_ref`, 11.3): el stock no es de la web. La edición se calcula primero (se aplica
+ * adentro de una transacción que se deshace, para saber cómo queda el pedido), se manda completa con
+ * `Rukoz::editarReserva` —HTTP, sin transacción ni locks tomados— y recién si el Central acepta se aplica de verdad.
+ * Si el Central rechaza (sin stock, pedido ya no editable, caído) no se guarda nada. Si la transacción local falla después
+ * de un PUT correcto, el paquete vuelve a mandar el pedido anterior.
  */
 class PedidoEdicionService
 {
@@ -52,6 +65,16 @@ class PedidoEdicionService
      */
     public function actualizar(Pedido $pedido, array $datos): Pedido
     {
+        if ($pedido->usaCentral()) {
+            if (! $pedido->tieneReservaAbierta()) {
+                throw ValidationException::withMessages([
+                    'estado' => 'Este pedido ya no tiene su reserva abierta en el Sistema Central: no se puede editar.',
+                ]);
+            }
+
+            return $this->actualizarConReserva($pedido, $datos);
+        }
+
         try {
             return DB::transaction(function () use ($pedido, $datos) {
                 // Lock del pedido: una edición no debe pisarse con otra edición ni con un
@@ -66,20 +89,7 @@ class PedidoEdicionService
 
                 $operacionesAntes = $this->stockService->operacionesDe($pedido);
 
-                $this->aplicarItems($pedido, $datos['items'] ?? []);
-                $this->agregarItems($pedido, $datos['nuevos_items'] ?? []);
-
-                if (! $pedido->items()->exists()) {
-                    throw ValidationException::withMessages([
-                        'items' => 'El pedido necesita al menos un producto.',
-                    ]);
-                }
-
-                $this->recalcularTotales($pedido);
-
-                $pedido->fill(Arr::only($datos, self::CAMPOS_CLIENTE));
-                $pedido->editado_at = now();
-                $pedido->save();
+                $this->aplicarEdicion($pedido, $datos);
 
                 $this->stockService->ajustarPorEdicion(
                     $pedido,
@@ -97,6 +107,112 @@ class PedidoEdicionService
                     ? "Solo quedan {$e->stockDisponible} unidades de {$titulo} para sumar al pedido (la edición necesita {$e->cantidadSolicitada} más)."
                     : "No queda stock de {$titulo} para sumar al pedido.",
             ]);
+        }
+    }
+
+    /**
+     * Cambia items, totales y datos del cliente del pedido (sin stock ni HTTP). Tiene que correr dentro de una transacción.
+     *
+     * @param  array<string, mixed>  $datos
+     */
+    private function aplicarEdicion(Pedido $pedido, array $datos): void
+    {
+        $this->aplicarItems($pedido, $datos['items'] ?? []);
+        $this->agregarItems($pedido, $datos['nuevos_items'] ?? []);
+
+        if (! $pedido->items()->exists()) {
+            throw ValidationException::withMessages([
+                'items' => 'El pedido necesita al menos un producto.',
+            ]);
+        }
+
+        $this->recalcularTotales($pedido);
+
+        $pedido->fill(Arr::only($datos, self::CAMPOS_CLIENTE));
+        $pedido->editado_at = now();
+        $pedido->save();
+    }
+
+    /**
+     * Edición de un pedido con reserva abierta en el Central. Ver la nota de la clase.
+     *
+     * @param  array<string, mixed>  $datos
+     */
+    private function actualizarConReserva(Pedido $pedido, array $datos): Pedido
+    {
+        $armador = app(PedidoParaCentral::class);
+
+        // El pedido tal como está (lo que el Central tiene hoy): es a lo que se vuelve si la edición local falla.
+        $actual = Pedido::with('items')->findOrFail($pedido->id);
+        $anterior = $armador->armar($actual, $actual->items, $actual->created_at)->payload;
+
+        // Cómo quedaría. Si algo es inválido (color sin texto, combo cambiado…) falla acá, antes de hablar con el Central.
+        $plan = $this->planificar($pedido->id, $datos, $armador);
+
+        try {
+            $reserva = Rukoz::editarReserva($pedido->rukoz_ref, $plan->payload, function (array $central) use ($pedido, $datos, $plan, $armador) {
+                // Dentro de la transacción del paquete: solo base local, nada de HTTP.
+                $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
+
+                if (! $bloqueado->tieneReservaAbierta()) {
+                    throw ValidationException::withMessages([
+                        'estado' => 'El pedido cambió de estado mientras se editaba: no se guardó la edición.',
+                    ]);
+                }
+
+                $this->aplicarEdicion($bloqueado, $datos);
+
+                // Lo que se guarda tiene que ser EXACTAMENTE lo que acepta el Central; si alguien tocó el pedido en el medio,
+                // se aborta y el paquete vuelve a mandar el pedido anterior.
+                $final = $armador->armar($bloqueado, $bloqueado->items()->get(), $bloqueado->created_at);
+
+                if (json_encode($final->payload) !== json_encode($plan->payload)) {
+                    throw ValidationException::withMessages([
+                        'estado' => 'El pedido cambió mientras se guardaba la edición. Probá de nuevo.',
+                    ]);
+                }
+
+                $bloqueado->forceFill([
+                    'rukoz_version' => $central['version'] ?? $bloqueado->rukoz_version,
+                    'rukoz_estado' => $central['estado'] ?? $bloqueado->rukoz_estado,
+                ])->save();
+
+                return $bloqueado;
+            }, pedidoAnterior: $anterior);
+        } catch (SinStockException $e) {
+            EspejoStock::refrescar(ErroresDelCentral::paresParaRefrescar($e, $plan));
+
+            throw ValidationException::withMessages([
+                'items' => collect(ErroresDelCentral::sinStock($e, $plan))->pluck('mensaje')->implode(' '),
+            ]);
+        } catch (RukozException $e) {
+            ErroresDelCentral::registrar($e, 'editar la reserva');
+
+            throw ValidationException::withMessages(['estado' => ErroresDelCentral::paraElAdmin($e, 'guardar la edición')]);
+        }
+
+        return $reserva->local;
+    }
+
+    /**
+     * El pedido de Central que resultaría de la edición, sin guardarla: se aplica adentro de una transacción que SIEMPRE se
+     * deshace. Así la regla de la edición vive en un solo lugar (`aplicarEdicion`) y el Central recibe lo que la web va a guardar.
+     *
+     * @param  array<string, mixed>  $datos
+     */
+    private function planificar(int $pedidoId, array $datos, PedidoParaCentral $armador): PedidoArmado
+    {
+        $conexion = DB::connection();
+        $conexion->beginTransaction();
+
+        try {
+            $pedido = Pedido::whereKey($pedidoId)->firstOrFail();
+
+            $this->aplicarEdicion($pedido, $datos);
+
+            return $armador->armar($pedido, $pedido->items()->get(), $pedido->created_at);
+        } finally {
+            $conexion->rollBack();
         }
     }
 
