@@ -275,8 +275,13 @@ export default function VariantesColorRepeater({ variantes, onChange, errors = {
                                                 value={variante.stock ?? ''}
                                                 onChange={(e) => actualizar(index, 'stock', e.target.value)}
                                                 placeholder="Ilimitado"
-                                                className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
+                                                readOnly={variante.stock_gestionado}
+                                                title={variante.stock_gestionado ? 'El stock se administra en el Sistema Central' : undefined}
+                                                className={`block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all ${variante.stock_gestionado ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                             />
+                                            {variante.stock_gestionado && (
+                                                <p className="mt-1 text-xs text-gray-500">El stock se administra en el Sistema Central</p>
+                                            )}
                                             {errorStock && <p className="mt-1 text-xs text-red-600">{errorStock}</p>}
                                         </div>
 

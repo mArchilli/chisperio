@@ -10,6 +10,7 @@ use App\Models\Categoria;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
 use App\Models\Subcategoria;
+use App\Rukoz\EspejoStock;
 use App\Rukoz\SincronizacionDeCatalogo;
 use App\Services\AumentoPreciosService;
 use Illuminate\Http\Request;
@@ -248,6 +249,7 @@ class ProductoController extends Controller
     public function edit(Producto $producto)
     {
         $producto->load(['categorias', 'subcategorias', 'media', 'escalasPrecio', 'variantes', 'addons']);
+        $this->marcarStockGestionado($producto);
         $categorias = Categoria::all();
         $subcategorias = Subcategoria::with('categoria')->get();
 
@@ -289,7 +291,7 @@ class ProductoController extends Controller
         $this->validarUnicoColorPersonalizado($validated['variantes'] ?? []);
 
         $mapaClaves = DB::transaction(function () use ($validated, $producto) {
-            $producto->update([
+            $atributos = [
                 'titulo' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'] ?? null,
                 'precio' => $validated['precio'],
@@ -297,7 +299,14 @@ class ProductoController extends Controller
                 'is_active' => $validated['is_active'] ?? true,
                 'is_featured' => $validated['is_featured'] ?? false,
                 'sugerir_en_carrito' => $validated['sugerir_en_carrito'] ?? false,
-            ]);
+            ];
+
+            // Si el stock lo lleva el Central, un valor que llegue en el request se ignora (el espejo es la única vía).
+            if (EspejoStock::gestionado('producto', $producto->id)) {
+                unset($atributos['stock']);
+            }
+
+            $producto->update($atributos);
 
             // Actualizar categorías y subcategorías
             if (isset($validated['categorias'])) {
@@ -607,6 +616,9 @@ class ProductoController extends Controller
 
         $mapaClaves = [];
 
+        // Variantes cuyo stock lleva el Central: se actualiza todo menos el stock, aunque llegue uno en el request.
+        $conStockDelCentral = EspejoStock::gestionados('variante', $idsConservar);
+
         foreach ($variantes as $index => $variante) {
             $atributos = [
                 'nombre' => $variante['nombre'],
@@ -619,6 +631,10 @@ class ProductoController extends Controller
             ];
 
             if (!empty($variante['id'])) {
+                if (in_array((int) $variante['id'], $conStockDelCentral, true)) {
+                    unset($atributos['stock']);
+                }
+
                 $producto->variantes()->whereKey($variante['id'])->update($atributos);
                 $varianteId = $variante['id'];
             } else {
@@ -631,6 +647,21 @@ class ProductoController extends Controller
         }
 
         return $mapaClaves;
+    }
+
+    /**
+     * Marca en el producto y en sus variantes si su stock lo lleva el Central (INTEGRACION_STOCK): el formulario
+     * los muestra de solo lectura. No se persiste, solo viaja al formulario.
+     */
+    private function marcarStockGestionado(Producto $producto): void
+    {
+        $producto->setAttribute('stock_gestionado', EspejoStock::gestionado('producto', $producto->id));
+
+        $gestionadas = EspejoStock::gestionados('variante', $producto->variantes->pluck('id')->all());
+
+        $producto->variantes->each(
+            fn ($variante) => $variante->setAttribute('stock_gestionado', in_array($variante->id, $gestionadas, true))
+        );
     }
 
     /**

@@ -450,6 +450,7 @@ class PedidoController extends Controller
         } catch (StockInsuficienteException $e) {
             $this->abortarPorStockInsuficiente([[
                 'producto_id' => $e->productoId,
+                'variante_id' => $e->varianteId,
                 'cantidad' => $e->cantidadSolicitada,
                 'stock_disponible' => $e->stockDisponible,
             ]]);
@@ -494,13 +495,20 @@ class PedidoController extends Controller
     private function abortarPorStockInsuficiente(array $faltantes): never
     {
         $titulos = Producto::whereIn('id', collect($faltantes)->pluck('producto_id'))->pluck('titulo', 'id');
+        $colores = ProductoVariante::whereIn('id', collect($faltantes)->pluck('variante_id')->filter())->pluck('nombre', 'id');
 
         $mensajes = [];
 
         foreach ($faltantes as $faltante) {
             $titulo = $titulos->get($faltante['producto_id'], 'este producto');
 
-            $mensajes["stock.{$faltante['producto_id']}"] = $faltante['stock_disponible'] > 0
+            // Con variante se nombra el color: "Chispa PULY (Dorada)", así el cliente sabe cuál sacar o ajustar.
+            if (! empty($faltante['variante_id']) && $colores->has($faltante['variante_id'])) {
+                $titulo .= ' (' . $colores->get($faltante['variante_id']) . ')';
+            }
+
+            // Una lista por producto: dos colores del mismo producto sin stock no se pisan entre sí.
+            $mensajes["stock.{$faltante['producto_id']}"][] = $faltante['stock_disponible'] > 0
                 ? "Solo quedan {$faltante['stock_disponible']} unidades de {$titulo} (pediste {$faltante['cantidad']}). Ajustá la cantidad."
                 : "No queda stock de {$titulo}.";
         }
