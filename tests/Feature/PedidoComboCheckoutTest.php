@@ -68,6 +68,23 @@ class PedidoComboCheckoutTest extends TestCase
         return compact('combo', 'itemFijo', 'itemAElegir', 'productoFijo', 'varianteFija', 'productoAElegir', 'varianteRoja', 'varianteAzul');
     }
 
+    public function test_el_snapshot_del_combo_guarda_el_combo_producto_id_de_cada_linea(): void
+    {
+        ['combo' => $combo, 'itemFijo' => $itemFijo, 'itemAElegir' => $itemAElegir, 'varianteRoja' => $varianteRoja] = $this->armarCombo();
+
+        $this->postJson('/checkout', $this->payloadBase([
+            'combos' => [[
+                'combo_id' => $combo->id,
+                'cantidad' => 1,
+                'selecciones' => [['combo_producto_id' => $itemAElegir->id, 'variante_id' => $varianteRoja->id]],
+            ]],
+        ]))->assertCreated();
+
+        $seleccionados = collect(PedidoItem::where('combo_id', $combo->id)->firstOrFail()->combo_items_seleccionados);
+
+        $this->assertSame([$itemFijo->id, $itemAElegir->id], $seleccionados->pluck('combo_producto_id')->all());
+    }
+
     public function test_checkout_con_combo_resuelve_variante_fija_y_elegida_descuenta_stock_de_cada_componente(): void
     {
         ['combo' => $combo, 'itemAElegir' => $itemAElegir, 'varianteFija' => $varianteFija, 'varianteRoja' => $varianteRoja] = $this->armarCombo();

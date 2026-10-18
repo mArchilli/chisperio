@@ -6,6 +6,7 @@ use App\Models\Combo;
 use App\Models\ComboProducto;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
+use App\Rukoz\SincronizacionDeCatalogo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -74,6 +75,8 @@ class ComboController extends Controller
 
         $this->guardarMedia($request, $combo);
 
+        SincronizacionDeCatalogo::combo($combo);
+
         return redirect()->route('combos.index')
             ->with('success', 'Combo creado exitosamente');
     }
@@ -139,6 +142,8 @@ class ComboController extends Controller
         }
 
         $this->guardarMedia($request, $combo);
+
+        SincronizacionDeCatalogo::combo($combo);
 
         return redirect()->route('combos.index')
             ->with('success', 'Combo actualizado exitosamente');

@@ -10,6 +10,7 @@ use App\Models\Categoria;
 use App\Models\EscalaPrecio;
 use App\Models\Oferta;
 use App\Models\Subcategoria;
+use App\Rukoz\SincronizacionDeCatalogo;
 use App\Services\AumentoPreciosService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -227,6 +228,8 @@ class ProductoController extends Controller
             }
         }
 
+        SincronizacionDeCatalogo::producto($producto);
+
         return redirect()->route('productos.index')
             ->with('success', 'Producto creado exitosamente');
     }
@@ -397,6 +400,8 @@ class ProductoController extends Controller
                 ]);
             }
         }
+
+        SincronizacionDeCatalogo::producto($producto);
 
         return redirect()->route('productos.index')
             ->with('success', 'Producto actualizado exitosamente');

@@ -22,7 +22,7 @@ class ComboPedidoResolver
      * componentes ya resuelto (`combo_items_seleccionados`) con las cantidades totales
      * (cantidad de receta × cantidad de combos) listas para precio/stock.
      *
-     * @return array{combo: Combo, cantidad: int, componentes: array<int, array{producto_id: int, producto_variante_id: ?int, titulo: string, variante_nombre: ?string, variante_color_hex: ?string, cantidad_por_combo: int, cantidad_total: int}>}
+     * @return array{combo: Combo, cantidad: int, componentes: array<int, array{combo_producto_id: int, producto_id: int, producto_variante_id: ?int, titulo: string, variante_nombre: ?string, variante_color_hex: ?string, cantidad_por_combo: int, cantidad_total: int}>}
      *
      * @throws ValidationException
      */
@@ -62,6 +62,9 @@ class ComboPedidoResolver
             }
 
             $componentes[] = [
+                // Línea de la receta (combo_productos.id): la integración con el Central lo necesita para
+                // armar las selecciones del combo. Los pedidos anteriores a este cambio no lo tienen.
+                'combo_producto_id' => $item->id,
                 'producto_id' => $item->producto_id,
                 'producto_variante_id' => $varianteResuelta?->id,
                 'titulo' => $item->producto->titulo,
