@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { WHATSAPP_SUCURSALES, SUCURSAL_LABELS } from '@/lib/whatsapp';
+import { formatearFechaCorta } from '@/lib/fecha';
 
 const ESTADOS = {
     pendiente: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
@@ -23,13 +24,6 @@ const formatearPrecio = (precio) =>
         maximumFractionDigits: 2,
     }).format(precio);
 
-const formatearFechaCorta = (fecha) =>
-    new Date(fecha).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    });
-
 export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFiltrarSucursal, stats }) {
     const [pedidoACancelar, setPedidoACancelar] = useState(null);
     // Pedido cuyas acciones rápidas (mobile) están desplegadas.
@@ -47,6 +41,8 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
             key: 'pendientes',
             label: 'Pendientes',
             value: stats.pendientes_count,
+            // Reservas sin cerrar: su monto va aparte de las ventas.
+            sublabel: `${formatearPrecio(stats.pendientes_monto)} sin cerrar`,
             estado: 'pendiente',
             icon: (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,7 +85,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
         },
         {
             key: 'facturacion',
-            label: 'Facturación',
+            label: 'Ventas (despachados)',
             value: formatearPrecio(stats.facturacion),
             estado: null,
             icon: (
@@ -189,6 +185,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                             {card.label}
                                         </div>
                                         <div className="mt-1 text-xl sm:text-2xl font-bold text-gray-900 truncate">{card.value}</div>
+                                        {card.sublabel && <div className="mt-0.5 text-xs text-gray-400 truncate">{card.sublabel}</div>}
                                     </Tag>
                                 );
                             })}

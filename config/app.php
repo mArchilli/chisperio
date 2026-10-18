@@ -69,6 +69,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Zona horaria de negocio (solo para mostrar y para interpretar "el día")
+    |--------------------------------------------------------------------------
+    |
+    | Lo guardado en la base sigue en `timezone` (UTC). Esta es la zona en la que
+    | se muestran las fechas y en la que se interpreta "hoy", "este día" o "este
+    | mes" en los filtros del panel y las métricas. Ver App\Support\ZonaHoraria
+    | (back) y resources/js/lib/fecha.js (front).
+    |
+    */
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'America/Argentina/Buenos_Aires'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

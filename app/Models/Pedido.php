@@ -40,6 +40,8 @@ class Pedido extends Model
         'envio_gratis',
         'envio_gratis_monto_minimo',
         'editado_at',
+        'codigo_descuento_consumido_at',
+        'codigo_descuento_liberado_at',
     ];
 
     protected $casts = [
@@ -49,6 +51,8 @@ class Pedido extends Model
         'total' => 'decimal:2',
         'despachado_at' => 'datetime',
         'editado_at' => 'datetime',
+        'codigo_descuento_consumido_at' => 'datetime',
+        'codigo_descuento_liberado_at' => 'datetime',
         'envio_gratis' => 'boolean',
         'envio_gratis_monto_minimo' => 'decimal:2',
         // Snapshot histórico del tipo de descuento usado, no el estado actual del código
@@ -84,9 +88,26 @@ class Pedido extends Model
         return $this->belongsTo(PlanPagoTarjeta::class, 'plan_pago_tarjeta_id');
     }
 
+    /**
+     * Todo lo que no está cancelado (ventas + pendientes). Ya NO se usa para facturación ni
+     * métricas de ingresos (ahí van ventas() y pendientes() por separado); queda para
+     * lo que de verdad significa "no cancelado", como el total descontado por un cupón.
+     */
     public function scopeFacturables(Builder $query): Builder
     {
         return $query->where('estado', '!=', EstadoPedido::Cancelado);
+    }
+
+    /** Ventas cerradas (ver EstadoPedido::estadosDeVenta()). Los cancelados nunca entran. */
+    public function scopeVentas(Builder $query): Builder
+    {
+        return $query->whereIn('estado', array_map(fn (EstadoPedido $estado) => $estado->value, EstadoPedido::estadosDeVenta()));
+    }
+
+    /** Pedidos todavía sin cerrar: reservas que aún no son venta. */
+    public function scopePendientes(Builder $query): Builder
+    {
+        return $query->where('estado', EstadoPedido::Pendiente);
     }
 
     /**

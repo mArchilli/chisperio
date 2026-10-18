@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use PDO;
 use PDOException;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
@@ -32,9 +33,13 @@ use Tests\TestCase;
  * tests/Concurrency/descontar_worker.php) mientras el lado B corre en este proceso — dos
  * ejecuciones concurrentes de verdad compitiendo por el lock de la misma fila.
  *
- * Requiere MySQL real disponible localmente (mismo motor que usa producción); si no hay
- * conexión, el test se skipea en vez de romper el resto de la suite.
+ * Requiere MySQL real disponible localmente (mismo motor que usa producción). Es opt-in:
+ * por defecto se saltea, y solo corre con el grupo `mysql` Y la variable de entorno
+ * RUN_MYSQL_LOCK_TEST=1 (ambas). Siempre trabaja sobre su propia base
+ * `chisperio_stock_lock_test`, nunca sobre la base de trabajo (`chisperio`). Si pedido
+ * explícitamente pero no hay conexión, se skipea en vez de romper el resto de la suite.
  */
+#[Group('mysql')]
 class StockServiceConcurrencyTest extends TestCase
 {
     private const CONNECTION = 'stock_lock_test';
@@ -53,6 +58,15 @@ class StockServiceConcurrencyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Opt-in explícito: este test crea una base en el MySQL local y le corre
+        // migrate:fresh, así que NUNCA debe correr dentro de `php artisan test` a secas.
+        if (! filter_var(getenv('RUN_MYSQL_LOCK_TEST'), FILTER_VALIDATE_BOOLEAN)) {
+            $this->markTestSkipped(
+                'Test de concurrencia con MySQL real: se saltea por defecto. '.
+                'Para correrlo: RUN_MYSQL_LOCK_TEST=1 php artisan test --group=mysql (ver docs/TESTS.md).'
+            );
+        }
 
         try {
             $this->prepararBaseDeDatosDeTest();

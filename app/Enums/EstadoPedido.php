@@ -8,6 +8,26 @@ enum EstadoPedido: string
     case Despachado = 'despachado';
     case Cancelado = 'cancelado';
 
+    /**
+     * Estados que cuentan como VENTA CERRADA en las métricas y la facturación del panel.
+     * Hoy solo `despachado`: el pedido salió, la venta se concretó. `pendiente` es una
+     * reserva todavía sin cerrar (se muestra aparte, como "pendientes") y `cancelado` no
+     * suma nunca. Cuando se sumen los estados de la integración con el Sistema Central
+     * (confirmado, empaquetado, retirado...) los que representen una venta confirmada se
+     * agregan acá y todas las métricas los toman solas.
+     *
+     * @return array<int, self>
+     */
+    public static function estadosDeVenta(): array
+    {
+        return [self::Despachado];
+    }
+
+    public function esVenta(): bool
+    {
+        return in_array($this, self::estadosDeVenta(), true);
+    }
+
     public function label(): string
     {
         return match ($this) {

@@ -49,7 +49,7 @@ Route::get('/checkout', function () {
     ]);
 })->name('checkout.index');
 
-Route::post('/checkout', [PedidoController::class, 'store'])->name('checkout.store');
+Route::post('/checkout', [PedidoController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
 
 Route::get('/confirmacion-pedido', function () {
     return Inertia::render('ConfirmacionPedido', [

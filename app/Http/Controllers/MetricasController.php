@@ -4,11 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Models\Pedido;
 use App\Models\PedidoItem;
+use App\Support\ZonaHoraria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
+/**
+ * Métricas de ventas del panel.
+ *
+ * - Ventas: pedidos en un estado de venta cerrada (Pedido::ventas(), ver
+ *   EstadoPedido::estadosDeVenta()). Es lo que alimenta facturación, cantidad de pedidos,
+ *   ticket promedio, la serie, la comparación con el período anterior y el top de productos.
+ * - Pendientes: reservas todavía sin cerrar, con monto y cantidad aparte. No suman a las ventas.
+ * - Cancelados: no suman nunca, ni a ventas ni a pendientes.
+ *
+ * Los períodos son días/meses ARGENTINOS (ver ZonaHoraria): lo guardado está en UTC, así que
+ * un pedido hecho a las 22:00 hora argentina del día 31 pertenece al mes que termina, aunque
+ * en la base figure ya como día 1 del mes siguiente.
+ */
 class MetricasController extends Controller
 {
     public function index(Request $request)
@@ -19,33 +33,36 @@ class MetricasController extends Controller
         ]);
 
         $periodo = $validated['periodo'] ?? 'mensual';
-        $fecha = isset($validated['fecha']) ? Carbon::parse($validated['fecha']) : now();
+
+        // "fecha" es un día calendario argentino (no un instante): se interpreta en hora argentina.
+        $fecha = isset($validated['fecha'])
+            ? ZonaHoraria::enZonaLocal($validated['fecha'])
+            : ZonaHoraria::ahora();
 
         if ($periodo === 'mensual') {
-            $inicio = $fecha->copy()->startOfMonth();
-            $fin = $fecha->copy()->endOfMonth();
-            $inicioAnterior = $inicio->copy()->subMonthNoOverflow();
-            $finAnterior = $inicioAnterior->copy()->endOfMonth();
+            [$inicio, $fin] = ZonaHoraria::rangoDelMes($fecha);
+            [$inicioAnterior, $finAnterior] = ZonaHoraria::rangoDelMes($fecha->copy()->startOfMonth()->subMonthNoOverflow());
         } else {
-            $inicio = $fecha->copy()->startOfDay();
-            $fin = $fecha->copy()->endOfDay();
-            $inicioAnterior = $inicio->copy()->subDay();
-            $finAnterior = $inicioAnterior->copy()->endOfDay();
+            [$inicio, $fin] = ZonaHoraria::rangoDelDia($fecha);
+            [$inicioAnterior, $finAnterior] = ZonaHoraria::rangoDelDia($fecha->copy()->subDay());
         }
 
-        $facturacionTotal = (float) Pedido::facturables()->whereBetween('created_at', [$inicio, $fin])->sum('total');
-        $cantidadPedidos = Pedido::facturables()->whereBetween('created_at', [$inicio, $fin])->count();
-        $facturacionAnterior = (float) Pedido::facturables()->whereBetween('created_at', [$inicioAnterior, $finAnterior])->sum('total');
+        $facturacionTotal = (float) Pedido::ventas()->whereBetween('created_at', [$inicio, $fin])->sum('total');
+        $cantidadPedidos = Pedido::ventas()->whereBetween('created_at', [$inicio, $fin])->count();
+        $facturacionAnterior = (float) Pedido::ventas()->whereBetween('created_at', [$inicioAnterior, $finAnterior])->sum('total');
+
+        $pendientes = Pedido::pendientes()->whereBetween('created_at', [$inicio, $fin]);
 
         return Inertia::render('Admin/Metricas/Index', [
             'periodo' => $periodo,
             'fecha' => $fecha->toDateString(),
             'stats' => [
+                // Ventas cerradas. Los nombres son los de siempre: facturación = ventas.
                 'facturacion_total' => $facturacionTotal,
                 'cantidad_pedidos' => $cantidadPedidos,
                 'ticket_promedio' => $cantidadPedidos > 0 ? round($facturacionTotal / $cantidadPedidos, 2) : 0,
                 'facturacion_serie' => $periodo === 'mensual'
-                    ? $this->serieMensual($inicio, $fin)
+                    ? $this->serieMensual($inicio, $fin, $fecha)
                     : $this->serieDiaria($inicio, $fin),
                 'comparacion_periodo_anterior' => [
                     'facturacion' => $facturacionAnterior,
@@ -54,23 +71,34 @@ class MetricasController extends Controller
                         ? round((($facturacionTotal - $facturacionAnterior) / $facturacionAnterior) * 100, 2)
                         : null,
                 ],
+                // Reservas sin cerrar del mismo período, aparte de las ventas.
+                'pendientes' => [
+                    'monto' => (float) (clone $pendientes)->sum('total'),
+                    'cantidad' => (clone $pendientes)->count(),
+                ],
                 'top_productos' => $this->topProductos($inicio, $fin),
             ],
         ]);
     }
 
-    private function serieMensual(Carbon $inicio, Carbon $fin): array
+    /**
+     * Un punto por día del mes. Se agrupa en PHP (no con DATE(created_at) en SQL) para que el
+     * día sea el argentino y no el de la zona en que se guardó, y para que funcione igual en
+     * MySQL y en los tests con SQLite.
+     */
+    private function serieMensual(Carbon $inicio, Carbon $fin, Carbon $fecha): array
     {
-        $totales = Pedido::facturables()
+        $totales = Pedido::ventas()
             ->whereBetween('created_at', [$inicio, $fin])
-            ->selectRaw('DATE(created_at) as fecha, SUM(total) as monto')
-            ->groupBy('fecha')
-            ->pluck('monto', 'fecha');
+            ->get(['created_at', 'total'])
+            ->groupBy(fn (Pedido $pedido) => ZonaHoraria::aLocal($pedido->created_at)->toDateString())
+            ->map(fn ($pedidos) => (float) $pedidos->sum('total'));
 
         $serie = [];
-        $cursor = $inicio->copy()->startOfDay();
+        $cursor = $fecha->copy()->startOfMonth();
+        $ultimo = $fecha->copy()->endOfMonth();
 
-        while ($cursor->lte($fin)) {
+        while ($cursor->lte($ultimo)) {
             $fechaStr = $cursor->toDateString();
 
             $serie[] = [
@@ -85,17 +113,17 @@ class MetricasController extends Controller
     }
 
     /**
-     * Un punto por hora (0-23) del día seleccionado. Para "ver un día" interesa la
-     * distribución horaria de ventas dentro de ese día; comparar ese día contra
+     * Un punto por hora (0-23, hora argentina) del día seleccionado. Para "ver un día"
+     * interesa la distribución horaria de ventas dentro de ese día; comparar ese día contra
      * otros días ya lo cubre el modo mensual. Las horas sin pedidos quedan en 0.
      */
     private function serieDiaria(Carbon $inicio, Carbon $fin): array
     {
-        $totales = Pedido::facturables()
+        $totales = Pedido::ventas()
             ->whereBetween('created_at', [$inicio, $fin])
-            ->selectRaw('HOUR(created_at) as hora, SUM(total) as monto')
-            ->groupBy('hora')
-            ->pluck('monto', 'hora');
+            ->get(['created_at', 'total'])
+            ->groupBy(fn (Pedido $pedido) => (int) ZonaHoraria::aLocal($pedido->created_at)->format('G'))
+            ->map(fn ($pedidos) => (float) $pedidos->sum('total'));
 
         $serie = [];
 
@@ -112,7 +140,7 @@ class MetricasController extends Controller
     private function topProductos(Carbon $inicio, Carbon $fin): array
     {
         return PedidoItem::query()
-            ->whereHas('pedido', fn ($query) => $query->facturables()->whereBetween('created_at', [$inicio, $fin]))
+            ->whereHas('pedido', fn ($query) => $query->ventas()->whereBetween('created_at', [$inicio, $fin]))
             ->selectRaw('producto_id, titulo, SUM(subtotal) as monto')
             ->groupBy('producto_id', 'titulo')
             ->orderByDesc('monto')

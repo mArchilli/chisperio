@@ -477,6 +477,13 @@ export default function Checkout({ canLogin }) {
                 setCodigoDescuentoError(mensajesCodigo.join(' '));
             }
 
+            // 429: demasiados intentos seguidos desde esta conexión (throttle del checkout).
+            // No es un error del pedido: se le pide esperar y reintentar.
+            if (error.response?.status === 429) {
+                setApiError('Esperá un momento y probá de nuevo.');
+                return;
+            }
+
             setApiError(
                 mensajesStock.length > 0
                     ? mensajesStock

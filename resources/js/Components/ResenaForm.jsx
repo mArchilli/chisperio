@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ReviewCard } from '@/Components/Landing/ReviewsSection';
+import { hoyISO } from '@/lib/fecha';
 
 /** Misma regla que Resena::getInicialesAttribute: primera letra de la primera y la última palabra. */
 export function inicialesDe(nombre) {
@@ -12,14 +13,8 @@ export function inicialesDe(nombre) {
     return (primera + ultima).toUpperCase();
 }
 
-/** Fecha de hoy como "YYYY-MM-DD" en hora local (lo que espera <input type="date">). */
-export function hoyISO() {
-    const ahora = new Date();
-    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-    const dia = String(ahora.getDate()).padStart(2, '0');
-
-    return `${ahora.getFullYear()}-${mes}-${dia}`;
-}
+// Fecha de hoy en hora argentina: ver lib/fecha.js. Se re-exporta porque Resenas/Create la importa de acá.
+export { hoyISO };
 
 const inputClase =
     'block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6000ca] focus:border-transparent transition-all duration-300 hover:border-gray-300';

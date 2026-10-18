@@ -9,6 +9,7 @@ import {
     buildPedidoClienteMessage,
     normalizarTelefonoWhatsApp,
 } from '@/lib/whatsapp';
+import { formatearFechaHora } from '@/lib/fecha';
 
 const ESTADOS = {
     pendiente: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
@@ -31,14 +32,7 @@ const formatearPrecio = (precio) =>
 
 const formatearPorcentaje = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
 
-const formatearFecha = (fecha) =>
-    new Date(fecha).toLocaleString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+const formatearFecha = (fecha) => formatearFechaHora(fecha);
 
 function DatoCliente({ label, value }) {
     return (
