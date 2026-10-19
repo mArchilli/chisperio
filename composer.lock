@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "79e57a32f4a1ce94e99992ab7db1b34c",
+    "content-hash": "cbe99426bd4384e317808e7109f1bf44",
     "packages": [
         {
             "name": "brick/math",
@@ -3426,10 +3426,16 @@
         {
             "name": "rukoz/core-client",
             "version": "0.1.2",
-            "dist": {
-                "type": "path",
-                "url": "../rukoz-core-client",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:mArchilli/rukoz-core-client.git",
                 "reference": "5f265fca45a3d4d10376bcaa7d88e48a4de64e80"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mArchilli/rukoz-core-client/zipball/5f265fca45a3d4d10376bcaa7d88e48a4de64e80",
+                "reference": "5f265fca45a3d4d10376bcaa7d88e48a4de64e80",
+                "shasum": ""
             },
             "require": {
                 "ext-json": "*",
@@ -3495,10 +3501,11 @@
                 "laravel",
                 "rukoz"
             ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/mArchilli/rukoz-core-client/tree/v0.1.2",
+                "issues": "https://github.com/mArchilli/rukoz-core-client/issues"
+            },
+            "time": "2026-10-19T16:36:18+00:00"
         },
         {
             "name": "symfony/clock",
@@ -8712,9 +8719,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "rukoz/core-client": 20
-    },
+    "stability-flags": [],
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
