@@ -381,9 +381,11 @@ php artisan rukoz:sync-catalogo       # resumen: enviados, sin vincular
 
 Con `RUKOZ_INTEGRACION=true` el paquete empieza a programar sus tareas (cron del paso 4); el catálogo diario corre 03:30.
 
-**En el Central** (*Integraciones → Web Chisperío → Productos web*): **rehacer los vínculos** de cada producto sin variantes y de cada variante con su artículo, y las variantes «a elección del cliente» con el artículo genérico. La tabla de vínculos aprobada está en el doc del proyecto; **se aplica tal cual**, no se reinterpreta.
+**En el Central** (*Integraciones → Web Chisperío → Productos web*): **rehacer los vínculos** de cada producto sin variantes y de cada variante con su artículo, y las variantes «a elección del cliente» con el artículo genérico. La tabla aprobada está en [`VINCULOS-APROBADOS-CHISPERIO.md`](VINCULOS-APROBADOS-CHISPERIO.md); **se aplica tal cual**, no se reinterpreta.
 
-> ⚠️ Esa tabla **no está en este repositorio** (`docs/` y `CONTEXTO-PROYECTO-chisperio.md` no la contienen). Hay que tenerla a mano antes del día del deploy. Los ids de productos y variantes de **producción** no tienen por qué coincidir con los de la copia local con la que se aprobó: verificar por nombre, no por id.
+> ⚠️ Los ids de productos y variantes de **producción** no tienen por qué coincidir con los de la copia local con la que se aprobó la tabla: identificar por **nombre**, no por id. Y, como indica ese documento, **antes de aplicar se le muestra la tabla final a Matias**.
+>
+> Referencia del resultado esperado (central de prueba): 43 vinculados, 6 `no_aplica` (los productos padre con variantes), 0 sin vincular, combo `asd` completo. Si en producción los números difieren, revisar el catálogo antes de seguir.
 
 Después:
 
@@ -599,5 +601,4 @@ Los comandos útiles, en una línea: `rukoz:ping`, `rukoz:referencias`, `rukoz:e
 2. **Cron:** ¿Hostinger deja correr `schedule:run` cada minuto en este plan? Si no, ¿cuál es el mínimo? (1.3).
 3. **PHP del hosting:** ¿CLI y web están en 8.2 o superior? ¿Están las extensiones? (1.1).
 4. **Pedidos pendientes de la web vieja:** ¿cuántos hay y se cierran antes del deploy? ¿Se resta su mercadería del stock del Central? (Paso 3).
-5. **Tabla de vínculos aprobada:** no está en este repositorio; ¿dónde está el «doc del proyecto» que la tiene? (Paso 6).
-6. **Token de GitHub:** ¿uno solo o uno por lugar (desarrollo y hosting)? (Anexo A).
+5. **Token de GitHub:** ¿uno solo o uno por lugar (desarrollo y hosting)? (Anexo A).
