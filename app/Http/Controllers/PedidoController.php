@@ -14,6 +14,7 @@ use App\Models\PedidoItem;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
 use App\Rukoz\CheckoutCentral;
+use App\Rukoz\ConfirmacionDeVenta;
 use App\Rukoz\ErroresDelCentral;
 use App\Rukoz\EspejoStock;
 use App\Rukoz\PedidoArmado;
@@ -73,10 +74,20 @@ class PedidoController extends Controller
 
         $pedidos = Pedido::with('items')
             ->deSucursal($sucursalScope)
-            ->when($filtroEstado !== 'todos', fn ($query) => $query->where('estado', $filtroEstado))
+            // «Confirmados» incluye a los ya empaquetados (siguen sin despachar); cada fila muestra su estado exacto.
+            ->when($filtroEstado === EstadoPedido::Confirmado->value, fn ($query) => $query->whereIn('estado', [EstadoPedido::Confirmado->value, EstadoPedido::Empaquetado->value]))
+            ->when($filtroEstado !== 'todos' && $filtroEstado !== EstadoPedido::Confirmado->value, fn ($query) => $query->where('estado', $filtroEstado))
             ->latest()
             ->paginate(15)
             ->withQueryString();
+
+        // 11.4 — Las acciones que ofrece cada fila (un pedido con reserva en el Central no se despacha a mano: se confirma).
+        $pedidos->getCollection()->transform(fn (Pedido $pedido) => $pedido->setAttribute('permisos', [
+            'puede_confirmar' => $pedido->puedeConfirmarse(),
+            'puede_marcar_despachado' => $pedido->puedeTransicionarA(EstadoPedido::Despachado),
+            'puede_cancelar' => $pedido->puedeTransicionarA(EstadoPedido::Cancelado),
+            'puede_volver_a_pendiente' => $pedido->puedeTransicionarA(EstadoPedido::Pendiente),
+        ]));
 
         return Inertia::render('Admin/Pedidos/Index', [
             'pedidos' => $pedidos,
@@ -86,6 +97,10 @@ class PedidoController extends Controller
             'stats' => [
                 'pendientes_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Pendiente)->count(),
                 'despachados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Despachado)->count(),
+                // 11.4 — Estados que llegan del Central: la venta confirmada, todavía sin despachar, y la anulada.
+                'confirmados_count' => Pedido::deSucursal($sucursalScope)->whereIn('estado', [EstadoPedido::Confirmado->value, EstadoPedido::Empaquetado->value])->count(),
+                'entregados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Entregado)->count(),
+                'anulados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Anulado)->count(),
                 'cancelados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Cancelado)->count(),
                 // Ventas = pedidos en estado de venta cerrada (EstadoPedido::estadosDeVenta());
                 // los pendientes van aparte y los cancelados no suman nunca.
@@ -118,6 +133,15 @@ class PedidoController extends Controller
 
         return Inertia::render('Admin/Pedidos/Show', [
             'pedido' => $pedido,
+            // 11.4 — Qué acciones ofrece la ficha. El backend las vuelve a exigir en cada endpoint.
+            'permisos' => [
+                'puede_confirmar' => $pedido->puedeConfirmarse(),
+                'puede_editar' => $pedido->esEditable(),
+                'puede_marcar_despachado' => $pedido->puedeTransicionarA(EstadoPedido::Despachado),
+                'puede_cancelar' => $pedido->puedeTransicionarA(EstadoPedido::Cancelado),
+                'puede_volver_a_pendiente' => $pedido->puedeTransicionarA(EstadoPedido::Pendiente),
+                'es_venta_del_central' => $pedido->estaConfirmado(),
+            ],
         ]);
     }
 
@@ -130,10 +154,10 @@ class PedidoController extends Controller
     {
         $this->autorizarSucursal($request, $pedido);
 
-        if (! $pedido->estado->esEditable()) {
+        if (! $pedido->esEditable()) {
             return redirect()
                 ->route('pedidos.show', $pedido)
-                ->with('error', 'Un pedido cancelado no se puede editar.');
+                ->with('error', PedidoEdicionService::motivoDeSoloLectura($pedido));
         }
 
         $pedido->load('items.producto.imagenPrincipal');
@@ -201,6 +225,11 @@ class PedidoController extends Controller
     {
         $this->autorizarSucursal($request, $pedido);
 
+        // 11.4 — Un pedido confirmado (o anulado, cancelado) es de solo lectura también en el backend, antes de validar nada.
+        if (! $pedido->esEditable()) {
+            throw ValidationException::withMessages(['estado' => PedidoEdicionService::motivoDeSoloLectura($pedido)]);
+        }
+
         $validated = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
             'cliente_dni' => 'nullable|string|max:50',
@@ -261,9 +290,9 @@ class PedidoController extends Controller
         $estadoActual = $pedido->estado;
         $estadoDestino = EstadoPedido::from($validated['estado']);
 
-        if (! $estadoActual->puedeTransicionarA($estadoDestino)) {
+        if (! $pedido->puedeTransicionarA($estadoDestino)) {
             throw ValidationException::withMessages([
-                'estado' => $this->mensajeTransicionInvalida($estadoActual, $estadoDestino),
+                'estado' => $this->mensajeTransicionInvalida($pedido, $estadoDestino),
             ]);
         }
 
@@ -321,8 +350,21 @@ class PedidoController extends Controller
      * el pedido ya está cancelado (terminal), sigue en el mismo estado, o el caso
      * concreto que motiva esta regla (no se puede cancelar directo un despachado).
      */
-    private function mensajeTransicionInvalida(EstadoPedido $actual, EstadoPedido $destino): string
+    private function mensajeTransicionInvalida(Pedido $pedido, EstadoPedido $destino): string
     {
+        $actual = $pedido->estado;
+
+        // 11.4 — Una venta confirmada (o anulada) en el Central no se toca desde la web.
+        if ($pedido->estaConfirmado() || $actual === EstadoPedido::Anulado) {
+            return $destino === EstadoPedido::Cancelado || $actual === EstadoPedido::Anulado
+                ? 'Para anular, hacelo en el Sistema Central.'
+                : 'Este pedido ya es una venta confirmada en el Sistema Central: su estado lo maneja el Central (empaquetado y despacho se hacen allá).';
+        }
+
+        if ($destino === EstadoPedido::Despachado && $pedido->usaCentral() && ConfirmacionDeVenta::activa()) {
+            return 'Este pedido tiene su stock en el Sistema Central: se confirma como venta con «Confirmar venta» (y el despacho se hace en el Central).';
+        }
+
         if ($actual === EstadoPedido::Cancelado) {
             return 'Este pedido ya está cancelado. Es un estado final, no se puede volver a cambiar.';
         }

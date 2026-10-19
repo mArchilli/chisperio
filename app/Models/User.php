@@ -21,6 +21,7 @@ class User extends Authenticatable
         'role',
         'sucursal',
         'debe_cambiar_password',
+        'rukoz_vendedor_id',
     ];
 
     protected $hidden = [

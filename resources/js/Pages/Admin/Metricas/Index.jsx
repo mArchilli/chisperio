@@ -220,7 +220,7 @@ export default function Index({ periodo, fecha, stats }) {
                     <h2 className="text-2xl font-bold text-[#6000ca]">
                         Métricas
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500">Ventas cerradas (pedidos despachados) de la tienda</p>
+                    <p className="mt-1 text-sm text-gray-500">Ventas cerradas de la tienda: pedidos despachados y ventas confirmadas en el Sistema Central (cuentan desde la confirmación)</p>
                 </div>
             }
         >

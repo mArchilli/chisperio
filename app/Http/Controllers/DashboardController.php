@@ -80,7 +80,8 @@ class DashboardController extends Controller
     {
         $masVendido = DB::table('pedido_items')
             ->join('pedidos', 'pedidos.id', '=', 'pedido_items.pedido_id')
-            ->whereIn('pedidos.estado', array_map(fn (EstadoPedido $estado) => $estado->value, EstadoPedido::estadosDeVenta()))
+            // Las ventas de verdad (Pedido::ventas distingue los pedidos del Central, 11.4: un despachado manual sin confirmar no es venta).
+            ->whereIn('pedidos.id', Pedido::ventas()->select('pedidos.id'))
             ->when($sucursal, fn ($query) => $query->where('pedidos.sucursal', $sucursal->value))
             ->select('pedido_items.producto_id', 'pedido_items.titulo', DB::raw('SUM(pedido_items.cantidad) as unidades'))
             ->groupBy('pedido_items.producto_id', 'pedido_items.titulo')

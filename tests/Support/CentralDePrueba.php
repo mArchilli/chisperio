@@ -45,6 +45,24 @@ class CentralDePrueba
     /** Se llama justo después de reservar un pedido nuevo (`fn (string $ref)`): sirve para simular una carrera. */
     public ?\Closure $alCrear = null;
 
+    /** Vendedores de la web que el Central ya tiene asignados a un usuario suyo (`GET /referencias` → `vendedores[].id`). @var list<string> */
+    public array $vendedoresAsignados = ['7'];
+
+    /** Si es true, `confirmar` contesta 409 CONFIRMACION_RECHAZADA (por ejemplo, el contenido cambió). */
+    public bool $rechazarConfirmacion = false;
+
+    /** Si es true, `confirmar` PROCESA la venta pero la respuesta se pierde (timeout): sirve para probar el reintento idéntico. */
+    public bool $perderRespuestaDeConfirmar = false;
+
+    /** Lo que contesta `GET /referencias` (por defecto, el fixture oficial). @var array<string, mixed>|null */
+    public ?array $referencias = null;
+
+    /** Body de cada `confirmar` aceptado, por ref (para decidir si repetirlo es idempotente o PEDIDO_YA_CONFIRMADO). @var array<string, array> */
+    public array $confirmaciones = [];
+
+    /** Lo que el Central le suma a cada venta confirmada (`numero_venta`). */
+    private int $ventas = 0;
+
     public static function instalar(): self
     {
         config([
@@ -114,6 +132,20 @@ class CentralDePrueba
 
         if ($metodo === 'GET' && $ruta === '/ping') {
             return Http::response(['ok' => true, 'integracion' => ['nombre' => 'Chisperío (prueba)', 'slug' => 'chisperio'], 'hora_servidor' => now()->toIso8601String()]);
+        }
+
+        if ($metodo === 'GET' && str_starts_with($ruta, '/referencias')) {
+            return $this->responderReferencias($request);
+        }
+
+        if ($metodo === 'GET' && preg_match('#^/pedidos/([^/]+)$#', $ruta, $m)) {
+            return isset($this->pedidos[urldecode($m[1])])
+                ? Http::response($this->respuesta(urldecode($m[1])))
+                : $this->error('PEDIDO_INEXISTENTE', 404, 'No existe ese pedido.');
+        }
+
+        if ($metodo === 'POST' && preg_match('#^/pedidos/([^/]+)/confirmar$#', $ruta, $m)) {
+            return $this->confirmar(urldecode($m[1]), $body);
         }
 
         if ($metodo === 'GET' && str_starts_with($ruta, '/stock')) {
@@ -216,6 +248,137 @@ class CentralDePrueba
         }
 
         return Http::response($this->respuesta($ref), 200);
+    }
+
+    private function responderReferencias(Request $request)
+    {
+        $referencias = $this->referencias ?? json_decode((string) file_get_contents(base_path('tests/fixtures/rukoz/response-referencias.json')), true);
+        $referencias['vendedores'] = array_map(fn ($id) => ['id' => $id, 'external_id' => $id, 'nombre' => 'Vendedor '.$id], $this->vendedoresAsignados);
+        $referencias['hash'] = hash('sha256', json_encode($referencias));
+
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $consulta);
+
+        return Http::response(($consulta['hash'] ?? null) === $referencias['hash'] ? ['hash' => $referencias['hash'], 'sin_cambios' => true] : $referencias);
+    }
+
+    private function confirmar(string $ref, array $body)
+    {
+        if (! isset($this->pedidos[$ref])) {
+            return $this->error('PEDIDO_INEXISTENTE', 404, 'No existe ese pedido.');
+        }
+
+        $pedido = $this->pedidos[$ref];
+
+        // El Central valida la forma; los errores de contrato de la web quedan anotados y los tests los exigen vacíos.
+        $total = (float) $pedido['payload']['total'] + (float) ($body['envio']['costo_cobrado'] ?? 0);
+        $errores = ContratoConfirmacionCentral::errores($body, $this->referencias ?? json_decode((string) file_get_contents(base_path('tests/fixtures/rukoz/response-referencias.json')), true), $total);
+
+        if ($errores !== []) {
+            array_push($this->erroresDeContrato, ...array_map(fn ($e) => 'confirmar: '.$e, $errores));
+
+            return $this->validacion($errores);
+        }
+
+        if ($pedido['estado'] === 'cancelado') {
+            return $this->error('PEDIDO_CANCELADO', 409, 'El pedido está cancelado.');
+        }
+
+        if ($pedido['estado'] !== 'reservado') {
+            return $this->huella($this->confirmaciones[$ref] ?? []) === $this->huella($body)
+                ? Http::response($this->respuesta($ref), 200)
+                : $this->error('PEDIDO_YA_CONFIRMADO', 409, 'El pedido ya está confirmado con otro contenido.');
+        }
+
+        if (! in_array($body['vendedor']['id'], $this->vendedoresAsignados, true)) {
+            return $this->error('VENDEDOR_NO_MAPEADO', 422, 'El vendedor «'.$body['vendedor']['id'].'» de la web todavía no está asignado a un usuario del Central.', ['vendedor' => $body['vendedor']]);
+        }
+
+        if ($this->rechazarConfirmacion) {
+            return $this->error('CONFIRMACION_RECHAZADA', 409, 'La venta no se pudo crear: el contenido del pedido cambió.');
+        }
+
+        $pagado = array_sum(array_map(fn ($p) => (float) $p['monto'], $body['pagos'] ?? []));
+
+        $this->pedidos[$ref] = [
+            ...$pedido,
+            'estado' => 'confirmado',
+            'version' => $pedido['version'] + 1,
+            'venta' => [
+                'numero_venta' => 'TST-'.str_pad((string) ++$this->ventas, 6, '0', STR_PAD_LEFT),
+                'total' => $total,
+                'pagado' => $pagado,
+                'saldo' => $total - $pagado,
+                'confirmado_at' => $body['confirmado_at'] ?? now()->toIso8601String(),
+                'empaquetado_at' => null,
+                'despachado_at' => null,
+                'retirado_at' => null,
+                'anulado_at' => null,
+                'motivo' => null,
+            ],
+        ];
+        $this->confirmaciones[$ref] = $body;
+
+        if ($this->perderRespuestaDeConfirmar) {
+            throw new ConnectionException('cURL error 28: Operation timed out');
+        }
+
+        return Http::response($this->respuesta($ref), 201);
+    }
+
+    /** Lo que importa del body para saber si repetirlo es «lo mismo» (la huella ignora confirmado_at, fechas y email/nombre del vendedor). */
+    private function huella(array $body): string
+    {
+        unset($body['confirmado_at']);
+        $body['pagos'] = array_map(fn ($p) => array_diff_key($p, ['fecha' => 1]), $body['pagos'] ?? []);
+        $body['vendedor'] = ['id' => $body['vendedor']['id'] ?? null];
+
+        return hash('sha256', json_encode($body));
+    }
+
+    /**
+     * Mueve el pedido a un estado nuevo DESDE EL CENTRAL (empaquetar, despachar, anular…) y devuelve el `datos` del evento
+     * `pedido.*` tal como lo mandaría el webhook (estado completo, `version` nueva). Los tests lo meten en el paquete o lo
+     * disparan como `PedidoActualizado`.
+     *
+     * @param  array<string, mixed>  $venta  Campos a cambiar de la venta (`despachado_at`, `numero_seguimiento`, `motivo`…).
+     * @return array<string, mixed>
+     */
+    public function avanzar(string $ref, string $estado, array $venta = []): array
+    {
+        $this->pedidos[$ref]['estado'] = $estado;
+        $this->pedidos[$ref]['version']++;
+        $this->pedidos[$ref]['venta'] = [...($this->pedidos[$ref]['venta'] ?? []), ...$venta];
+
+        return $this->datosDeEvento($ref);
+    }
+
+    /** @return array<string, mixed> */
+    public function datosDeEvento(string $ref): array
+    {
+        $pedido = $this->pedidos[$ref];
+        $venta = $pedido['venta'] ?? [];
+
+        return [
+            'pedido_id' => array_search($ref, array_keys($this->pedidos), true) + 1,
+            'external_ref' => $ref,
+            'estado' => $pedido['estado'],
+            'version' => $pedido['version'],
+            'numero_venta' => $venta['numero_venta'] ?? null,
+            'venta_id' => 4000,
+            'transportista' => $venta['transportista'] ?? null,
+            'numero_seguimiento' => $venta['numero_seguimiento'] ?? null,
+            'url_seguimiento' => $venta['url_seguimiento'] ?? null,
+            'confirmado_at' => $venta['confirmado_at'] ?? null,
+            'empaquetado_at' => $venta['empaquetado_at'] ?? null,
+            'despachado_at' => $venta['despachado_at'] ?? null,
+            'retirado_at' => $venta['retirado_at'] ?? null,
+            'anulado_at' => $venta['anulado_at'] ?? null,
+            'total' => number_format((float) ($venta['total'] ?? $pedido['payload']['total']), 2, '.', ''),
+            'pagado' => number_format((float) ($venta['pagado'] ?? 0), 2, '.', ''),
+            'saldo' => number_format((float) ($venta['saldo'] ?? 0), 2, '.', ''),
+            'moneda' => 'ARS',
+            ...(isset($venta['motivo']) ? ['motivo' => $venta['motivo']] : []),
+        ];
     }
 
     private function responderStock(Request $request)
@@ -341,13 +504,15 @@ class CentralDePrueba
     {
         $pedido = $this->pedidos[$ref];
         $payload = $pedido['payload'];
+        $venta = isset($pedido['venta']) ? $this->datosDeEvento($ref) : [];
 
         return [
+            ...$venta,
             'pedido_id' => array_search($ref, array_keys($this->pedidos), true) + 1,
             'external_ref' => $ref,
             'estado' => $pedido['estado'],
             'version' => $pedido['version'],
-            'total' => number_format((float) $payload['total'], 2, '.', ''),
+            'total' => $venta['total'] ?? number_format((float) $payload['total'], 2, '.', ''),
             'total_con_recargo' => isset($payload['total_con_recargo']) ? number_format((float) $payload['total_con_recargo'], 2, '.', '') : null,
             'moneda' => $payload['moneda'] ?? 'ARS',
             'items' => array_map(fn ($i) => [

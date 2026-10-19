@@ -16,8 +16,10 @@ use Inertia\Inertia;
  * - Ventas: pedidos en un estado de venta cerrada (Pedido::ventas(), ver
  *   EstadoPedido::estadosDeVenta()). Es lo que alimenta facturación, cantidad de pedidos,
  *   ticket promedio, la serie, la comparación con el período anterior y el top de productos.
- * - Pendientes: reservas todavía sin cerrar, con monto y cantidad aparte. No suman a las ventas.
- * - Cancelados: no suman nunca, ni a ventas ni a pendientes.
+ *   La FECHA de la venta (Pedido::ventasEntre / fechaDeVenta) es `confirmado_at` para los pedidos con
+ *   `rukoz_ref` (11.4: la venta nace al confirmarla en el Central) y `created_at` para los de siempre.
+ * - Pendientes: reservas todavía sin cerrar (o sin confirmar), con monto y cantidad aparte. No suman a las ventas.
+ * - Cancelados y anulados: no suman nunca, ni a ventas ni a pendientes.
  *
  * Los períodos son días/meses ARGENTINOS (ver ZonaHoraria): lo guardado está en UTC, así que
  * un pedido hecho a las 22:00 hora argentina del día 31 pertenece al mes que termina, aunque
@@ -47,9 +49,9 @@ class MetricasController extends Controller
             [$inicioAnterior, $finAnterior] = ZonaHoraria::rangoDelDia($fecha->copy()->subDay());
         }
 
-        $facturacionTotal = (float) Pedido::ventas()->whereBetween('created_at', [$inicio, $fin])->sum('total');
-        $cantidadPedidos = Pedido::ventas()->whereBetween('created_at', [$inicio, $fin])->count();
-        $facturacionAnterior = (float) Pedido::ventas()->whereBetween('created_at', [$inicioAnterior, $finAnterior])->sum('total');
+        $facturacionTotal = (float) Pedido::ventasEntre($inicio, $fin)->sum('total');
+        $cantidadPedidos = Pedido::ventasEntre($inicio, $fin)->count();
+        $facturacionAnterior = (float) Pedido::ventasEntre($inicioAnterior, $finAnterior)->sum('total');
 
         $pendientes = Pedido::pendientes()->whereBetween('created_at', [$inicio, $fin]);
 
@@ -88,10 +90,9 @@ class MetricasController extends Controller
      */
     private function serieMensual(Carbon $inicio, Carbon $fin, Carbon $fecha): array
     {
-        $totales = Pedido::ventas()
-            ->whereBetween('created_at', [$inicio, $fin])
-            ->get(['created_at', 'total'])
-            ->groupBy(fn (Pedido $pedido) => ZonaHoraria::aLocal($pedido->created_at)->toDateString())
+        $totales = Pedido::ventasEntre($inicio, $fin)
+            ->get(['created_at', 'confirmado_at', 'rukoz_ref', 'total'])
+            ->groupBy(fn (Pedido $pedido) => ZonaHoraria::aLocal($pedido->fechaDeVenta())->toDateString())
             ->map(fn ($pedidos) => (float) $pedidos->sum('total'));
 
         $serie = [];
@@ -119,10 +120,9 @@ class MetricasController extends Controller
      */
     private function serieDiaria(Carbon $inicio, Carbon $fin): array
     {
-        $totales = Pedido::ventas()
-            ->whereBetween('created_at', [$inicio, $fin])
-            ->get(['created_at', 'total'])
-            ->groupBy(fn (Pedido $pedido) => (int) ZonaHoraria::aLocal($pedido->created_at)->format('G'))
+        $totales = Pedido::ventasEntre($inicio, $fin)
+            ->get(['created_at', 'confirmado_at', 'rukoz_ref', 'total'])
+            ->groupBy(fn (Pedido $pedido) => (int) ZonaHoraria::aLocal($pedido->fechaDeVenta())->format('G'))
             ->map(fn ($pedidos) => (float) $pedidos->sum('total'));
 
         $serie = [];
@@ -140,7 +140,7 @@ class MetricasController extends Controller
     private function topProductos(Carbon $inicio, Carbon $fin): array
     {
         return PedidoItem::query()
-            ->whereHas('pedido', fn ($query) => $query->ventas()->whereBetween('created_at', [$inicio, $fin]))
+            ->whereHas('pedido', fn ($query) => $query->ventasEntre($inicio, $fin))
             ->selectRaw('producto_id, titulo, SUM(subtotal) as monto')
             ->groupBy('producto_id', 'titulo')
             ->orderByDesc('monto')

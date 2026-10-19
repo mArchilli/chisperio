@@ -58,6 +58,17 @@ class PedidoEdicionService
         private readonly ComboPedidoResolver $comboResolver,
     ) {}
 
+    /** Por qué un pedido no se puede editar (para la UI y para el backend). */
+    public static function motivoDeSoloLectura(Pedido $pedido): string
+    {
+        return match (true) {
+            $pedido->estado === EstadoPedido::Anulado => 'Esta venta fue anulada en el Sistema Central: el pedido es de solo lectura.',
+            $pedido->estado === EstadoPedido::Cancelado => 'Un pedido cancelado no se puede editar.',
+            $pedido->estaConfirmado() => 'Este pedido ya está confirmado en el Sistema Central y es de solo lectura. Para corregirlo, anulá la venta allá y rehacelo.',
+            default => 'Este pedido ya no tiene su reserva abierta en el Sistema Central: no se puede editar.',
+        };
+    }
+
     /**
      * @param  array<string, mixed>  $datos  Ya validado por PedidoController::actualizar.
      *
@@ -65,13 +76,12 @@ class PedidoEdicionService
      */
     public function actualizar(Pedido $pedido, array $datos): Pedido
     {
-        if ($pedido->usaCentral()) {
-            if (! $pedido->tieneReservaAbierta()) {
-                throw ValidationException::withMessages([
-                    'estado' => 'Este pedido ya no tiene su reserva abierta en el Sistema Central: no se puede editar.',
-                ]);
-            }
+        // 11.4 — Solo lectura: un pedido confirmado, anulado o cancelado no se edita (la UI no ofrece el botón, esto es el backend).
+        if (! $pedido->esEditable()) {
+            throw ValidationException::withMessages(['estado' => self::motivoDeSoloLectura($pedido)]);
+        }
 
+        if ($pedido->usaCentral()) {
             return $this->actualizarConReserva($pedido, $datos);
         }
 

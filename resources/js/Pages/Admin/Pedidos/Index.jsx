@@ -7,8 +7,12 @@ import { formatearFechaCorta } from '@/lib/fecha';
 
 const ESTADOS = {
     pendiente: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
+    confirmado: { label: 'Confirmado', badge: 'bg-blue-100 text-blue-800 border border-blue-300' },
+    empaquetado: { label: 'Empaquetado', badge: 'bg-indigo-100 text-indigo-800 border border-indigo-300' },
     despachado: { label: 'Despachado', badge: 'bg-green-100 text-green-800 border border-green-300' },
+    entregado: { label: 'Entregado', badge: 'bg-emerald-100 text-emerald-800 border border-emerald-300' },
     cancelado: { label: 'Cancelado', badge: 'bg-red-100 text-red-800 border border-red-300' },
+    anulado: { label: 'Anulado', badge: 'bg-red-100 text-red-800 border border-red-300' },
 };
 
 const SUCURSAL_BADGE = {
@@ -34,7 +38,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
         ...WHATSAPP_SUCURSALES.map((s) => ({ value: s.id, label: s.nombre })),
     ];
 
-    const totalPedidos = stats.pendientes_count + stats.despachados_count + stats.cancelados_count;
+    const totalPedidos = stats.pendientes_count + stats.confirmados_count + stats.despachados_count + stats.entregados_count + stats.cancelados_count + stats.anulados_count;
 
     const statCards = [
         {
@@ -85,7 +89,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
         },
         {
             key: 'facturacion',
-            label: 'Ventas (despachados)',
+            label: 'Ventas',
             value: formatearPrecio(stats.facturacion),
             estado: null,
             icon: (
@@ -99,8 +103,11 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
     const tabs = [
         { value: 'todos', label: 'Todos', count: totalPedidos },
         { value: 'pendiente', label: 'Pendientes', count: stats.pendientes_count },
+        { value: 'confirmado', label: 'Confirmados', count: stats.confirmados_count },
         { value: 'despachado', label: 'Despachados', count: stats.despachados_count },
+        { value: 'entregado', label: 'Entregados', count: stats.entregados_count },
         { value: 'cancelado', label: 'Cancelados', count: stats.cancelados_count },
+        { value: 'anulado', label: 'Anulados', count: stats.anulados_count },
     ];
 
     // Un solo helper para los dos filtros (estado y sucursal): cada uno preserva
@@ -260,7 +267,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {pedidos.data.map((pedido, index) => {
-                                    const estadoInfo = ESTADOS[pedido.estado];
+                                    const estadoInfo = ESTADOS[pedido.estado] ?? { label: pedido.estado, badge: 'bg-gray-100 text-gray-800 border border-gray-300' };
                                     const combos = pedido.items.filter((item) => item.combo_id);
                                     // Resultado final guardado al comprar (por monto, o por llevar solo un combo con envío gratis).
                                     const tieneEnvioGratis = Boolean(pedido.envio_gratis);
@@ -355,18 +362,22 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                         <>
                                                             {/* Acciones rápidas: botones directos desde md en adelante */}
                                                             <div className="hidden md:grid grid-cols-2 gap-2">
+                                                                {pedido.permisos?.puede_marcar_despachado && (
                                                                 <button
                                                                     onClick={() => cambiarEstado(pedido, 'despachado')}
                                                                     className="inline-flex items-center justify-center p-3 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all duration-200 transform hover:scale-105 active:scale-95"
                                                                 >
                                                                     Despachar
                                                                 </button>
+                                                                )}
+                                                                {pedido.permisos?.puede_cancelar && (
                                                                 <button
                                                                     onClick={() => setPedidoACancelar(pedido)}
                                                                     className="admin-delete inline-flex items-center justify-center p-3 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
                                                                 >
                                                                     Cancelar
                                                                 </button>
+                                                                )}
                                                             </div>
 
                                                             {/* Acciones rápidas: menú desplegable en mobile/tablet chico */}
@@ -388,6 +399,7 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                                 </button>
                                                                 {accionesAbiertas === pedido.id && (
                                                                     <div className="mt-2 grid grid-cols-2 gap-2">
+                                                                        {pedido.permisos?.puede_marcar_despachado && (
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => {
@@ -398,6 +410,8 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                                         >
                                                                             Despachar
                                                                         </button>
+                                                                        )}
+                                                                        {pedido.permisos?.puede_cancelar && (
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => {
@@ -408,13 +422,14 @@ export default function Index({ pedidos, filtroEstado, filtroSucursal, puedeFilt
                                                                         >
                                                                             Cancelar
                                                                         </button>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </>
                                                     )}
 
-                                                    {pedido.estado === 'despachado' && (
+                                                    {pedido.estado === 'despachado' && pedido.permisos?.puede_volver_a_pendiente && (
                                                         <button
                                                             onClick={() => cambiarEstado(pedido, 'pendiente')}
                                                             className="w-full inline-flex items-center justify-center p-3 bg-white border-2 border-yellow-500 text-yellow-700 rounded-lg text-sm font-semibold hover:bg-yellow-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"

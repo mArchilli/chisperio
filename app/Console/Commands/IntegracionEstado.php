@@ -4,11 +4,15 @@ namespace App\Console\Commands;
 
 use App\Enums\EstadoPedido;
 use App\Models\Pedido;
+use App\Models\User;
 use App\Rukoz\CheckoutCentral;
+use App\Rukoz\ConfirmacionDeVenta;
 use App\Rukoz\EspejoStock;
+use App\Rukoz\VendedorParaCentral;
 use Illuminate\Console\Command;
 use Rukoz\CoreClient\Compensaciones\Compensacion;
 use Rukoz\CoreClient\Errores\RukozException;
+use Rukoz\CoreClient\Eventos\PedidoActualizado;
 use Rukoz\CoreClient\Facades\Rukoz;
 use Throwable;
 
@@ -31,7 +35,10 @@ class IntegracionEstado extends Command
             'INTEGRACION_CHECKOUT (11.3)',
             $this->onOff(CheckoutCentral::solicitado()).(CheckoutCentral::solicitado() ? (CheckoutCentral::activo() ? ' → <fg=green>el checkout USA el Central</>' : ' → <fg=red>el checkout NO usa el Central</>') : '')
         );
-        $this->components->twoColumnDetail('INTEGRACION_CONFIRMACION (11.4)', $this->onOff((bool) config('integracion.confirmacion')));
+        $this->components->twoColumnDetail(
+            'INTEGRACION_CONFIRMACION (11.4)',
+            $this->onOff((bool) config('integracion.confirmacion')).((bool) config('integracion.confirmacion') ? (ConfirmacionDeVenta::activa() ? ' → <fg=green>se confirma y se reflejan los estados</>' : ' → <fg=red>falta RUKOZ_INTEGRACION: no hace nada</>') : '')
+        );
         $this->components->twoColumnDetail('Vender sin reserva si el Central no responde', CheckoutCentral::permiteVenderSinReserva() ? '<fg=yellow>SÍ</>' : 'no (el pedido no se crea)');
         $this->components->twoColumnDetail('Cancelación automática de reservas', CheckoutCentral::diasParaCancelar().' días sin confirmar');
 
@@ -55,6 +62,10 @@ class IntegracionEstado extends Command
         $this->newLine();
         $this->components->twoColumnDetail('<fg=white;options=bold>Reservas</>');
         $mal = $this->reservas() || $mal;
+
+        $this->newLine();
+        $this->components->twoColumnDetail('<fg=white;options=bold>Ventas (11.4)</>');
+        $mal = $this->ventas() || $mal;
 
         return $mal ? self::FAILURE : self::SUCCESS;
     }
@@ -114,6 +125,40 @@ class IntegracionEstado extends Command
         $this->components->twoColumnDetail('Compensaciones fallidas (vencieron: requieren una persona)', $fallidas === 0 ? '<fg=green>0</>' : "<fg=red>{$fallidas}</>");
 
         return $fallidas > 0;
+    }
+
+    /** @return bool true si hay un problema */
+    private function ventas(): bool
+    {
+        $porEstado = Pedido::query()->whereNotNull('rukoz_ref')->whereNotNull('confirmado_at')->get(['estado'])->countBy(fn (Pedido $p) => $p->estado->value);
+        $detalle = $porEstado->isEmpty() ? 'ninguna' : $porEstado->map(fn (int $n, string $estado) => "{$estado}: {$n}")->implode(', ');
+        $this->components->twoColumnDetail('Ventas confirmadas en el Central', $detalle);
+
+        $conSaldo = Pedido::query()->whereNotNull('rukoz_ref')->whereIn('estado', [EstadoPedido::Confirmado->value, EstadoPedido::Empaquetado->value, EstadoPedido::Despachado->value, EstadoPedido::Entregado->value])->where('rukoz_saldo', '>', 0)->count();
+        $this->components->twoColumnDetail('…con saldo pendiente de cobro', (string) $conSaldo);
+
+        $usuarios = User::query()->get(['id', 'rukoz_vendedor_id']);
+        $sinMapeo = $usuarios->filter(fn (User $u) => ! VendedorParaCentral::mapeado($u))->count();
+        $this->components->twoColumnDetail('Usuarios con vendedor del Central asignado', ($usuarios->count() - $sinMapeo).' de '.$usuarios->count().($sinMapeo > 0 ? " (los {$sinMapeo} restantes no pueden confirmar: chisperio:vendedor-mapear)" : ''));
+
+        $mal = false;
+
+        if (config('integracion.confirmacion') && ! CheckoutCentral::activo()) {
+            $this->components->warn('INTEGRACION_CONFIRMACION está encendido pero el checkout no usa el Central: no habrá pedidos con reserva para confirmar.');
+            $mal = true;
+        }
+
+        if (config('integracion.confirmacion') && ConfirmacionDeVenta::activa()) {
+            $this->components->twoColumnDetail('Listener de estados del Central', $this->listenerActivo() ? '<fg=green>registrado</>' : '<fg=red>NO registrado</> (reiniciá/limpiá la config)');
+            $mal = $mal || ! $this->listenerActivo();
+        }
+
+        return $mal;
+    }
+
+    private function listenerActivo(): bool
+    {
+        return app('events')->hasListeners(PedidoActualizado::class);
     }
 
     private function onOff(bool $valor): string

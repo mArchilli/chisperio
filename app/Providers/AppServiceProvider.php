@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Models\Pedido;
 use App\Rukoz\CatalogoDeChisperio;
 use App\Rukoz\CheckoutCentral;
+use App\Rukoz\ConfirmacionDeVenta;
 use App\Rukoz\EspejoStock;
+use App\Rukoz\EstadoDesdeCentral;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -15,6 +17,7 @@ use Illuminate\Support\ServiceProvider;
 use Rukoz\CoreClient\Compensaciones\Compensacion;
 use Rukoz\CoreClient\Contratos\ProveedorCatalogo;
 use Rukoz\CoreClient\Eventos\CompensacionResuelta;
+use Rukoz\CoreClient\Eventos\PedidoActualizado;
 use Rukoz\CoreClient\Eventos\StockActualizado;
 
 class AppServiceProvider extends ServiceProvider
@@ -43,6 +46,14 @@ class AppServiceProvider extends ServiceProvider
         // y no en app/Listeners para que Laravel no lo descubra solo y escuche con el interruptor apagado.
         if (config('integracion.stock')) {
             Event::listen(StockActualizado::class, [EspejoStock::class, 'alActualizarse']);
+        }
+
+        // 11.4 — Los estados que informa el Central (confirmado, empaquetado, despachado, retirado, anulado, reserva liberada) se
+        // reflejan en el pedido de la web solo con INTEGRACION_CONFIRMACION. El listener del genérico `PedidoActualizado` recibe el
+        // estado completo con la regla de versión del paquete ya aplicada, y es idempotente. Registrado a mano (no en
+        // app/Listeners) para que Laravel no lo descubra solo con el interruptor apagado.
+        if (ConfirmacionDeVenta::activa()) {
+            Event::listen(PedidoActualizado::class, [EstadoDesdeCentral::class, 'alActualizarse']);
         }
 
         // 11.3 — Combinación inválida (checkout sin stock o sin integración): el checkout no usa el Central y queda el aviso.

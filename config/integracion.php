@@ -14,7 +14,8 @@
 |   catalogo      11.1  mandar el catálogo (productos, variantes y combos) al Central
 |   stock         11.2  espejar el stock que informa el Central
 |   checkout      11.3  reservar el stock en el Central al crear un pedido (exige `stock`)
-|   confirmacion  11.4  confirmar la venta y recibir los estados del Central
+|   confirmacion  11.4  confirmar la venta desde el admin y recibir los estados del Central (pedidos con `rukoz_ref`, o sea que
+|                       tienen que haberse creado con `checkout` encendido)
 |
 | `checkout` solo vale con `stock` y RUKOZ_INTEGRACION encendidos (App\Rukoz\CheckoutCentral::activo()):
 | si no, el checkout NO usa el Central, queda un warning en el log y `chisperio:integracion-estado` lo informa.
@@ -44,4 +45,23 @@ return [
 
     // 11.3 — durante cuántos segundos un pedido ya creado frena a un doble envío idéntico (doble clic, reintento del navegador).
     'ventana_doble_envio' => (int) env('CHECKOUT_VENTANA_DOBLE_ENVIO', 120),
+
+    /*
+    | 11.4 — Confirmar la venta desde el admin.
+    |
+    | `referencias_cache`: segundos que el modal «Confirmar venta» reutiliza la lista de cuentas, medios de pago, formas de envío,
+    | transportistas y vendedores del Central (encima del caché por `hash` del paquete: evita hasta la consulta liviana).
+    |
+    | `referencias_respaldo`: si el Central no contesta `GET /referencias`, el modal usa esta lista (JSON en una sola variable,
+    | con las mismas claves que la respuesta del Central: cuentas[{codigo,nombre}], medios_pago[{codigo,nombre}],
+    | formas_envio[{id,nombre,es_retiro,...}], transportistas[{id,nombre}]). Vacía por defecto: sin Central y sin respaldo no se
+    | puede armar el formulario y no se confirma nada.
+    |
+    | `forma_envio_id` / `transportista_id`: valores que el modal preselecciona (opcional); si no, la primera forma de envío que no
+    | sea retiro y el transportista que sugiere el Central.
+    */
+    'referencias_cache' => (int) env('INTEGRACION_REFERENCIAS_CACHE', 300),
+    'referencias_respaldo' => json_decode((string) env('INTEGRACION_REFERENCIAS_RESPALDO', '{}'), true) ?: [],
+    'forma_envio_id' => env('INTEGRACION_FORMA_ENVIO_ID') !== null ? (int) env('INTEGRACION_FORMA_ENVIO_ID') : null,
+    'transportista_id' => env('INTEGRACION_TRANSPORTISTA_ID') !== null ? (int) env('INTEGRACION_TRANSPORTISTA_ID') : null,
 ];
