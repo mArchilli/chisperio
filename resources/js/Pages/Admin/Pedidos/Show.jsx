@@ -132,6 +132,14 @@ export default function Show({ pedido, permisos }) {
                                                 : 'Stock reservado en el Central'}
                                 </span>
                             )}
+                            {esVentaDelCentral && pedido.rukoz_retenido_por_pago && (
+                                <span
+                                    className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900"
+                                    title="Se confirmó con «Despachar solo con pago completo»: el Central no la despacha hasta que se cobre el saldo."
+                                >
+                                    Retenido hasta completar el pago
+                                </span>
+                            )}
                             {SUCURSAL_LABELS[pedido.sucursal] && (
                                 <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${SUCURSAL_BADGE[pedido.sucursal] ?? 'bg-gray-100 text-gray-700 border border-gray-300'}`}>
                                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -504,6 +512,7 @@ export default function Show({ pedido, permisos }) {
                                         <DatoCliente label="Total de la venta" value={pedido.rukoz_total_venta !== null ? formatearPrecio(pedido.rukoz_total_venta) : null} />
                                         <DatoCliente label="Pagado" value={pedido.rukoz_pagado !== null ? formatearPrecio(pedido.rukoz_pagado) : null} />
                                         <DatoCliente label="Saldo" value={pedido.rukoz_saldo !== null ? formatearPrecio(pedido.rukoz_saldo) : null} />
+                                        {pedido.rukoz_punto && <DatoCliente label="Punto de atención" value={pedido.rukoz_punto} />}
                                         {pedido.rukoz_empaquetado_at && <DatoCliente label="Empaquetado" value={formatearFecha(pedido.rukoz_empaquetado_at)} />}
                                         {pedido.despachado_at && <DatoCliente label="Despachado" value={formatearFecha(pedido.despachado_at)} />}
                                         {pedido.rukoz_retirado_at && <DatoCliente label="Entregado" value={formatearFecha(pedido.rukoz_retirado_at)} />}

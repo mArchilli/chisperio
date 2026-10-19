@@ -14,7 +14,8 @@ const CAMPO = 'block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:b
 /**
  * 11.4 — «Confirmar venta»: crea la venta en el Sistema Central a partir de un pedido reservado, con o sin pago.
  * Muestra el resumen (con las notas por ítem), el envío cobrado, los pagos (ninguno, uno o varios), el saldo que queda en el
- * Central y el vendedor (el usuario logueado, o el que elija un admin). Los datos del formulario (cuentas, medios, formas de
+ * Central, el punto de atención de la venta (el del pedido; se puede corregir), la retención del despacho («Despachar solo con
+ * pago completo», solo si queda saldo) y el vendedor (el usuario logueado, o el que elija un admin). Los datos del formulario (cuentas, medios, formas de
  * envío) los pide al abrirse, así la ficha del pedido no depende del Central.
  */
 export default function ConfirmarVentaModal({ pedido, onClose }) {
@@ -29,6 +30,8 @@ export default function ConfirmarVentaModal({ pedido, onClose }) {
     const [costoEnvio, setCostoEnvio] = useState('');
     const [esGratis, setEsGratis] = useState(false);
     const [vendedorId, setVendedorId] = useState('');
+    const [punto, setPunto] = useState('');
+    const [soloConPagoCompleto, setSoloConPagoCompleto] = useState(false);
 
     useEffect(() => {
         let activo = true;
@@ -45,6 +48,7 @@ export default function ConfirmarVentaModal({ pedido, onClose }) {
 
                 setDatos(data);
                 setVendedorId(String(data.vendedor_por_defecto));
+                setPunto(data.punto ?? '');
                 setEsGratis(Boolean(data.resumen.envio_gratis) && !preferida?.es_retiro);
 
                 if (preferida) {
@@ -75,6 +79,9 @@ export default function ConfirmarVentaModal({ pedido, onClose }) {
     const pagado = pagos.reduce((suma, p) => suma + aNumero(p.monto), 0);
     const saldo = Math.round((totalVenta - pagado) * 100) / 100;
     const pagaDeMas = saldo < -0.004;
+    // La retención solo tiene sentido si queda saldo: con el pago cubierto no hay nada que esperar.
+    const quedaSaldo = saldo > 0.004;
+    const puntos = referencias?.puntos ?? [];
 
     const vendedor = datos?.vendedores?.find((v) => String(v.id) === String(vendedorId));
     const sinMapeo = vendedor ? !vendedor.mapeado : false;
@@ -121,6 +128,8 @@ export default function ConfirmarVentaModal({ pedido, onClose }) {
                     es_gratis: esGratis && !esRetiro,
                     transportista_id: !esRetiro && transportistaId ? Number(transportistaId) : null,
                 },
+                punto: punto || null,
+                solo_con_pago_completo: quedaSaldo && soloConPagoCompleto,
             },
             {
                 preserveScroll: true,
@@ -131,7 +140,7 @@ export default function ConfirmarVentaModal({ pedido, onClose }) {
     };
 
     // Errores por campo (`pagos.0.cuenta`, `envio.forma_envio_id`…) y el general (`confirmacion`, `pagos`).
-    const erroresDelFormulario = Object.entries(errors ?? {}).filter(([clave]) => clave === 'confirmacion' || clave === 'pagos' || clave.startsWith('pagos.') || clave.startsWith('envio') || clave === 'vendedor_id');
+    const erroresDelFormulario = Object.entries(errors ?? {}).filter(([clave]) => clave === 'confirmacion' || clave === 'pagos' || clave.startsWith('pagos.') || clave.startsWith('envio') || clave === 'vendedor_id' || clave === 'punto');
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="confirmar-venta-titulo">
@@ -275,7 +284,38 @@ export default function ConfirmarVentaModal({ pedido, onClose }) {
                                                 ? `Queda con saldo ${formatearPrecio(saldo)} en el central`
                                                 : 'Venta pagada por completo'}
                                     </p>
+                                    <label className={`mt-3 flex items-start gap-2 border-t border-current/20 pt-3 ${quedaSaldo ? '' : 'opacity-60'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={quedaSaldo && soloConPagoCompleto}
+                                            disabled={!quedaSaldo}
+                                            onChange={(e) => setSoloConPagoCompleto(e.target.checked)}
+                                            className="mt-0.5 rounded border-gray-300 text-[#6000ca] focus:ring-[#6000ca] disabled:cursor-not-allowed"
+                                        />
+                                        <span>
+                                            Despachar solo con pago completo
+                                            <span className="block text-xs font-normal">
+                                                {quedaSaldo
+                                                    ? 'El Central te deja empaquetarla pero no despacharla hasta que se cobre el saldo; cuando se completa el pago, se libera sola.'
+                                                    : 'Solo se puede pedir si queda saldo por cobrar.'}
+                                            </span>
+                                        </span>
+                                    </label>
                                 </section>
+
+                                {/* Punto de atención (11.4b) */}
+                                {puntos.length > 0 && (
+                                    <section>
+                                        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Punto de atención</h4>
+                                        <select aria-label="Punto de atención" className={CAMPO} value={punto} onChange={(e) => setPunto(e.target.value)}>
+                                            {!punto && <option value="">El predeterminado del Central</option>}
+                                            {puntos.map((p) => (
+                                                <option key={p.codigo} value={p.codigo}>{p.nombre ?? p.codigo}{p.predeterminado ? ' (predeterminado)' : ''}</option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-xs text-gray-500">Es el punto de la venta en el Central (métricas, caja y empaquetado). Viene de la provincia del pedido; corregilo si hace falta.</p>
+                                    </section>
+                                )}
 
                                 {/* Vendedor */}
                                 <section>

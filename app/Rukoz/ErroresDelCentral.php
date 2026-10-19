@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Rukoz\CoreClient\Errores\CentralNoDisponibleException;
 use Rukoz\CoreClient\Errores\IntegracionApagadaException;
 use Rukoz\CoreClient\Errores\PedidoNoEditableException;
+use Rukoz\CoreClient\Errores\PuntoDesconocidoException;
 use Rukoz\CoreClient\Errores\RukozException;
 use Rukoz\CoreClient\Errores\SinStockException;
 use Throwable;
@@ -87,8 +88,19 @@ final class ErroresDelCentral
             $e instanceof CentralNoDisponibleException => "No pudimos comunicarnos con el Sistema Central, así que no se pudo {$accion}. No se guardó ningún cambio: probá de nuevo en unos minutos.",
             $e instanceof IntegracionApagadaException => "La integración con el Sistema Central está apagada y este pedido tiene stock reservado allá: no se puede {$accion} hasta volver a encenderla.",
             $e instanceof PedidoNoEditableException => 'Este pedido ya no está en reserva en el Sistema Central'.($e->estado() !== null ? " (estado: {$e->estado()})" : '').': no se puede '.$accion.' desde acá.',
+            $e instanceof PuntoDesconocidoException => self::mensajePuntoDesconocido($e),
             default => "El Sistema Central rechazó la operación y no se pudo {$accion}. Avisá a soporte.",
         };
+    }
+
+    /** 11.4b — El código de punto configurado en la web (`integracion.puntos`) no existe en el Central: es de configuración. */
+    public static function mensajePuntoDesconocido(PuntoDesconocidoException $e): string
+    {
+        $validos = $e->puntosValidos();
+
+        return 'El punto de atención «'.($e->punto() ?? '?').'» no existe en el Sistema Central'
+            .($validos !== [] ? ' (los válidos son: '.implode(', ', $validos).')' : '')
+            .'. Es un problema de configuración (INTEGRACION_PUNTO_*): avisá a soporte. No se guardó ningún cambio.';
     }
 
     /** Para lo que no es culpa de quien compra ni del admin: queda en el log del servidor, sin datos del cliente. */

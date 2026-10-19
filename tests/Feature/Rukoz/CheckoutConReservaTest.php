@@ -139,8 +139,11 @@ class CheckoutConReservaTest extends TestCase
         $this->assertSame('ARS', $payload['moneda']);
         $this->assertSame([
             'nombre' => 'Cliente de prueba', 'telefono' => '1155550000', 'dni' => '30123456', 'localidad' => 'Córdoba',
-            'provincia' => 'Córdoba', 'cp' => '5000', 'observaciones' => "Sucursal: Córdoba\nTocar timbre",
+            'provincia' => 'Córdoba', 'cp' => '5000', 'observaciones' => 'Tocar timbre',
         ], $payload['cliente']);
+        // 11.4b — La sucursal ya no va en las observaciones: viaja en su campo, `punto`.
+        $this->assertSame('CBA', $payload['punto']);
+        $this->assertSame('CBA', $pedido->rukoz_punto);
         // El `creado_at` que recibió el Central es la hora del pedido guardado (así un PUT posterior manda la misma).
         $this->assertSame($payload['creado_at'], $pedido->created_at->toIso8601String());
     }
@@ -282,7 +285,7 @@ class CheckoutConReservaTest extends TestCase
         $this->checkout([['producto_id' => $producto->id, 'cantidad' => 1]])->assertCreated();
 
         $payload = $this->reservaUnica();
-        $this->assertSame("Sucursal: Buenos Aires\nEnvío gratis", $payload['cliente']['observaciones']);
+        $this->assertSame('Envío gratis', $payload['cliente']['observaciones']);
         $this->assertEquals(1000.0, $payload['total']);
     }
 

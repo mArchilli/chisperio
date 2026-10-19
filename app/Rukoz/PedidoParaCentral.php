@@ -25,8 +25,10 @@ use Illuminate\Validation\ValidationException;
  *  - `nota` por línea (hasta 500 caracteres): el color a elección y el texto de cada add-on. Puede llevar un nombre: no se
  *    loguea en ningún lado.
  *  - Envío: no es una línea (el Central solo admite producto/variante/combo) ni suma al `total`; el costo se informa al
- *    confirmar. Que el pedido califica para envío gratis y la sucursal con la que coordina el cliente (la API no tiene campo
- *    para ninguna) viajan al principio de `cliente.observaciones`.
+ *    confirmar. Que el pedido califica para envío gratis (la API no tiene campo para eso) viaja al principio de
+ *    `cliente.observaciones`.
+ *  - Punto de atención (11.4b): la sucursal del pedido viaja en su campo, `punto`, traducida al código del Central
+ *    (`PuntoDeAtencion`). Ya no va en `cliente.observaciones`. Sin código configurado, no se manda y rige el predeterminado.
  *  - Los productos «con variantes» (`no_aplica` en el Central) nunca viajan como línea: lo que se compra es una variante.
  */
 final class PedidoParaCentral
@@ -57,6 +59,10 @@ final class PedidoParaCentral
             'moneda' => 'ARS',
             'creado_at' => $creadoAt->toIso8601String(),
         ];
+
+        if ($punto = PuntoDeAtencion::codigoDe($pedido->sucursal)) {
+            $payload['punto'] = $punto;
+        }
 
         if ($pedido->total_con_recargo !== null) {
             $payload['total_con_recargo'] = (float) $pedido->total_con_recargo;
@@ -224,7 +230,6 @@ final class PedidoParaCentral
     private function cliente(Pedido $pedido): array
     {
         $observaciones = array_filter([
-            'Sucursal: '.($pedido->sucursal?->label() ?? 'Buenos Aires'),
             $pedido->envio_gratis ? 'Envío gratis' : null,
             trim((string) $pedido->observaciones) !== '' ? trim((string) $pedido->observaciones) : null,
         ]);

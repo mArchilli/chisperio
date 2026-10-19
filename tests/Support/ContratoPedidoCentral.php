@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 /**
- * Valida el body de `POST /pedidos` / `PUT /pedidos/{ref}` contra el contrato del Central 0.1.1, sin llamarlo.
+ * Valida el body de `POST /pedidos` / `PUT /pedidos/{ref}` contra el contrato del Central 0.1.2 (con `punto`), sin llamarlo.
  *
  * Tres controles (mismo criterio que `ContratoCatalogoCentral`):
  *  1. Forma: ninguna clave que el contrato no conozca. Las permitidas salen del fixture oficial
@@ -51,6 +51,22 @@ class ContratoPedidoCentral
         }
 
         return $claves;
+    }
+
+    /**
+     * `punto` tiene que ser uno de los de `GET /referencias` (el Central responde 422 PUNTO_DESCONOCIDO si no).
+     *
+     * @param  array<string, mixed>  $referencias
+     * @return list<string>
+     */
+    public static function errorDePunto(array $payload, array $referencias): array
+    {
+        $punto = $payload['punto'] ?? null;
+        $validos = array_column($referencias['puntos'] ?? [], 'codigo');
+
+        return $punto !== null && ! in_array($punto, $validos, true)
+            ? ["punto: «{$punto}» no es un punto de la integración (válidos: ".implode(', ', $validos).')']
+            : [];
     }
 
     /** @return list<string> */
@@ -120,6 +136,7 @@ class ContratoPedidoCentral
             'total_con_recargo' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'moneda' => ['nullable', 'string', 'size:3'],
             'creado_at' => ['nullable', 'date'],
+            'punto' => ['nullable', 'string', 'max:30'],
         ]);
 
         $errores = $validador->errors()->all();

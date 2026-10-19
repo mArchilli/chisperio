@@ -8,7 +8,7 @@ use Rukoz\CoreClient\Facades\Rukoz;
 
 /**
  * Lo que el modal «Confirmar venta» necesita del Central (`GET /referencias`): cuentas de cobro, medios de pago, formas de
- * envío, transportistas y vendedores ya asignados.
+ * envío, transportistas, puntos de atención (11.4b) y vendedores ya asignados.
  *
  * Doble caché: el del paquete (por `hash`, una consulta liviana) y, encima, uno de la web de `integracion.referencias_cache`
  * segundos, para que abrir el modal no pegue al Central cada vez. Si el Central no contesta se usa la lista configurable
@@ -21,7 +21,7 @@ final class ReferenciasDelCentral
     private const CLAVE = 'rukoz:referencias:ui';
 
     /**
-     * @return array{origen: 'central'|'respaldo'|'ninguno', error: string|null, cuentas: list<array<string, mixed>>, medios_pago: list<array<string, mixed>>, formas_envio: list<array<string, mixed>>, transportistas: list<array<string, mixed>>, vendedores: list<array<string, mixed>>}
+     * @return array{origen: 'central'|'respaldo'|'ninguno', error: string|null, cuentas: list<array<string, mixed>>, medios_pago: list<array<string, mixed>>, formas_envio: list<array<string, mixed>>, transportistas: list<array<string, mixed>>, puntos: list<array<string, mixed>>, vendedores: list<array<string, mixed>>}
      */
     public static function obtener(bool $forzar = false): array
     {
@@ -64,6 +64,7 @@ final class ReferenciasDelCentral
             'medios_pago' => $lista('medios_pago'),
             'formas_envio' => $lista('formas_envio'),
             'transportistas' => $lista('transportistas'),
+            'puntos' => $lista('puntos'),
             'vendedores' => $lista('vendedores'),
         ];
     }

@@ -3,11 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Enums\EstadoPedido;
+use App\Enums\Sucursal;
 use App\Models\Pedido;
 use App\Models\User;
 use App\Rukoz\CheckoutCentral;
 use App\Rukoz\ConfirmacionDeVenta;
 use App\Rukoz\EspejoStock;
+use App\Rukoz\PuntoDeAtencion;
+use App\Rukoz\ReferenciasDelCentral;
 use App\Rukoz\VendedorParaCentral;
 use Illuminate\Console\Command;
 use Rukoz\CoreClient\Compensaciones\Compensacion;
@@ -66,6 +69,10 @@ class IntegracionEstado extends Command
         $this->newLine();
         $this->components->twoColumnDetail('<fg=white;options=bold>Ventas (11.4)</>');
         $mal = $this->ventas() || $mal;
+
+        $this->newLine();
+        $this->components->twoColumnDetail('<fg=white;options=bold>Puntos de atención (11.4b)</>');
+        $mal = $this->puntos($integracion) || $mal;
 
         return $mal ? self::FAILURE : self::SUCCESS;
     }
@@ -151,6 +158,48 @@ class IntegracionEstado extends Command
         if (config('integracion.confirmacion') && ConfirmacionDeVenta::activa()) {
             $this->components->twoColumnDetail('Listener de estados del Central', $this->listenerActivo() ? '<fg=green>registrado</>' : '<fg=red>NO registrado</> (reiniciá/limpiá la config)');
             $mal = $mal || ! $this->listenerActivo();
+        }
+
+        return $mal;
+    }
+
+    /**
+     * Cada sucursal de la web contra los puntos que devuelve `GET /referencias`. Un código que el Central no tiene lo rechazaría
+     * (PUNTO_DESCONOCIDO) en el checkout, la edición y la confirmación: es un error de configuración.
+     *
+     * @return bool true si hay un problema
+     */
+    private function puntos(bool $integracion): bool
+    {
+        $mapeo = collect(Sucursal::cases())->map(fn (Sucursal $s) => $s->label().' → '.(PuntoDeAtencion::codigoDe($s) ?? 'sin código'))->implode(', ');
+        $this->components->twoColumnDetail('Sucursal de la web → punto del Central', $mapeo);
+
+        if (! $integracion) {
+            $this->components->twoColumnDetail('Puntos del Central', 'omitido (RUKOZ_INTEGRACION apagado)');
+
+            return false;
+        }
+
+        $referencias = ReferenciasDelCentral::obtener(forzar: true);
+
+        if ($referencias['origen'] !== 'central') {
+            $this->components->twoColumnDetail('Puntos del Central', '<fg=yellow>no se pudieron leer</> ('.($referencias['error'] ?? 'sin respuesta').')');
+
+            return false;
+        }
+
+        $mal = false;
+        $this->components->twoColumnDetail('Puntos del Central', collect($referencias['puntos'])->map(fn ($p) => ($p['codigo'] ?? '?').($p['predeterminado'] ?? false ? ' (predeterminado)' : ''))->implode(', ') ?: 'ninguno');
+
+        foreach (PuntoDeAtencion::validar($referencias['puntos']) as $fila) {
+            if (! $fila['existe']) {
+                $this->components->twoColumnDetail($fila['sucursal']->label(), "<fg=red>ERROR</> el código «{$fila['codigo']}» no existe en el Central (INTEGRACION_PUNTO_*)");
+                $mal = true;
+            }
+        }
+
+        if (! $mal) {
+            $this->components->twoColumnDetail('Códigos configurados', '<fg=green>todos existen en el Central</>');
         }
 
         return $mal;

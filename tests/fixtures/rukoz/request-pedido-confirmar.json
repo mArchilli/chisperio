@@ -21,5 +21,7 @@
   "descuento": 0,
   "recargo_medio_pago": 0,
   "observaciones": "Entregar por la tarde",
+  "punto": "BA",
+  "solo_con_pago_completo": true,
   "confirmado_at": "2026-10-20T11:05:00-03:00"
 }

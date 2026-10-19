@@ -88,5 +88,7 @@
   "retirado_at": null,
   "anulado_at": null,
   "pagado": null,
-  "saldo": null
+  "saldo": null,
+  "punto": "BA",
+  "retenido_por_pago": false
 }

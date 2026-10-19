@@ -64,4 +64,18 @@ return [
     'referencias_respaldo' => json_decode((string) env('INTEGRACION_REFERENCIAS_RESPALDO', '{}'), true) ?: [],
     'forma_envio_id' => env('INTEGRACION_FORMA_ENVIO_ID') !== null ? (int) env('INTEGRACION_FORMA_ENVIO_ID') : null,
     'transportista_id' => env('INTEGRACION_TRANSPORTISTA_ID') !== null ? (int) env('INTEGRACION_TRANSPORTISTA_ID') : null,
+
+    /*
+    | 11.4b — Punto de atención de cada pedido en el Central.
+    |
+    | La web reparte sus pedidos entre dos sucursales según la provincia del checkout (App\Enums\Sucursal::paraProvincia, la misma
+    | regla que sugiere la sucursal en la tienda). Acá se traduce la sucursal de la web al CÓDIGO de punto del Central (`codigo` de
+    | `puntos` en GET /referencias): es lo que viaja como `punto` en reservar, editarReserva y confirmar. Una sucursal sin código
+    | (variable vacía) no manda `punto` y el Central usa el predeterminado de la integración. Un código que el Central no tiene lo
+    | rechaza con PUNTO_DESCONOCIDO; `chisperio:integracion-estado` lo marca antes de que pase.
+    */
+    'puntos' => [
+        'buenos-aires' => env('INTEGRACION_PUNTO_BUENOS_AIRES', 'BA'),
+        'cordoba' => env('INTEGRACION_PUNTO_CORDOBA', 'CBA'),
+    ],
 ];

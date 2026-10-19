@@ -5,7 +5,7 @@ namespace Tests\Support;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Valida el body de `POST /pedidos/{ref}/confirmar` contra el contrato del Central 0.1.1, sin llamarlo (mismo criterio que
+ * Valida el body de `POST /pedidos/{ref}/confirmar` contra el contrato del Central 0.1.2 (con `punto` y `solo_con_pago_completo`), sin llamarlo (mismo criterio que
  * `ContratoPedidoCentral`).
  *
  *  1. Forma: ninguna clave que el contrato no conozca. Las permitidas salen del fixture oficial
@@ -85,6 +85,8 @@ class ContratoConfirmacionCentral
             'recargo_medio_pago' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'observaciones' => ['nullable', 'string', 'max:2000'],
             'confirmado_at' => ['nullable', 'date'],
+            'punto' => ['nullable', 'string', 'max:30'],
+            'solo_con_pago_completo' => ['nullable', 'boolean'],
         ]);
 
         return $validador->fails() ? collect($validador->errors()->all())->values()->all() : [];
@@ -114,6 +116,8 @@ class ContratoConfirmacionCentral
         }
 
         if ($referencias !== null) {
+            $errores = [...$errores, ...ContratoPedidoCentral::errorDePunto($body, $referencias)];
+
             $cuentas = array_column($referencias['cuentas'] ?? [], 'codigo');
 
             foreach ($body['pagos'] ?? [] as $i => $pago) {

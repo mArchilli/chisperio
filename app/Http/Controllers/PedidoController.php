@@ -270,6 +270,14 @@ class PedidoController extends Controller
 
         $edicionService->actualizar($pedido, $validated);
 
+        // 11.4b — Cambiar la provincia de un pedido con reserva puede pasarlo a la otra sucursal (y a su punto en el Central):
+        // un vendedor ya no lo ve, así que vuelve al listado en vez de a una ficha que le daría 403.
+        if (! $request->user()->esAdmin() && $pedido->fresh()->sucursal !== $request->user()->sucursal) {
+            return redirect()
+                ->route('pedidos.index')
+                ->with('success', 'Pedido actualizado. Por la provincia pasó a la sucursal '.$pedido->fresh()->sucursal?->label().'.');
+        }
+
         return redirect()
             ->route('pedidos.show', $pedido)
             ->with('success', 'Pedido actualizado.');
@@ -395,7 +403,7 @@ class PedidoController extends Controller
             'cliente_codigo_postal' => 'nullable|string|max:20',
             'observaciones' => 'nullable|string',
             // Sucursal con la que el cliente eligió coordinar (selector del checkout).
-            // Si no llega, cae en Buenos Aires (el número histórico) — ver abajo.
+            // Si no llega, la que corresponde a la provincia (Sucursal::paraProvincia; sin provincia, Buenos Aires, el número histórico).
             'sucursal' => ['nullable', Rule::enum(Sucursal::class)],
             'codigo_descuento' => 'nullable|string',
             'plan_pago_tarjeta_id' => 'nullable|integer',
@@ -505,7 +513,7 @@ class PedidoController extends Controller
                     'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
                     'observaciones' => $validated['observaciones'] ?? null,
                     'estado' => EstadoPedido::Pendiente,
-                    'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::BuenosAires,
+                    'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::paraProvincia($validated['cliente_provincia'] ?? null),
                     ...$calculo->atributosPedido(),
                 ]);
 
@@ -578,7 +586,7 @@ class PedidoController extends Controller
             'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
             'observaciones' => $validated['observaciones'] ?? null,
             'estado' => EstadoPedido::Pendiente,
-            'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::BuenosAires,
+            'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::paraProvincia($validated['cliente_provincia'] ?? null),
             ...$calculo->atributosPedido(),
         ];
 
@@ -644,6 +652,7 @@ class PedidoController extends Controller
                     'rukoz_ref' => $intento['ref'],
                     'rukoz_version' => $central['version'] ?? null,
                     'rukoz_estado' => $central['estado'] ?? Pedido::RESERVA_RESERVADA,
+                    'rukoz_punto' => $central['punto'] ?? null,
                 ]);
                 // Lo que el Central recibió como `creado_at`: así un PUT posterior manda la misma hora.
                 $pedido->created_at = $creadoAt;

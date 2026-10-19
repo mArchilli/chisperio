@@ -13,6 +13,7 @@ use Rukoz\CoreClient\Errores\IntegracionApagadaException;
 use Rukoz\CoreClient\Errores\PedidoCanceladoException;
 use Rukoz\CoreClient\Errores\PedidoRequiereRevisionException;
 use Rukoz\CoreClient\Errores\PedidoYaConfirmadoException;
+use Rukoz\CoreClient\Errores\PuntoDesconocidoException;
 use Rukoz\CoreClient\Errores\RukozException;
 use Rukoz\CoreClient\Errores\ValidacionException as ValidacionDelCentral;
 use Rukoz\CoreClient\Errores\VendedorNoMapeadoException;
@@ -23,7 +24,8 @@ use Throwable;
  * Confirmar la venta de un pedido reservado en el Central (11.4): `Rukoz::confirmar` → `POST /pedidos/{ref}/confirmar`.
  *
  * Qué se manda: `vendedor` (adaptador `VendedorParaCentral`), `pagos[]` (0 a 20: cuenta, medio, monto, fecha), `envio`
- * (`forma_envio_id`, `costo_cobrado`, `es_gratis`, `transportista_id`) y `confirmado_at`. NO se manda `descuento`: el del cupón ya
+ * (`forma_envio_id`, `costo_cobrado`, `es_gratis`, `transportista_id`), `confirmado_at` y, desde la 11.4b, `punto` (el del pedido,
+ * corregible en el modal) y `solo_con_pago_completo` (el vendedor pide que no se despache hasta el pago completo). NO se manda `descuento`: el del cupón ya
  * viaja en el `total` del pedido (11.3) y mandarlo otra vez se restaría dos veces. El envío no entra en el `total` del pedido:
  * va solo acá, y la venta queda en `productos − cupón + envío cobrado`.
  *
@@ -131,6 +133,7 @@ final class ConfirmacionDeVenta
         }
 
         $fecha = ZonaHoraria::aLocal($this->fijarMomento($pedido))->toIso8601String();
+        $punto = trim((string) ($datos['punto'] ?? '')) !== '' ? trim((string) $datos['punto']) : self::puntoDelPedido($pedido);
 
         return array_filter([
             'vendedor' => $vendedorDelPayload,
@@ -146,8 +149,21 @@ final class ConfirmacionDeVenta
                 'es_gratis' => $esGratis,
                 'transportista_id' => isset($envio['transportista_id']) && $envio['transportista_id'] !== '' ? (int) $envio['transportista_id'] : null,
             ], fn ($v) => $v !== null),
+            'punto' => $punto,
+            // Solo tiene sentido con saldo: si los pagos cubren la venta el Central no retiene nada.
+            'solo_con_pago_completo' => (bool) ($datos['solo_con_pago_completo'] ?? false) && $suma < $total - 0.004,
             'confirmado_at' => $fecha,
         ], fn ($v) => $v !== null);
+    }
+
+    /**
+     * El punto del Central con el que se presenta el pedido al confirmar: el que informó el Central y, si todavía no informó
+     * ninguno (pedidos anteriores a la 11.4b), el que le corresponde a su sucursal. `null` si no hay punto configurado: no se
+     * manda y rige el predeterminado.
+     */
+    public static function puntoDelPedido(Pedido $pedido): ?string
+    {
+        return trim((string) $pedido->rukoz_punto) !== '' ? $pedido->rukoz_punto : PuntoDeAtencion::codigoDe($pedido->sucursal);
     }
 
     /** `confirmando_at`: se fija una sola vez (aunque dos procesos lo intenten) y de ahí sale la hora de todos los reintentos. */
@@ -180,6 +196,10 @@ final class ConfirmacionDeVenta
             throw $this->error($e instanceof PedidoCanceladoException
                 ? 'Este pedido está cancelado en el Sistema Central: no se puede confirmar. Se actualizó su estado.'
                 : 'Este pedido ya estaba confirmado en el Sistema Central (con otros datos de pago o envío). Se actualizó su estado: revisá la venta allá.');
+        } catch (PuntoDesconocidoException $e) {
+            ErroresDelCentral::registrar($e, 'confirmar la venta');
+
+            throw $this->error(ErroresDelCentral::mensajePuntoDesconocido($e));
         } catch (ValidacionDelCentral $e) {
             throw $this->error('El Sistema Central no aceptó los datos: '.$this->detalle($e).'.');
         } catch (CentralNoDisponibleException) {

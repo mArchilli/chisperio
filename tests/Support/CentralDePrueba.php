@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Http;
  */
 class CentralDePrueba
 {
-    /** @var array<string, array{payload: array, version: int, estado: string, motivo: ?string}> */
+    /** @var array<string, array{payload: array, version: int, estado: string, motivo: ?string, punto: ?string, retenido: bool}> */
     public array $pedidos = [];
 
     /** Disponible inicial por ítem (`variante:25` => 3). Lo que no está acá es ilimitado. @var array<string, int> */
@@ -181,6 +181,10 @@ class CentralDePrueba
 
         $ref = (string) $body['external_ref'];
 
+        if ($desconocido = $this->puntoDesconocido($body['punto'] ?? null)) {
+            return $desconocido;
+        }
+
         if (isset($this->pedidos[$ref])) {
             return $this->normalizar($this->pedidos[$ref]['payload']) === $this->normalizar($body)
                 ? Http::response($this->respuesta($ref), 200)
@@ -191,7 +195,7 @@ class CentralDePrueba
             return $this->sinStock($faltan);
         }
 
-        $this->pedidos[$ref] = ['payload' => $body, 'version' => 1, 'estado' => 'reservado', 'motivo' => null];
+        $this->pedidos[$ref] = ['payload' => $body, 'version' => 1, 'estado' => 'reservado', 'motivo' => null, 'punto' => $body['punto'] ?? $this->puntoPredeterminado(), 'retenido' => false];
 
         if ($this->alCrear !== null) {
             ($this->alCrear)($ref);
@@ -209,6 +213,10 @@ class CentralDePrueba
             return $this->validacion($errores);
         }
 
+        if ($desconocido = $this->puntoDesconocido($body['punto'] ?? null)) {
+            return $desconocido;
+        }
+
         if (! isset($this->pedidos[$ref])) {
             return $this->error('PEDIDO_INEXISTENTE', 404, 'No existe ese pedido.');
         }
@@ -217,7 +225,12 @@ class CentralDePrueba
             return $this->error('PEDIDO_NO_EDITABLE', 409, 'El pedido ya no se puede editar.', ['estado' => $this->pedidos[$ref]['estado']]);
         }
 
-        if ($this->normalizar($this->pedidos[$ref]['payload']) === $this->normalizar($body)) {
+        // Un PUT sin `punto` conserva el del pedido (no vuelve al predeterminado).
+        $body['punto'] ??= $this->pedidos[$ref]['punto'];
+        $anterior = $this->pedidos[$ref]['payload'];
+        $anterior['punto'] ??= $this->pedidos[$ref]['punto'];
+
+        if ($this->normalizar($anterior) === $this->normalizar($body)) {
             return Http::response($this->respuesta($ref), 200);
         }
 
@@ -226,6 +239,7 @@ class CentralDePrueba
         }
 
         $this->pedidos[$ref]['payload'] = $body;
+        $this->pedidos[$ref]['punto'] = $body['punto'];
         $this->pedidos[$ref]['version']++;
 
         return Http::response($this->respuesta($ref), 200);
@@ -269,6 +283,10 @@ class CentralDePrueba
 
         $pedido = $this->pedidos[$ref];
 
+        if ($desconocido = $this->puntoDesconocido($body['punto'] ?? null)) {
+            return $desconocido;
+        }
+
         // El Central valida la forma; los errores de contrato de la web quedan anotados y los tests los exigen vacíos.
         $total = (float) $pedido['payload']['total'] + (float) ($body['envio']['costo_cobrado'] ?? 0);
         $errores = ContratoConfirmacionCentral::errores($body, $this->referencias ?? json_decode((string) file_get_contents(base_path('tests/fixtures/rukoz/response-referencias.json')), true), $total);
@@ -303,6 +321,9 @@ class CentralDePrueba
             ...$pedido,
             'estado' => 'confirmado',
             'version' => $pedido['version'] + 1,
+            // La venta toma el punto de la confirmación; si no, el del pedido. La retención solo rige con saldo.
+            'punto' => $body['punto'] ?? $pedido['punto'],
+            'retenido' => (bool) ($body['solo_con_pago_completo'] ?? false) && $total - $pagado > 0.004,
             'venta' => [
                 'numero_venta' => 'TST-'.str_pad((string) ++$this->ventas, 6, '0', STR_PAD_LEFT),
                 'total' => $total,
@@ -352,6 +373,47 @@ class CentralDePrueba
         return $this->datosDeEvento($ref);
     }
 
+    /**
+     * El pago se completa en el Central: la venta se libera sola y llega un `pedido.pago_actualizado` con `retenido_por_pago: false`.
+     *
+     * @return array<string, mixed> El `datos` del evento.
+     */
+    public function completarPago(string $ref): array
+    {
+        $total = (float) ($this->pedidos[$ref]['venta']['total'] ?? 0);
+
+        $this->pedidos[$ref]['version']++;
+        $this->pedidos[$ref]['retenido'] = false;
+        $this->pedidos[$ref]['venta'] = [...$this->pedidos[$ref]['venta'], 'pagado' => $total, 'saldo' => 0.0];
+
+        return $this->datosDeEvento($ref);
+    }
+
+    /** @return list<string> Los códigos de punto de `GET /referencias`. */
+    public function puntosValidos(): array
+    {
+        $referencias = $this->referencias ?? json_decode((string) file_get_contents(base_path('tests/fixtures/rukoz/response-referencias.json')), true);
+
+        return array_column($referencias['puntos'] ?? [], 'codigo');
+    }
+
+    private function puntoPredeterminado(): ?string
+    {
+        $referencias = $this->referencias ?? json_decode((string) file_get_contents(base_path('tests/fixtures/rukoz/response-referencias.json')), true);
+
+        return collect($referencias['puntos'] ?? [])->firstWhere('predeterminado', true)['codigo'] ?? null;
+    }
+
+    /** 422 PUNTO_DESCONOCIDO si el código no es uno de los de la integración (mismo detalle que el fixture oficial). */
+    private function puntoDesconocido(mixed $punto)
+    {
+        if ($punto === null || in_array($punto, $this->puntosValidos(), true)) {
+            return null;
+        }
+
+        return $this->error('PUNTO_DESCONOCIDO', 422, "El punto «{$punto}» no existe para esta integración. Códigos válidos: ".implode(', ', $this->puntosValidos()).'.', ['punto' => $punto, 'puntos_validos' => $this->puntosValidos()]);
+    }
+
     /** @return array<string, mixed> */
     public function datosDeEvento(string $ref): array
     {
@@ -377,6 +439,8 @@ class CentralDePrueba
             'pagado' => number_format((float) ($venta['pagado'] ?? 0), 2, '.', ''),
             'saldo' => number_format((float) ($venta['saldo'] ?? 0), 2, '.', ''),
             'moneda' => 'ARS',
+            'punto' => $pedido['punto'] ?? null,
+            'retenido_por_pago' => (bool) ($pedido['retenido'] ?? false),
             ...(isset($venta['motivo']) ? ['motivo' => $venta['motivo']] : []),
         ];
     }
@@ -513,6 +577,8 @@ class CentralDePrueba
             'estado' => $pedido['estado'],
             'version' => $pedido['version'],
             'total' => $venta['total'] ?? number_format((float) $payload['total'], 2, '.', ''),
+            'punto' => $pedido['punto'] ?? null,
+            'retenido_por_pago' => (bool) ($pedido['retenido'] ?? false),
             'total_con_recargo' => isset($payload['total_con_recargo']) ? number_format((float) $payload['total_con_recargo'], 2, '.', '') : null,
             'moneda' => $payload['moneda'] ?? 'ARS',
             'items' => array_map(fn ($i) => [

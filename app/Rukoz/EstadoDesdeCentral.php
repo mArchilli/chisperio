@@ -56,7 +56,7 @@ final class EstadoDesdeCentral
             }
 
             $web = EstadoPedido::desdeCentral($estadoCentral);
-            $cambios = ['rukoz_version' => $version];
+            $cambios = ['rukoz_version' => $version] + self::cambiosDePunto($datos);
 
             if ($web === null) {
                 // reservado / requiere_revision: el pedido sigue pendiente. Si ya es una venta no se toca (no se des-confirma).
@@ -88,6 +88,27 @@ final class EstadoDesdeCentral
 
             return $pedido;
         });
+    }
+
+    /**
+     * 11.4b — `punto` (código del punto de atención) y `retenido_por_pago` que informa el Central en todo estado del pedido.
+     * Solo se guarda lo que viene: un estado más viejo (de antes de la 11.4b) no borra lo ya sabido.
+     *
+     * @return array<string, mixed>
+     */
+    private static function cambiosDePunto(array $datos): array
+    {
+        $cambios = [];
+
+        if (isset($datos['punto']) && is_string($datos['punto']) && trim($datos['punto']) !== '') {
+            $cambios['rukoz_punto'] = mb_substr(trim($datos['punto']), 0, 20);
+        }
+
+        if (array_key_exists('retenido_por_pago', $datos) && $datos['retenido_por_pago'] !== null) {
+            $cambios['rukoz_retenido_por_pago'] = (bool) $datos['retenido_por_pago'];
+        }
+
+        return $cambios;
     }
 
     /** @return array<string, mixed> */

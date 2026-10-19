@@ -50,6 +50,8 @@ class PedidoConfirmacionController extends Controller
                 ])->values(),
             ],
             'vendedores' => $this->vendedoresElegibles($usuario, $referencias['origen'] === 'central' ? $referencias['vendedores'] : null),
+            // 11.4b — El punto de atención con el que se confirma (el del pedido; el vendedor lo puede corregir con `referencias.puntos`).
+            'punto' => ConfirmacionDeVenta::puntoDelPedido($pedido),
             'vendedor_por_defecto' => $usuario->id,
             'puede_elegir_vendedor' => $usuario->esAdmin(),
             'preseleccion' => [
@@ -74,6 +76,8 @@ class PedidoConfirmacionController extends Controller
             'envio.costo_cobrado' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'envio.es_gratis' => ['nullable', 'boolean'],
             'envio.transportista_id' => ['nullable', 'integer'],
+            'punto' => ['nullable', 'string', 'max:20'],
+            'solo_con_pago_completo' => ['nullable', 'boolean'],
         ], [
             'pagos.*.cuenta.required' => 'Elegí la cuenta de cada pago.',
             'pagos.*.monto.required' => 'Ingresá el monto de cada pago.',
@@ -88,7 +92,12 @@ class PedidoConfirmacionController extends Controller
         ['pedido' => $confirmado, 'ya_confirmado' => $yaConfirmado] = $confirmacion->confirmar(
             $pedido,
             $vendedor,
-            ['pagos' => $validated['pagos'] ?? [], 'envio' => $validated['envio']],
+            [
+                'pagos' => $validated['pagos'] ?? [],
+                'envio' => $validated['envio'],
+                'punto' => $validated['punto'] ?? null,
+                'solo_con_pago_completo' => (bool) ($validated['solo_con_pago_completo'] ?? false),
+            ],
             $request->user(),
         );
 
@@ -119,7 +128,7 @@ class PedidoConfirmacionController extends Controller
     }
 
     /**
-     * Si tenemos las listas del Central, se avisa acá (antes de llamarlo) de una cuenta o forma de envío que no existe. Sin
+     * Si tenemos las listas del Central, se avisa acá (antes de llamarlo) de una cuenta, forma de envío o punto que no existe. Sin
      * listas no se valida: lo hace el Central y devuelve el detalle.
      *
      * @param  array<string, mixed>  $validated
@@ -137,6 +146,12 @@ class PedidoConfirmacionController extends Controller
                     $errores["pagos.{$i}.cuenta"] = 'La cuenta elegida no existe en el Sistema Central.';
                 }
             }
+        }
+
+        $puntos = array_column($referencias['puntos'] ?? [], 'codigo');
+
+        if ($puntos !== [] && ! empty($validated['punto']) && ! in_array($validated['punto'], $puntos, true)) {
+            $errores['punto'] = 'El punto de atención elegido no existe en el Sistema Central.';
         }
 
         $formas = collect($referencias['formas_envio'])->keyBy('id');

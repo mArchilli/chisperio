@@ -66,6 +66,18 @@
       "nombre": "Andreani"
     }
   ],
+  "puntos": [
+    {
+      "codigo": "BA",
+      "nombre": "Buenos Aires",
+      "predeterminado": true
+    },
+    {
+      "codigo": "CBA",
+      "nombre": "Córdoba",
+      "predeterminado": false
+    }
+  ],
   "vendedores": [
     {
       "id": "7",

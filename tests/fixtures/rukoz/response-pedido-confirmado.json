@@ -69,5 +69,7 @@
   "retirado_at": null,
   "anulado_at": null,
   "pagado": "20000.00",
-  "saldo": "33500.00"
+  "saldo": "33500.00",
+  "punto": "BA",
+  "retenido_por_pago": true
 }

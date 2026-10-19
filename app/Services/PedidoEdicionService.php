@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EstadoPedido;
+use App\Enums\Sucursal;
 use App\Enums\TipoDescuento;
 use App\Exceptions\StockInsuficienteException;
 use App\Exceptions\VarianteRequeridaException;
@@ -138,9 +139,32 @@ class PedidoEdicionService
 
         $this->recalcularTotales($pedido);
 
+        $this->reasignarSucursalSiCambiaLaProvincia($pedido, $datos);
+
         $pedido->fill(Arr::only($datos, self::CAMPOS_CLIENTE));
         $pedido->editado_at = now();
         $pedido->save();
+    }
+
+    /**
+     * 11.4b — En un pedido con reserva en el Central, cambiar la provincia cambia la sucursal (la misma regla del checkout,
+     * `Sucursal::paraProvincia`) y con ella el `punto` que viaja al Central en la edición. Si la provincia no cambia, la sucursal
+     * queda como está: puede ser la que el cliente eligió a mano. Los pedidos sin reserva no se tocan (su sucursal sigue siendo
+     * solo la del cliente).
+     *
+     * @param  array<string, mixed>  $datos
+     */
+    private function reasignarSucursalSiCambiaLaProvincia(Pedido $pedido, array $datos): void
+    {
+        if (! $pedido->usaCentral() || ! array_key_exists('cliente_provincia', $datos)) {
+            return;
+        }
+
+        $nueva = Sucursal::paraProvincia($datos['cliente_provincia']);
+
+        if ($nueva !== Sucursal::paraProvincia($pedido->cliente_provincia)) {
+            $pedido->sucursal = $nueva;
+        }
     }
 
     /**
@@ -185,6 +209,7 @@ class PedidoEdicionService
                 $bloqueado->forceFill([
                     'rukoz_version' => $central['version'] ?? $bloqueado->rukoz_version,
                     'rukoz_estado' => $central['estado'] ?? $bloqueado->rukoz_estado,
+                    'rukoz_punto' => $central['punto'] ?? $bloqueado->rukoz_punto,
                 ])->save();
 
                 return $bloqueado;
