@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\TipoDescuento;
 use App\Models\CodigoDescuento;
 use App\Models\Pedido;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CodigoDescuentoService
@@ -67,11 +68,14 @@ class CodigoDescuentoService
      * validar() — así que un código nunca da un motivo distinto ni un monto
      * distinto según por dónde se lo consulte.
      *
+     * $bloquear (default true = comportamiento de siempre) permite resolver el cupón sin
+     * el lockForUpdate, para calcular un pedido fuera de la transacción de escritura.
+     *
      * @return array{codigoDescuento: ?CodigoDescuento, codigo_descuento_id: ?int, codigo_descuento_texto: ?string, codigo_descuento_tipo: ?string, codigo_descuento_valor: ?float, descuento_monto: float}
      *
      * @throws ValidationException
      */
-    public function resolverParaCheckout(?string $codigo, float $subtotal): array
+    public function resolverParaCheckout(?string $codigo, float $subtotal, bool $bloquear = true): array
     {
         $sinDescuento = [
             'codigoDescuento' => null,
@@ -87,7 +91,12 @@ class CodigoDescuentoService
         }
 
         $codigoNormalizado = strtoupper(trim($codigo));
-        $codigoDescuento = CodigoDescuento::where('codigo', $codigoNormalizado)->lockForUpdate()->first();
+        $consulta = CodigoDescuento::where('codigo', $codigoNormalizado);
+
+        // $bloquear = false: lectura sin lock, para calcular fuera de una transacción
+        // (CalculadoraPedido sin $bloquearCupon). El lock solo hace falta, y solo se
+        // puede pedir, dentro de la transacción que después consume el cupo.
+        $codigoDescuento = ($bloquear ? $consulta->lockForUpdate() : $consulta)->first();
 
         $motivo = $codigoDescuento === null
             ? 'Este código ya no es válido, quitalo del carrito e intentá de nuevo.'
@@ -121,6 +130,11 @@ class CodigoDescuentoService
      * El snapshot del código en el Pedido (codigo_descuento_texto, descuento_monto,
      * etc.) NO se toca acá — solo se libera el cupo, el historial del pedido queda
      * intacto.
+     *
+     * IDEMPOTENTE: la primera llamada libera el uso y deja marcado
+     * pedidos.codigo_descuento_liberado_at; cualquier llamada posterior para el mismo
+     * pedido (reintento, evento duplicado) no hace nada. La marca se lee con el pedido
+     * lockeado, así dos llamadas concurrentes tampoco liberan dos veces.
      */
     public function liberarUso(Pedido $pedido): void
     {
@@ -128,15 +142,80 @@ class CodigoDescuentoService
             return;
         }
 
-        $codigoDescuento = CodigoDescuento::where('id', $pedido->codigo_descuento_id)
-            ->lockForUpdate()
-            ->first();
+        DB::transaction(function () use ($pedido) {
+            // Se relee el pedido bajo lock: el $pedido que llega puede estar desactualizado.
+            $actual = Pedido::whereKey($pedido->getKey())->lockForUpdate()->first();
 
-        if ($codigoDescuento === null || $codigoDescuento->usos_actuales <= 0) {
+            if ($actual === null
+                || $actual->codigo_descuento_id === null
+                || $actual->codigo_descuento_liberado_at !== null) {
+                return;
+            }
+
+            $codigoDescuento = CodigoDescuento::where('id', $actual->codigo_descuento_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($codigoDescuento !== null && $codigoDescuento->usos_actuales > 0) {
+                $codigoDescuento->decrement('usos_actuales');
+            }
+
+            $this->marcar($pedido, $actual, 'codigo_descuento_liberado_at');
+        });
+    }
+
+    /**
+     * Consume un uso del código aplicado a un pedido recién creado (contraparte de
+     * liberarUso()). Tiene que correr dentro de la transacción que crea el pedido, con el
+     * código ya validado por resolverParaCheckout() bajo lock — acá NO se vuelve a validar
+     * el límite de usos, solo se suma el uso una vez.
+     *
+     * IDEMPOTENTE: deja marcado pedidos.codigo_descuento_consumido_at y una segunda
+     * llamada para el mismo pedido no suma nada. Tampoco consume un pedido cuyo uso ya se
+     * liberó (consumir después de liberar dejaría el contador de más).
+     */
+    public function consumirUso(Pedido $pedido): void
+    {
+        if ($pedido->codigo_descuento_id === null) {
             return;
         }
 
-        $codigoDescuento->decrement('usos_actuales');
+        DB::transaction(function () use ($pedido) {
+            $actual = Pedido::whereKey($pedido->getKey())->lockForUpdate()->first();
+
+            if ($actual === null
+                || $actual->codigo_descuento_id === null
+                || $actual->codigo_descuento_consumido_at !== null
+                || $actual->codigo_descuento_liberado_at !== null) {
+                return;
+            }
+
+            $codigoDescuento = CodigoDescuento::where('id', $actual->codigo_descuento_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($codigoDescuento === null) {
+                return;
+            }
+
+            $codigoDescuento->increment('usos_actuales');
+
+            $this->marcar($pedido, $actual, 'codigo_descuento_consumido_at');
+        });
+    }
+
+    /**
+     * Guarda la marca en la fila y la refleja en la instancia que tiene el caller, sin
+     * dejarla "sucia" (para que un update() posterior suyo no la reescriba).
+     */
+    private function marcar(Pedido $pedido, Pedido $actual, string $columna): void
+    {
+        $ahora = now();
+
+        $actual->forceFill([$columna => $ahora])->save();
+
+        $pedido->setAttribute($columna, $ahora);
+        $pedido->syncOriginalAttribute($columna);
     }
 
     /**

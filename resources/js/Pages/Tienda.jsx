@@ -81,7 +81,8 @@ function ProductCard({ producto, qty, onQtyChange, onAddToCart }) {
     const discount = hasOffer ? Math.round(precioInfo.ahorroTotalPorcentaje) : null;
     const maxQty = cantidadMaxima(producto);
     const stockBajo = tieneStockBajo(producto);
-    const agotado = sinStock(producto);
+    // Un producto con variantes no usa su propio stock: está agotado si todos sus colores activos lo están.
+    const agotado = sinStock(producto) || (variantes.length > 0 && variantes.every((v) => v.stock !== null && v.stock !== undefined && v.stock <= 0));
     const enElTope = maxQty !== null && qty >= maxQty;
     // Esta card ya agrega al carrito sin pasar por la ficha (botón "Agregar" más abajo),
     // así que la cantidad elegida en los pills es la que se usa ahí directamente. Además

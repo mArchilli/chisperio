@@ -82,6 +82,11 @@ class StockService
      */
     public function descontar(Pedido $pedido): void
     {
+        // Pedido con reserva en el Central (11.3): el stock lo lleva el Central, la web no lo descuenta ni lo repone.
+        if ($pedido->usaCentral()) {
+            return;
+        }
+
         DB::transaction(function () use ($pedido) {
             $operaciones = $this->operacionesOrdenadasParaLock($pedido);
 
@@ -109,6 +114,11 @@ class StockService
      */
     public function reponer(Pedido $pedido): void
     {
+        // Pedido con reserva en el Central (11.3): el stock lo lleva el Central, la web no lo descuenta ni lo repone.
+        if ($pedido->usaCentral()) {
+            return;
+        }
+
         DB::transaction(function () use ($pedido) {
             $yaRepuesto = MovimientoStock::where('pedido_id', $pedido->id)
                 ->where('motivo', MotivoMovimientoStock::PedidoCancelado)
@@ -149,6 +159,11 @@ class StockService
      */
     public function ajustarPorEdicion(Pedido $pedido, array $antes, array $despues): void
     {
+        // Pedido con reserva en el Central (11.3): el stock lo lleva el Central, la web no lo descuenta ni lo repone.
+        if ($pedido->usaCentral()) {
+            return;
+        }
+
         $totalizar = function (array $operaciones): array {
             $totales = [];
 

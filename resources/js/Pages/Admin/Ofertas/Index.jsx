@@ -2,6 +2,7 @@ import { Check, X } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
+import { formatearFecha as formatearFechaAR } from '@/lib/fecha';
 
 export default function Index({ ofertas }) {
     const { auth } = usePage().props;
@@ -22,11 +23,7 @@ export default function Index({ ofertas }) {
     // Función para formatear fechas
     const formatearFecha = (fecha) => {
         if (!fecha) return 'Sin fecha';
-        return new Date(fecha).toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+        return formatearFechaAR(fecha);
     };
 
     const openDeleteModal = (oferta) => {

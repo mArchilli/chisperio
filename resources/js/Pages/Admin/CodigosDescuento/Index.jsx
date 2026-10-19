@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AccionesCardAdmin from '@/Components/AccionesCardAdmin';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { formatearDiaCalendario, hoyISO } from '@/lib/fecha';
 
 export default function Index({ codigosDescuento }) {
     const { auth, flash } = usePage().props;
@@ -19,12 +20,8 @@ export default function Index({ codigosDescuento }) {
 
     const formatearFecha = (fecha) => {
         if (!fecha) return 'Sin límite';
-        return new Date(fecha).toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            timeZone: 'UTC',
-        });
+        // vigente_desde/hasta son columnas `date`: un día calendario, no un instante.
+        return formatearDiaCalendario(fecha, { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
     const formatearDescuento = (codigo) => {
@@ -37,7 +34,7 @@ export default function Index({ codigosDescuento }) {
     // mostrar el badge de un vistazo (la fuente de verdad sigue siendo el server).
     const estaVigente = (codigo) => {
         if (!codigo.activo) return false;
-        const hoy = new Date().toISOString().substring(0, 10);
+        const hoy = hoyISO();
         if (codigo.vigente_desde && hoy < codigo.vigente_desde.substring(0, 10)) return false;
         if (codigo.vigente_hasta && hoy > codigo.vigente_hasta.substring(0, 10)) return false;
         if (codigo.limite_usos !== null && codigo.usos_actuales >= codigo.limite_usos) return false;

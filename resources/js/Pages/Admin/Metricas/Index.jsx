@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
+import { formatearDiaCalendario } from '@/lib/fecha';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const formatearPrecio = (precio) =>
@@ -24,18 +25,17 @@ const parsearFecha = (fechaIso) => new Date(`${fechaIso}T00:00:00`);
 
 const capitalizarInicio = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
+// Los días vienen resueltos en hora argentina desde el back: son fechas puras (lib/fecha.js).
 const formatearEtiquetaPeriodo = (periodo, fechaIso) => {
-    const date = parsearFecha(fechaIso);
     const texto =
         periodo === 'mensual'
-            ? date.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
-            : date.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+            ? formatearDiaCalendario(fechaIso, { month: 'long', year: 'numeric' })
+            : formatearDiaCalendario(fechaIso, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
     return capitalizarInicio(texto);
 };
 
-const formatearFechaCorta = (fechaIso) =>
-    parsearFecha(fechaIso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+const formatearFechaCorta = (fechaIso) => formatearDiaCalendario(fechaIso, { day: '2-digit', month: 'short' });
 
 function Icon({ path, className = 'h-6 w-6' }) {
     return (
@@ -187,7 +187,7 @@ function TopProductos({ productos }) {
 }
 
 export default function Index({ periodo, fecha, stats }) {
-    const { facturacion_total, cantidad_pedidos, ticket_promedio, facturacion_serie, comparacion_periodo_anterior, top_productos } = stats;
+    const { facturacion_total, cantidad_pedidos, ticket_promedio, facturacion_serie, comparacion_periodo_anterior, top_productos, pendientes } = stats;
 
     const irA = (nuevoPeriodo, nuevaFecha) => {
         router.get(
@@ -220,7 +220,7 @@ export default function Index({ periodo, fecha, stats }) {
                     <h2 className="text-2xl font-bold text-[#6000ca]">
                         Métricas
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500">Facturación y ventas de la tienda</p>
+                    <p className="mt-1 text-sm text-gray-500">Ventas cerradas de la tienda: pedidos despachados y ventas confirmadas en el Sistema Central (cuentan desde la confirmación)</p>
                 </div>
             }
         >
@@ -296,13 +296,18 @@ export default function Index({ periodo, fecha, stats }) {
                     {/* KPIs */}
                     <div className="px-4 sm:px-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 cards-2-impar">
                         <KpiCard
-                            label="Facturación total"
+                            label="Facturación (ventas)"
                             value={formatearPrecio(facturacion_total)}
                             icon={ICONOS.facturacion}
+                            sublabel={
+                                <div className="mt-0.5 text-xs text-gray-400 truncate">
+                                    Pendientes aparte: {formatearPrecio(pendientes.monto)} ({pendientes.cantidad})
+                                </div>
+                            }
                         />
 
                         <KpiCard
-                            label="Pedidos"
+                            label="Ventas"
                             value={cantidad_pedidos}
                             icon={ICONOS.pedidos}
                         />

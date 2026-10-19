@@ -1,6 +1,7 @@
 import { Truck, CreditCard } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ImageLightbox from '@/Components/ImageLightbox';
+import ConfirmarVentaModal from '@/Components/ConfirmarVentaModal';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
@@ -9,11 +10,16 @@ import {
     buildPedidoClienteMessage,
     normalizarTelefonoWhatsApp,
 } from '@/lib/whatsapp';
+import { formatearFechaHora } from '@/lib/fecha';
 
 const ESTADOS = {
     pendiente: { label: 'Pendiente', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
+    confirmado: { label: 'Confirmado', badge: 'bg-blue-100 text-blue-800 border border-blue-300' },
+    empaquetado: { label: 'Empaquetado', badge: 'bg-indigo-100 text-indigo-800 border border-indigo-300' },
     despachado: { label: 'Despachado', badge: 'bg-green-100 text-green-800 border border-green-300' },
+    entregado: { label: 'Entregado', badge: 'bg-emerald-100 text-emerald-800 border border-emerald-300' },
     cancelado: { label: 'Cancelado', badge: 'bg-red-100 text-red-800 border border-red-300' },
+    anulado: { label: 'Anulado', badge: 'bg-red-100 text-red-800 border border-red-300' },
 };
 
 const SUCURSAL_BADGE = {
@@ -31,14 +37,7 @@ const formatearPrecio = (precio) =>
 
 const formatearPorcentaje = (valor) => `${parseFloat(Number(valor).toFixed(2))}%`;
 
-const formatearFecha = (fecha) =>
-    new Date(fecha).toLocaleString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+const formatearFecha = (fecha) => formatearFechaHora(fecha);
 
 function DatoCliente({ label, value }) {
     return (
@@ -49,13 +48,15 @@ function DatoCliente({ label, value }) {
     );
 }
 
-export default function Show({ pedido }) {
+export default function Show({ pedido, permisos }) {
     const [lightboxSrc, setLightboxSrc] = useState(null);
     const [confirmarCancelacion, setConfirmarCancelacion] = useState(false);
+    const [confirmandoVenta, setConfirmandoVenta] = useState(false);
 
     const { flash, errors } = usePage().props;
 
-    const estadoInfo = ESTADOS[pedido.estado];
+    const estadoInfo = ESTADOS[pedido.estado] ?? { label: pedido.estado, badge: 'bg-gray-100 text-gray-800 border border-gray-300' };
+    const esVentaDelCentral = Boolean(permisos?.es_venta_del_central);
 
     const telefonoWhatsApp = normalizarTelefonoWhatsApp(pedido.cliente_telefono);
 
@@ -115,6 +116,28 @@ export default function Show({ pedido }) {
                                     title={`Editado el ${formatearFecha(pedido.editado_at)}`}
                                 >
                                     Editado
+                                </span>
+                            )}
+                            {pedido.rukoz_ref && (
+                                <span
+                                    className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-800"
+                                    title={`Referencia en el Sistema Central: ${pedido.rukoz_ref}`}
+                                >
+                                    {pedido.rukoz_estado === 'cancelado'
+                                        ? 'Reserva liberada en el Central'
+                                        : pedido.rukoz_estado === 'cancelacion_pendiente'
+                                            ? 'Liberando reserva en el Central…'
+                                            : esVentaDelCentral
+                                                ? `Venta en el Central${pedido.rukoz_numero_venta ? ` N° ${pedido.rukoz_numero_venta}` : ''}`
+                                                : 'Stock reservado en el Central'}
+                                </span>
+                            )}
+                            {esVentaDelCentral && pedido.rukoz_retenido_por_pago && (
+                                <span
+                                    className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900"
+                                    title="Se confirmó con «Despachar solo con pago completo»: el Central no la despacha hasta que se cobre el saldo."
+                                >
+                                    Retenido hasta completar el pago
                                 </span>
                             )}
                             {SUCURSAL_LABELS[pedido.sucursal] && (
@@ -410,43 +433,103 @@ export default function Show({ pedido }) {
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones</h3>
                             {pedido.estado === 'pendiente' && (
                                 <div className="flex flex-wrap gap-3">
-                                    <Link
-                                        href={route('pedidos.edit', pedido.id)}
-                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-semibold hover:bg-[#6000ca] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
-                                    >
-                                        Editar pedido
-                                    </Link>
-                                    <button
-                                        onClick={() => cambiarEstado('despachado')}
-                                        className="inline-flex items-center px-5 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all duration-200 transform hover:scale-105 active:scale-95"
-                                    >
-                                        Marcar como despachado
-                                    </button>
-                                    <button
-                                        onClick={() => setConfirmarCancelacion(true)}
-                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
-                                    >
-                                        Cancelar pedido
-                                    </button>
+                                    {permisos?.puede_confirmar && (
+                                        <button
+                                            onClick={() => setConfirmandoVenta(true)}
+                                            className="inline-flex items-center px-5 py-2.5 bg-[#6000ca] text-white rounded-lg text-sm font-semibold hover:bg-[#4d00a3] transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        >
+                                            Confirmar venta
+                                        </button>
+                                    )}
+                                    {permisos?.puede_editar && (
+                                        <Link
+                                            href={route('pedidos.edit', pedido.id)}
+                                            className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-semibold hover:bg-[#6000ca] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        >
+                                            Editar pedido
+                                        </Link>
+                                    )}
+                                    {permisos?.puede_marcar_despachado && (
+                                        <button
+                                            onClick={() => cambiarEstado('despachado')}
+                                            className="inline-flex items-center px-5 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        >
+                                            Marcar como despachado
+                                        </button>
+                                    )}
+                                    {permisos?.puede_cancelar && (
+                                        <button
+                                            onClick={() => setConfirmarCancelacion(true)}
+                                            className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-red-500 text-red-500 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        >
+                                            Cancelar pedido
+                                        </button>
+                                    )}
+                                    {permisos?.puede_confirmar && (
+                                        <p className="w-full text-xs text-gray-400">
+                                            «Confirmar venta» crea la venta en el Sistema Central, con o sin pago. Después el pedido es de solo lectura: el empaquetado, el despacho y cualquier corrección se hacen en el Central.
+                                        </p>
+                                    )}
                                 </div>
                             )}
-                            {pedido.estado === 'despachado' && (
+                            {pedido.estado === 'despachado' && !esVentaDelCentral && (
                                 <div className="flex flex-wrap gap-3">
-                                    <Link
-                                        href={route('pedidos.edit', pedido.id)}
-                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-semibold hover:bg-[#6000ca] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
-                                    >
-                                        Editar pedido
-                                    </Link>
-                                    <button
-                                        onClick={() => cambiarEstado('pendiente')}
-                                        className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-yellow-500 text-yellow-700 rounded-lg text-sm font-semibold hover:bg-yellow-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
-                                    >
-                                        Volver a pendiente
-                                    </button>
+                                    {permisos?.puede_editar && (
+                                        <Link
+                                            href={route('pedidos.edit', pedido.id)}
+                                            className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-[#6000ca] text-[#6000ca] rounded-lg text-sm font-semibold hover:bg-[#6000ca] hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        >
+                                            Editar pedido
+                                        </Link>
+                                    )}
+                                    {permisos?.puede_volver_a_pendiente && (
+                                        <button
+                                            onClick={() => cambiarEstado('pendiente')}
+                                            className="inline-flex items-center px-5 py-2.5 bg-white border-2 border-yellow-500 text-yellow-700 rounded-lg text-sm font-semibold hover:bg-yellow-500 hover:text-white transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                        >
+                                            Volver a pendiente
+                                        </button>
+                                    )}
                                     <p className="w-full text-xs text-gray-400">
                                         Volver a pendiente sirve para corregir un error de carga o poder cancelarlo: un pedido despachado no se puede cancelar directamente. Para cambiar su contenido (sumar o quitar productos, cantidades) alcanza con editarlo.
                                     </p>
+                                </div>
+                            )}
+                            {esVentaDelCentral && (
+                                <div className="space-y-4">
+                                    <p className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                                        {pedido.estado === 'anulado'
+                                            ? <>Esta venta fue <strong>anulada</strong> en el Sistema Central. El pedido es de solo lectura.</>
+                                            : <>Este pedido es una <strong>venta confirmada</strong> en el Sistema Central y es de solo lectura. Para anular o corregir, hacelo en el Sistema Central; el empaquetado y el despacho también se hacen allá y acá solo se ve su estado.</>}
+                                    </p>
+                                    {pedido.estado === 'anulado' && pedido.motivo_cancelacion && (
+                                        <p className="text-sm text-gray-600">Motivo: {pedido.motivo_cancelacion}</p>
+                                    )}
+                                    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        <DatoCliente label="N° de venta" value={pedido.rukoz_numero_venta} />
+                                        <DatoCliente label="Confirmada" value={formatearFecha(pedido.confirmado_at)} />
+                                        <DatoCliente label="Envío cobrado" value={pedido.envio_costo_cobrado !== null ? formatearPrecio(pedido.envio_costo_cobrado) : null} />
+                                        <DatoCliente label="Total de la venta" value={pedido.rukoz_total_venta !== null ? formatearPrecio(pedido.rukoz_total_venta) : null} />
+                                        <DatoCliente label="Pagado" value={pedido.rukoz_pagado !== null ? formatearPrecio(pedido.rukoz_pagado) : null} />
+                                        <DatoCliente label="Saldo" value={pedido.rukoz_saldo !== null ? formatearPrecio(pedido.rukoz_saldo) : null} />
+                                        {pedido.rukoz_punto && <DatoCliente label="Punto de atención" value={pedido.rukoz_punto} />}
+                                        {pedido.rukoz_empaquetado_at && <DatoCliente label="Empaquetado" value={formatearFecha(pedido.rukoz_empaquetado_at)} />}
+                                        {pedido.despachado_at && <DatoCliente label="Despachado" value={formatearFecha(pedido.despachado_at)} />}
+                                        {pedido.rukoz_retirado_at && <DatoCliente label="Entregado" value={formatearFecha(pedido.rukoz_retirado_at)} />}
+                                        {pedido.rukoz_transportista && <DatoCliente label="Transportista" value={pedido.rukoz_transportista} />}
+                                        {pedido.rukoz_numero_seguimiento && (
+                                            <div>
+                                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Seguimiento</div>
+                                                <div className="text-sm text-gray-900">
+                                                    {pedido.rukoz_url_seguimiento ? (
+                                                        <a href={pedido.rukoz_url_seguimiento} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#6000ca] hover:underline">
+                                                            {pedido.rukoz_numero_seguimiento}
+                                                        </a>
+                                                    ) : pedido.rukoz_numero_seguimiento}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </dl>
                                 </div>
                             )}
                             {pedido.estado === 'cancelado' && (
@@ -454,6 +537,14 @@ export default function Show({ pedido }) {
                                     <p className="text-sm text-gray-500 mb-4">
                                         Este pedido fue <strong>cancelado</strong>, no hay más acciones disponibles.
                                     </p>
+                                    {pedido.motivo_cancelacion && (
+                                        <p className="text-sm text-gray-500 mb-4">Motivo: {pedido.motivo_cancelacion}</p>
+                                    )}
+                                    {pedido.rukoz_estado === 'cancelacion_pendiente' && (
+                                        <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                            El Sistema Central no respondió: la liberación de la reserva quedó pendiente y se reintenta sola cada pocos minutos.
+                                        </p>
+                                    )}
                                     {pedido.movimientos_stock?.length > 0 && (
                                         <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                                             <p className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2">
@@ -483,6 +574,11 @@ export default function Show({ pedido }) {
                 <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
             )}
 
+            {/* Modal de confirmación de la venta en el Sistema Central (11.4) */}
+            {confirmandoVenta && (
+                <ConfirmarVentaModal pedido={pedido} onClose={() => setConfirmandoVenta(false)} />
+            )}
+
             {/* Modal de confirmación de cancelación */}
             {confirmarCancelacion && (
                 <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -508,7 +604,9 @@ export default function Show({ pedido }) {
                                                 ¿Estás seguro de que deseas cancelar el pedido de "<strong>{pedido.cliente_nombre}</strong>"?
                                             </p>
                                             <p className="text-sm text-gray-500">
-                                                Se va a reponer el stock de todos los productos de este pedido. Esta acción no se puede deshacer.
+                                                {pedido.rukoz_ref
+                                                    ? 'Se va a liberar el stock que este pedido tiene reservado en el Sistema Central. Esta acción no se puede deshacer.'
+                                                    : 'Se va a reponer el stock de todos los productos de este pedido. Esta acción no se puede deshacer.'}
                                             </p>
                                         </div>
                                     </div>

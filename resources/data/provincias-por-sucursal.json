@@ -1,0 +1,17 @@
+{
+  "defecto": "buenos-aires",
+  "provincias": {
+    "cordoba": [
+      "Córdoba",
+      "Santiago del Estero",
+      "Tucumán",
+      "Salta",
+      "Jujuy",
+      "Catamarca",
+      "La Rioja",
+      "San Juan",
+      "San Luis",
+      "Mendoza"
+    ]
+  }
+}

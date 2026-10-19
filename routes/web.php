@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\MetricasController;
 use App\Http\Controllers\OfertaController;
+use App\Http\Controllers\PedidoConfirmacionController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\PlanPagoTarjetaController;
 use App\Http\Controllers\PrecioController;
@@ -49,7 +50,7 @@ Route::get('/checkout', function () {
     ]);
 })->name('checkout.index');
 
-Route::post('/checkout', [PedidoController::class, 'store'])->name('checkout.store');
+Route::post('/checkout', [PedidoController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
 
 Route::get('/confirmacion-pedido', function () {
     return Inertia::render('ConfirmacionPedido', [
@@ -121,6 +122,10 @@ Route::middleware('auth')->group(function () {
     Route::get('admin/pedidos/{pedido}/editar', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('admin/pedidos/{pedido}', [PedidoController::class, 'actualizar'])->name('pedidos.update');
     Route::patch('admin/pedidos/{pedido}/estado', [PedidoController::class, 'cambiarEstado'])->name('pedidos.cambiar-estado');
+    // 11.4 — Confirmar la venta en el Sistema Central (admin y vendedor de la sucursal). `confirmacion` devuelve los datos del
+    // modal (cuentas, formas de envío, vendedores) y se pide recién al abrirlo: la ficha del pedido no depende del Central.
+    Route::get('admin/pedidos/{pedido}/confirmacion', [PedidoConfirmacionController::class, 'datos'])->name('pedidos.confirmacion');
+    Route::post('admin/pedidos/{pedido}/confirmar', [PedidoConfirmacionController::class, 'confirmar'])->name('pedidos.confirmar');
 
     // Gestión de catálogo (categorías/subcategorías/productos/ofertas/códigos de
     // descuento/add-ons) — reservada a admin; el vendedor solo consulta desde

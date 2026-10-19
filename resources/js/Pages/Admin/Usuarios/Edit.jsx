@@ -4,7 +4,7 @@ import PasswordInput from '@/Components/PasswordInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { WHATSAPP_SUCURSALES } from '@/lib/whatsapp';
 
-export default function Edit({ usuario }) {
+export default function Edit({ usuario, integracion }) {
     const { data, setData, put, processing, errors } = useForm({
         name: usuario.name || '',
         email: usuario.email || '',
@@ -12,6 +12,7 @@ export default function Edit({ usuario }) {
         password_confirmation: '',
         role: usuario.role || 'vendedor',
         sucursal: usuario.sucursal || '',
+        rukoz_vendedor_id: usuario.rukoz_vendedor_id || '',
     });
 
     const handleSubmit = (e) => {
@@ -128,6 +129,34 @@ export default function Edit({ usuario }) {
                                             El vendedor solo verá y gestionará los pedidos de esta sucursal.
                                         </p>
                                         <InputError message={errors.sucursal} className="mt-2" />
+                                    </div>
+                                )}
+
+                                {integracion?.confirmacion && (
+                                    <div className="mb-6">
+                                        <label htmlFor="rukoz_vendedor_id" className="block text-sm font-bold text-gray-700 mb-2">
+                                            Vendedor en el Sistema Central <span className="text-gray-400 font-normal">(opcional)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="rukoz_vendedor_id"
+                                            list="vendedores-del-central"
+                                            value={data.rukoz_vendedor_id}
+                                            onChange={(e) => setData('rukoz_vendedor_id', e.target.value)}
+                                            placeholder="Sin asignar"
+                                            maxLength={100}
+                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
+                                        />
+                                        <datalist id="vendedores-del-central">
+                                            {(integracion.vendedores_del_central ?? []).map((v) => (
+                                                <option key={v.id} value={v.id}>{v.nombre}</option>
+                                            ))}
+                                        </datalist>
+                                        <p className="mt-1.5 text-xs text-gray-500">
+                                            El id con el que este usuario se presenta ante el Sistema Central al confirmar una venta. Sin este dato no puede
+                                            confirmar ventas. Después, administración lo asigna a un usuario del Central (Integraciones → Vendedores).
+                                        </p>
+                                        <InputError message={errors.rukoz_vendedor_id} className="mt-2" />
                                     </div>
                                 )}
 

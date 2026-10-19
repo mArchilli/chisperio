@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,6 +16,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Estos seeders cargan datos de prueba (productos de ejemplo, un admin): jamás en producción.
+        if (app()->environment('production')) {
+            throw new RuntimeException('El seeder no se puede ejecutar en producción.');
+        }
+
         $this->call([
             UserSeeder::class,
             CategoriaSeeder::class,

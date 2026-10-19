@@ -10,6 +10,9 @@ import { track, itemEventParams } from '@/lib/pixel';
 const CartContext = createContext(null);
 const STORAGE_KEY = 'chisperio_cart';
 const STORAGE_KEY_CODIGO = 'chisperio_cart_codigo';
+
+// El endpoint de validación respondió 429 (throttle por IP): se muestra un aviso amable.
+class CodigoLimitadoError extends Error {}
 const STORAGE_KEY_FORMA_PAGO = 'chisperio_forma_pago';
 
 /**
@@ -665,6 +668,11 @@ export function CartProvider({ children }) {
                 body: JSON.stringify({ codigo, subtotal }),
             });
 
+            if (response.status === 429) {
+                // Demasiados intentos seguidos (throttle): mensaje amable, no un error crudo.
+                throw new CodigoLimitadoError();
+            }
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
@@ -675,12 +683,14 @@ export function CartProvider({ children }) {
             // no queda nada "aplicado" — el motivo se expone igual vía descuentoInfo
             // para mostrarlo como error.
             setCodigoAplicado(resultado.valido ? codigo : null);
-        } catch {
+        } catch (error) {
             // Red caída, timeout o el servidor no responde: no dejamos el spinner
             // colgado ni un código "aplicado" que en realidad no pudimos confirmar.
             setDescuentoInfo({
                 valido: false,
-                motivo: 'No pudimos validar el código. Probá de nuevo en un momento.',
+                motivo: error instanceof CodigoLimitadoError
+                    ? 'Esperá un momento y probá de nuevo.'
+                    : 'No pudimos validar el código. Probá de nuevo en un momento.',
                 monto_descuento: 0,
                 subtotal_con_descuento: subtotal,
             });

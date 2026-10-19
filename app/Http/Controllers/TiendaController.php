@@ -291,8 +291,15 @@ class TiendaController extends Controller
 
         // Productos sin stock al final del listado (stock NULL = ilimitado siempre
         // cuenta como "con stock" acá, igual que Producto::scopeConStock), y dentro de cada
-        // grupo el orden elegido (por defecto A → Z).
-        $query->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END');
+        // grupo el orden elegido (por defecto A → Z). Un producto con variantes está sin stock
+        // cuando ninguna variante activa tiene (su propia columna `stock` se ignora): con el
+        // stock del Central es normal que todas las variantes lleguen en 0.
+        $query->orderByRaw(
+            'CASE WHEN (NOT EXISTS (SELECT 1 FROM producto_variantes pv WHERE pv.producto_id = productos.id) AND productos.stock = 0)
+                OR (EXISTS (SELECT 1 FROM producto_variantes pv WHERE pv.producto_id = productos.id)
+                    AND NOT EXISTS (SELECT 1 FROM producto_variantes pv WHERE pv.producto_id = productos.id AND pv.is_active = 1 AND (pv.stock IS NULL OR pv.stock > 0)))
+            THEN 1 ELSE 0 END'
+        );
         $this->aplicarOrden($query, $request);
 
         $productos = $query

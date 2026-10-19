@@ -37,6 +37,7 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
             es_color_personalizado: v.es_color_personalizado ?? false,
             precio_adicional: v.precio_adicional,
             stock: v.stock,
+            stock_gestionado: v.stock_gestionado ?? false,
             is_active: v.is_active,
             clave: String(v.id),
         })),
@@ -274,9 +275,16 @@ export default function Edit({ producto, categorias, subcategorias, addonsDispon
                                             min="0"
                                             value={data.stock}
                                             onChange={(e) => setData('stock', e.target.value)}
-                                            placeholder="Dejar vacío para stock ilimitado"
-                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all"
+                                            placeholder={producto.stock_gestionado ? 'Ilimitado' : 'Dejar vacío para stock ilimitado'}
+                                            readOnly={producto.stock_gestionado}
+                                            aria-describedby={producto.stock_gestionado ? 'stock-central' : undefined}
+                                            className={`block w-full rounded-xl border-gray-300 shadow-sm focus:border-[#6000ca] focus:ring focus:ring-[#6000ca] focus:ring-opacity-50 transition-all ${producto.stock_gestionado ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                         />
+                                        {producto.stock_gestionado && (
+                                            <p id="stock-central" className="mt-2 text-xs text-gray-500">
+                                                El stock se administra en el Sistema Central
+                                            </p>
+                                        )}
                                         {errors.stock && (
                                             <div className="mt-2 flex items-center text-sm text-red-600">
                                                 <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">

@@ -1,3 +1,5 @@
+import { hoyISO } from './fecha';
+
 const unidad = (cantidad, singular, plural) => (cantidad === 1 ? `Hace un ${singular}` : `Hace ${cantidad} ${plural}`);
 
 /**
@@ -11,8 +13,9 @@ export function tiempoRelativo(fecha, ahora = new Date()) {
     const [anio, mes, dia] = String(fecha).slice(0, 10).split('-').map(Number);
     if (!anio || !mes || !dia) return '';
 
-    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-    const dias = Math.round((hoy - new Date(anio, mes - 1, dia)) / 86400000);
+    // "Hoy" es el día argentino, no el de la zona del dispositivo; ambos lados como fechas puras en UTC.
+    const [hoyAnio, hoyMes, hoyDia] = hoyISO(ahora).split('-').map(Number);
+    const dias = Math.round((Date.UTC(hoyAnio, hoyMes - 1, hoyDia) - Date.UTC(anio, mes - 1, dia)) / 86400000);
 
     if (dias < 1) return 'Hoy';
     if (dias < 7) return dias === 1 ? 'Hace un día' : `Hace ${dias} días`;

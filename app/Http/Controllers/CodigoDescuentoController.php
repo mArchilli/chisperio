@@ -79,19 +79,24 @@ class CodigoDescuentoController extends Controller
     }
 
     /**
+     * El nombre del parámetro tiene que coincidir con el segmento de ruta que genera
+     * Route::resource('admin/codigos-descuento') ({codigos_descuento}); si no, Laravel no
+     * hace el binding y entrega un modelo vacío: delete() no borra nada y usos_actuales
+     * es null, con lo que además se salteaba la guarda de abajo.
+     *
      * El historial de pedidos que ya usaron este código depende de que exista
      * (hasta que en Fase 4 el Pedido guarde su propio snapshot), así que mientras
      * usos_actuales > 0 no se permite el hard-delete.
      */
-    public function destroy(CodigoDescuento $codigo_descuento): RedirectResponse
+    public function destroy(CodigoDescuento $codigos_descuento): RedirectResponse
     {
-        if ($codigo_descuento->usos_actuales > 0) {
+        if ($codigos_descuento->usos_actuales > 0) {
             throw ValidationException::withMessages([
                 'codigo' => 'No se puede eliminar un código que ya fue usado en pedidos. Desactivalo en su lugar.',
             ]);
         }
 
-        $codigo_descuento->delete();
+        $codigos_descuento->delete();
 
         return redirect()->route('codigos-descuento.index')
             ->with('success', 'Código de descuento eliminado exitosamente.');

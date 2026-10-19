@@ -1,3 +1,4 @@
+import reglaDeProvincias from '../../data/provincias-por-sucursal.json';
 import { track } from './pixel';
 
 /**
@@ -67,7 +68,7 @@ export const WHATSAPP_SUCURSALES = [
     },
 ];
 
-export const SUCURSAL_POR_DEFECTO_ID = 'buenos-aires';
+export const SUCURSAL_POR_DEFECTO_ID = reglaDeProvincias.defecto;
 
 /** Mapa id de sucursal → nombre legible. Espeja `App\Enums\Sucursal::label()`. */
 export const SUCURSAL_LABELS = Object.fromEntries(
@@ -75,35 +76,32 @@ export const SUCURSAL_LABELS = Object.fromEntries(
 );
 
 /**
- * Provincias (tal cual las lista Checkout.jsx) que atiende cada sucursal, para
- * SUGERIR una en el checkout según la provincia elegida — la persona siempre
- * puede cambiarla. Criterio: centro + norte + Cuyo → Córdoba; el este, el
- * litoral (Santa Fe / Entre Ríos incluidos) y toda la Patagonia → Buenos Aires.
- * Cualquier provincia que no esté acá cae en la sucursal por defecto.
+ * Qué provincias atiende cada sucursal, para SUGERIR una en el checkout según la provincia elegida — la persona siempre
+ * puede cambiarla. Criterio: centro + norte + Cuyo → Córdoba; el este, el litoral (Santa Fe / Entre Ríos incluidos) y toda
+ * la Patagonia → Buenos Aires. Cualquier provincia que no esté ahí cae en la sucursal por defecto.
+ *
+ * La regla vive en `resources/data/provincias-por-sucursal.json`: la usa también el servidor
+ * (`App\Enums\Sucursal::paraProvincia`) para decidir el punto de atención del pedido en el Central. No se duplica acá.
  */
-const PROVINCIAS_POR_SUCURSAL = {
-    cordoba: [
-        'Córdoba',
-        'Santiago del Estero',
-        'Tucumán',
-        'Salta',
-        'Jujuy',
-        'Catamarca',
-        'La Rioja',
-        'San Juan',
-        'San Luis',
-        'Mendoza',
-    ],
-};
+const PROVINCIAS_POR_SUCURSAL = reglaDeProvincias.provincias;
+
+const normalizarProvincia = (texto) =>
+    String(texto ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
 
 /**
  * Id de la sucursal sugerida para `provincia`. Sin provincia o sin match →
  * SUCURSAL_POR_DEFECTO_ID ('buenos-aires').
  */
 export function sucursalSugeridaId(provincia) {
-    if (!provincia) return SUCURSAL_POR_DEFECTO_ID;
+    const buscada = normalizarProvincia(provincia);
+    if (!buscada) return SUCURSAL_POR_DEFECTO_ID;
     const match = Object.entries(PROVINCIAS_POR_SUCURSAL).find(([, provincias]) =>
-        provincias.includes(provincia)
+        provincias.some((nombre) => normalizarProvincia(nombre) === buscada)
     );
     return match ? match[0] : SUCURSAL_POR_DEFECTO_ID;
 }

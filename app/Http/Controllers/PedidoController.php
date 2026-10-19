@@ -7,26 +7,40 @@ use App\Enums\MotivoMovimientoStock;
 use App\Enums\Sucursal;
 use App\Exceptions\StockInsuficienteException;
 use App\Exceptions\VarianteRequeridaException;
-use App\Models\Addon;
+use App\DataTransferObjects\CalculoPedido;
 use App\Models\Combo;
-use App\Models\ConfiguracionEnvio;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
-use App\Models\PlanPagoTarjeta;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
+use App\Rukoz\CheckoutCentral;
+use App\Rukoz\ConfirmacionDeVenta;
+use App\Rukoz\ErroresDelCentral;
+use App\Rukoz\EspejoStock;
+use App\Rukoz\PedidoArmado;
+use App\Rukoz\PedidoParaCentral;
+use App\Rukoz\ReservaDePedido;
+use App\Services\CalculadoraPedido;
 use App\Services\CodigoDescuentoService;
 use App\Services\ComboPedidoResolver;
 use App\Services\PedidoEdicionService;
 use App\Services\PricingService;
-use App\Services\RecargoPagoService;
 use App\Services\StockService;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Rukoz\CoreClient\Errores\CentralNoDisponibleException;
+use Rukoz\CoreClient\Errores\RukozException;
+use Rukoz\CoreClient\Errores\SinStockException;
+use Rukoz\CoreClient\Facades\Rukoz;
 
 class PedidoController extends Controller
 {
@@ -60,10 +74,20 @@ class PedidoController extends Controller
 
         $pedidos = Pedido::with('items')
             ->deSucursal($sucursalScope)
-            ->when($filtroEstado !== 'todos', fn ($query) => $query->where('estado', $filtroEstado))
+            // «Confirmados» incluye a los ya empaquetados (siguen sin despachar); cada fila muestra su estado exacto.
+            ->when($filtroEstado === EstadoPedido::Confirmado->value, fn ($query) => $query->whereIn('estado', [EstadoPedido::Confirmado->value, EstadoPedido::Empaquetado->value]))
+            ->when($filtroEstado !== 'todos' && $filtroEstado !== EstadoPedido::Confirmado->value, fn ($query) => $query->where('estado', $filtroEstado))
             ->latest()
             ->paginate(15)
             ->withQueryString();
+
+        // 11.4 — Las acciones que ofrece cada fila (un pedido con reserva en el Central no se despacha a mano: se confirma).
+        $pedidos->getCollection()->transform(fn (Pedido $pedido) => $pedido->setAttribute('permisos', [
+            'puede_confirmar' => $pedido->puedeConfirmarse(),
+            'puede_marcar_despachado' => $pedido->puedeTransicionarA(EstadoPedido::Despachado),
+            'puede_cancelar' => $pedido->puedeTransicionarA(EstadoPedido::Cancelado),
+            'puede_volver_a_pendiente' => $pedido->puedeTransicionarA(EstadoPedido::Pendiente),
+        ]));
 
         return Inertia::render('Admin/Pedidos/Index', [
             'pedidos' => $pedidos,
@@ -73,12 +97,19 @@ class PedidoController extends Controller
             'stats' => [
                 'pendientes_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Pendiente)->count(),
                 'despachados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Despachado)->count(),
+                // 11.4 — Estados que llegan del Central: la venta confirmada, todavía sin despachar, y la anulada.
+                'confirmados_count' => Pedido::deSucursal($sucursalScope)->whereIn('estado', [EstadoPedido::Confirmado->value, EstadoPedido::Empaquetado->value])->count(),
+                'entregados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Entregado)->count(),
+                'anulados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Anulado)->count(),
                 'cancelados_count' => Pedido::deSucursal($sucursalScope)->where('estado', EstadoPedido::Cancelado)->count(),
+                // Ventas = pedidos en estado de venta cerrada (EstadoPedido::estadosDeVenta());
+                // los pendientes van aparte y los cancelados no suman nunca.
                 'unidades_vendidas' => (int) PedidoItem::whereHas(
                     'pedido',
-                    fn ($query) => $query->facturables()->deSucursal($sucursalScope)
+                    fn ($query) => $query->ventas()->deSucursal($sucursalScope)
                 )->sum('cantidad'),
-                'facturacion' => (float) Pedido::facturables()->deSucursal($sucursalScope)->sum('total'),
+                'facturacion' => (float) Pedido::ventas()->deSucursal($sucursalScope)->sum('total'),
+                'pendientes_monto' => (float) Pedido::pendientes()->deSucursal($sucursalScope)->sum('total'),
             ],
         ]);
     }
@@ -102,6 +133,15 @@ class PedidoController extends Controller
 
         return Inertia::render('Admin/Pedidos/Show', [
             'pedido' => $pedido,
+            // 11.4 — Qué acciones ofrece la ficha. El backend las vuelve a exigir en cada endpoint.
+            'permisos' => [
+                'puede_confirmar' => $pedido->puedeConfirmarse(),
+                'puede_editar' => $pedido->esEditable(),
+                'puede_marcar_despachado' => $pedido->puedeTransicionarA(EstadoPedido::Despachado),
+                'puede_cancelar' => $pedido->puedeTransicionarA(EstadoPedido::Cancelado),
+                'puede_volver_a_pendiente' => $pedido->puedeTransicionarA(EstadoPedido::Pendiente),
+                'es_venta_del_central' => $pedido->estaConfirmado(),
+            ],
         ]);
     }
 
@@ -114,10 +154,10 @@ class PedidoController extends Controller
     {
         $this->autorizarSucursal($request, $pedido);
 
-        if (! $pedido->estado->esEditable()) {
+        if (! $pedido->esEditable()) {
             return redirect()
                 ->route('pedidos.show', $pedido)
-                ->with('error', 'Un pedido cancelado no se puede editar.');
+                ->with('error', PedidoEdicionService::motivoDeSoloLectura($pedido));
         }
 
         $pedido->load('items.producto.imagenPrincipal');
@@ -185,6 +225,11 @@ class PedidoController extends Controller
     {
         $this->autorizarSucursal($request, $pedido);
 
+        // 11.4 — Un pedido confirmado (o anulado, cancelado) es de solo lectura también en el backend, antes de validar nada.
+        if (! $pedido->esEditable()) {
+            throw ValidationException::withMessages(['estado' => PedidoEdicionService::motivoDeSoloLectura($pedido)]);
+        }
+
         $validated = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
             'cliente_dni' => 'nullable|string|max:50',
@@ -225,6 +270,14 @@ class PedidoController extends Controller
 
         $edicionService->actualizar($pedido, $validated);
 
+        // 11.4b — Cambiar la provincia de un pedido con reserva puede pasarlo a la otra sucursal (y a su punto en el Central):
+        // un vendedor ya no lo ve, así que vuelve al listado en vez de a una ficha que le daría 403.
+        if (! $request->user()->esAdmin() && $pedido->fresh()->sucursal !== $request->user()->sucursal) {
+            return redirect()
+                ->route('pedidos.index')
+                ->with('success', 'Pedido actualizado. Por la provincia pasó a la sucursal '.$pedido->fresh()->sucursal?->label().'.');
+        }
+
         return redirect()
             ->route('pedidos.show', $pedido)
             ->with('success', 'Pedido actualizado.');
@@ -233,20 +286,21 @@ class PedidoController extends Controller
     /**
      * Update the estado of the specified resource.
      */
-    public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService, CodigoDescuentoService $codigoDescuentoService)
+    public function cambiarEstado(Request $request, Pedido $pedido, StockService $stockService, CodigoDescuentoService $codigoDescuentoService, ReservaDePedido $reservaDePedido)
     {
         $this->autorizarSucursal($request, $pedido);
 
         $validated = $request->validate([
             'estado' => ['required', new Enum(EstadoPedido::class)],
+            'motivo' => ['nullable', 'string', 'max:500'],
         ]);
 
         $estadoActual = $pedido->estado;
         $estadoDestino = EstadoPedido::from($validated['estado']);
 
-        if (! $estadoActual->puedeTransicionarA($estadoDestino)) {
+        if (! $pedido->puedeTransicionarA($estadoDestino)) {
             throw ValidationException::withMessages([
-                'estado' => $this->mensajeTransicionInvalida($estadoActual, $estadoDestino),
+                'estado' => $this->mensajeTransicionInvalida($pedido, $estadoDestino),
             ]);
         }
 
@@ -259,7 +313,12 @@ class PedidoController extends Controller
             ]);
         };
 
-        if ($estadoDestino === EstadoPedido::Cancelado) {
+        if ($estadoDestino === EstadoPedido::Cancelado && $pedido->usaCentral()) {
+            // El stock lo tiene reservado el Central: se cancela la reserva allá (HTTP, sin transacción abierta) y después
+            // se cancela el pedido local liberando el cupón. No se repone stock local (nunca se descontó). Si el Central no
+            // responde, la cancelación queda en las compensaciones del paquete y el pedido local queda cancelado igual.
+            $reservaDePedido->cancelar($pedido, $validated['motivo'] ?? 'Cancelado desde el panel de Chisperío');
+        } elseif ($estadoDestino === EstadoPedido::Cancelado) {
             // reponer() y liberarUso() dentro de la misma transacción que el update: si
             // por lo que sea algo falla, el estado no queda cambiado a medias (rollback
             // también del estado). La protección contra doble cancelación es la
@@ -299,8 +358,21 @@ class PedidoController extends Controller
      * el pedido ya está cancelado (terminal), sigue en el mismo estado, o el caso
      * concreto que motiva esta regla (no se puede cancelar directo un despachado).
      */
-    private function mensajeTransicionInvalida(EstadoPedido $actual, EstadoPedido $destino): string
+    private function mensajeTransicionInvalida(Pedido $pedido, EstadoPedido $destino): string
     {
+        $actual = $pedido->estado;
+
+        // 11.4 — Una venta confirmada (o anulada) en el Central no se toca desde la web.
+        if ($pedido->estaConfirmado() || $actual === EstadoPedido::Anulado) {
+            return $destino === EstadoPedido::Cancelado || $actual === EstadoPedido::Anulado
+                ? 'Para anular, hacelo en el Sistema Central.'
+                : 'Este pedido ya es una venta confirmada en el Sistema Central: su estado lo maneja el Central (empaquetado y despacho se hacen allá).';
+        }
+
+        if ($destino === EstadoPedido::Despachado && $pedido->usaCentral() && ConfirmacionDeVenta::activa()) {
+            return 'Este pedido tiene su stock en el Sistema Central: se confirma como venta con «Confirmar venta» (y el despacho se hace en el Central).';
+        }
+
         if ($actual === EstadoPedido::Cancelado) {
             return 'Este pedido ya está cancelado. Es un estado final, no se puede volver a cambiar.';
         }
@@ -319,7 +391,7 @@ class PedidoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, PricingService $pricingService, StockService $stockService, CodigoDescuentoService $codigoDescuentoService, RecargoPagoService $recargoPagoService)
+    public function store(Request $request, StockService $stockService, CalculadoraPedido $calculadora, CodigoDescuentoService $codigoDescuentoService)
     {
         $validated = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
@@ -331,7 +403,7 @@ class PedidoController extends Controller
             'cliente_codigo_postal' => 'nullable|string|max:20',
             'observaciones' => 'nullable|string',
             // Sucursal con la que el cliente eligió coordinar (selector del checkout).
-            // Si no llega, cae en Buenos Aires (el número histórico) — ver abajo.
+            // Si no llega, la que corresponde a la provincia (Sucursal::paraProvincia; sin provincia, Buenos Aires, el número histórico).
             'sucursal' => ['nullable', Rule::enum(Sucursal::class)],
             'codigo_descuento' => 'nullable|string',
             'plan_pago_tarjeta_id' => 'nullable|integer',
@@ -408,203 +480,28 @@ class PedidoController extends Controller
             $this->abortarPorStockInsuficiente($faltantes);
         }
 
+        // Con el checkout del Central activo el pedido reserva ALLÁ antes de guardarse y la web no toca su stock; si no,
+        // es el flujo de siempre (stock local, todo en una transacción).
+        if (CheckoutCentral::activo()) {
+            return $this->storeConReserva($validated, $calculadora, $codigoDescuentoService, $stockService);
+        }
+
+        return $this->storeLocal($validated, $calculadora, $codigoDescuentoService, $stockService);
+    }
+
+    /**
+     * Flujo de siempre: el pedido, el cupón y el descuento de stock local en una sola transacción.
+     */
+    private function storeLocal(array $validated, CalculadoraPedido $calculadora, CodigoDescuentoService $codigoDescuentoService, StockService $stockService): JsonResponse
+    {
         try {
-            $pedido = DB::transaction(function () use ($validated, $pricingService, $stockService, $codigoDescuentoService, $recargoPagoService) {
-                $productos = Producto::with(['escalasPrecio', 'ofertaVigente'])
-                    ->whereIn('id', collect($validated['items'])->pluck('producto_id'))
-                    ->get()
-                    ->keyBy('id');
-
-                // Una misma compra puede traer varias líneas del mismo producto (una
-                // por color elegido en el repartidor de la ficha). El precio por
-                // cantidad se resuelve sobre el TOTAL de unidades de ese producto en
-                // el pedido, no sobre la cantidad de cada línea suelta — ver
-                // PricingService::calcularPrecio ($cantidadParaEscala).
-                $cantidadPorProducto = collect($validated['items'])
-                    ->groupBy('producto_id')
-                    ->map(fn ($grupo) => (int) collect($grupo)->sum('cantidad'));
-
-                $subtotal = 0;
-                $itemsData = [];
-
-                foreach ($validated['items'] as $item) {
-                    $producto = $productos->get($item['producto_id']);
-                    $varianteId = $item['variante_id'] ?? null;
-                    $addonsInput = collect($item['addons'] ?? []);
-
-                    // Si el producto tiene variantes activas, elegir una no es opcional: sin
-                    // esto, un item que llega sin variante_id (ej. el "Agregar" rápido del
-                    // catálogo, que nunca pasa por el selector de color de la ficha) se
-                    // vendería al precio base, sin recargo, sin descontar el stock real de
-                    // ninguna variante y sin registrar qué color preparar. Corre ANTES de
-                    // calcularPrecio() a propósito: un item inválido no debe llegar a tocar
-                    // precio ni stock. No distingue es_color_personalizado de una variante
-                    // fija — cualquier variante activa configurada es obligatoria.
-                    if ($varianteId === null && $producto->variantesActivas()->exists()) {
-                        throw ValidationException::withMessages([
-                            'variante_id' => "Elegí un color para \"{$producto->titulo}\" antes de confirmar el pedido.",
-                        ]);
-                    }
-
-                    // calcularPrecio() valida acá mismo (con 422 si corresponde) que la
-                    // variante y cada addon pertenezcan a este producto y estén activos —
-                    // ver PricingService::resolverVariante/resolverAddons. Nunca se confía
-                    // en nombre/precio que pudo mandar el frontend. exigirVariante: true es
-                    // la misma regla de arriba, como defensa en profundidad por si algún día
-                    // otra vía llega hasta acá sin pasar por el guard explícito.
-                    $priceResult = $pricingService->calcularPrecio(
-                        $producto,
-                        $item['cantidad'],
-                        $varianteId,
-                        $addonsInput->pluck('addon_id')->all(),
-                        exigirVariante: true,
-                        cantidadParaEscala: $cantidadPorProducto[$item['producto_id']]
-                    );
-
-                    $addonsSeleccionados = collect($priceResult->addons_aplicados)
-                        ->map(function (Addon $addon) use ($addonsInput) {
-                            $texto = $addon->requiere_texto
-                                ? trim((string) ($addonsInput->firstWhere('addon_id', $addon->id)['texto_personalizado'] ?? ''))
-                                : null;
-
-                            if ($addon->requiere_texto && $texto === '') {
-                                throw ValidationException::withMessages([
-                                    'addons' => "El add-on \"{$addon->nombre}\" requiere un texto de personalización.",
-                                ]);
-                            }
-
-                            return [
-                                'addon_id' => $addon->id,
-                                'nombre' => $addon->nombre,
-                                'precio' => round((float) ($addon->pivot->precio_override ?? $addon->precio), 2),
-                                'texto_personalizado' => $texto,
-                            ];
-                        })
-                        ->values()
-                        ->all();
-
-                    // Si la variante elegida es "Otro / a elección del cliente" (ver
-                    // ProductoVariante::esPersonalizada), el color real pedido no vive en la
-                    // variante sino en este texto libre — sin él quien despache no sabe qué
-                    // preparar, así que se rechaza el item entero en vez de guardarlo vacío.
-                    $colorPersonalizadoTexto = null;
-
-                    if ($priceResult->variante_aplicada?->esPersonalizada()) {
-                        $colorPersonalizadoTexto = trim((string) ($item['color_personalizado_texto'] ?? ''));
-
-                        if ($colorPersonalizadoTexto === '') {
-                            throw ValidationException::withMessages([
-                                'color_personalizado_texto' => "Para \"{$priceResult->variante_aplicada->nombre}\" en {$producto->titulo} tenés que indicar el color o una descripción de lo que necesitás.",
-                            ]);
-                        }
-                    }
-
-                    $itemSubtotal = round($priceResult->precio_final_con_opciones * $item['cantidad'], 2);
-                    $subtotal += $itemSubtotal;
-
-                    $itemsData[] = [
-                        'producto_id' => $producto->id,
-                        'producto_variante_id' => $priceResult->variante_aplicada?->id,
-                        'titulo' => $producto->titulo,
-                        'precio_unitario' => $priceResult->precio_final_con_opciones,
-                        'cantidad' => $item['cantidad'],
-                        'subtotal' => $itemSubtotal,
-                        'variante_nombre' => $priceResult->variante_aplicada?->nombre,
-                        'variante_color_hex' => $priceResult->variante_aplicada?->color_hex,
-                        'recargo_variante_unitario' => $priceResult->recargo_variante,
-                        'addons_seleccionados' => $addonsSeleccionados !== [] ? $addonsSeleccionados : null,
-                        'addons_total_unitario' => $priceResult->addons_total,
-                        'precio_base_unitario' => $priceResult->precio_unitario_final,
-                        'color_personalizado_texto' => $colorPersonalizadoTexto,
-                    ];
-                }
-
-                // Líneas de combo: se resuelve cada una otra vez acá (fresca, dentro de la
-                // transacción) en vez de reusar $combosResueltos de afuera — mismo criterio
-                // que el resto del método, que recarga productos/ofertas fresh en vez de
-                // confiar en el chequeo optimista previo.
-                foreach ($validated['combos'] ?? [] as $comboInput) {
-                    $resuelto = $this->resolverLineaCombo($comboInput);
-                    $combo = $resuelto['combo'];
-                    $cantidadCombo = $resuelto['cantidad'];
-
-                    $precioCombo = $pricingService->calcularPrecioCombo($combo, $cantidadCombo);
-
-                    $comboSubtotal = round($precioCombo->precio_unitario_final * $cantidadCombo, 2);
-                    $subtotal += $comboSubtotal;
-
-                    $itemsData[] = [
-                        'combo_id' => $combo->id,
-                        'combo_items_seleccionados' => $resuelto['componentes'],
-                        'titulo' => $combo->titulo,
-                        'precio_unitario' => $precioCombo->precio_unitario_final,
-                        'cantidad' => $cantidadCombo,
-                        'subtotal' => $comboSubtotal,
-                        'precio_base_unitario' => $precioCombo->precio_lista,
-                        // Snapshot: el detalle del pedido no debe cambiar si después se edita el combo.
-                        'envio_gratis' => (bool) $combo->envio_gratis,
-                    ];
-                }
-
-                // Código de descuento: se resuelve y lockea ACÁ, dentro de la transacción —
-                // nunca se confía en lo que mandó el frontend (Fases 2 y 3 son solo
-                // previsualización de UX). Si no es válido, resolverParaCheckout() lanza
-                // ValidationException y aborta toda la creación del pedido (rollback), no
-                // lo crea sin el descuento en silencio.
-                $datosDescuento = $codigoDescuentoService->resolverParaCheckout(
-                    $validated['codigo_descuento'] ?? null,
-                    $subtotal
-                );
-
-                $total = round($subtotal - $datosDescuento['descuento_monto'], 2);
-
-                // Igual criterio que el código de descuento: el plan que manda el frontend es
-                // solo una preselección de UX, nunca la fuente de verdad. Se resuelve y valida
-                // acá, dentro de la transacción, contra el total ya recalculado server-side —
-                // nunca se calcula el recargo sobre un total que mande el frontend.
-                $datosPlanPago = [
-                    'plan_pago_tarjeta_id' => null,
-                    'plan_pago_nombre' => null,
-                    'plan_pago_cuotas' => null,
-                    'recargo_porcentaje' => null,
-                    'recargo_monto' => null,
-                    'total_con_recargo' => null,
-                ];
-
-                if (! empty($validated['plan_pago_tarjeta_id'])) {
-                    $plan = PlanPagoTarjeta::find($validated['plan_pago_tarjeta_id']);
-
-                    if ($plan === null || ! $plan->is_active) {
-                        throw ValidationException::withMessages([
-                            'plan_pago_tarjeta_id' => 'Esta forma de pago ya no está disponible. Elegí otra o pagá en efectivo/transferencia.',
-                        ]);
-                    }
-
-                    $recargo = $recargoPagoService->calcular($total, $plan);
-
-                    $datosPlanPago = [
-                        'plan_pago_tarjeta_id' => $plan->id,
-                        'plan_pago_nombre' => $plan->nombre,
-                        'plan_pago_cuotas' => $plan->cuotas,
-                        'recargo_porcentaje' => $plan->recargo_porcentaje,
-                        'recargo_monto' => $recargo['recargo_monto'],
-                        'total_con_recargo' => $recargo['total_con_recargo'],
-                    ];
-                }
-
-                // Snapshot de envío gratis: el monto mínimo es global y puede cambiar, pero el
-                // pedido tiene que seguir diciendo si calificó con el que regía al comprar.
-                // Igual criterio que el front (Checkout.jsx): sobre el subtotal, antes de
-                // descuento/recargo; mínimo <= 0 = feature desactivada.
-                //
-                // Además, un combo con envío gratis propio lo da SOLO si es lo único que se
-                // compra: con cualquier otro ítem (producto suelto u otro combo sin envío
-                // gratis) ese beneficio no cuenta y rige únicamente el monto. Ver
-                // resources/js/lib/envioGratis.js, que espeja esta regla en el carrito.
-                $montoMinimoEnvio = (float) ConfiguracionEnvio::obtener()->monto_minimo;
-                $envioGratisPorCombo = $itemsData !== [] && collect($itemsData)->every(
-                    fn (array $item) => ! empty($item['combo_id']) && ($item['envio_gratis'] ?? false)
-                );
+            $pedido = DB::transaction(function () use ($validated, $calculadora, $stockService, $codigoDescuentoService) {
+                // Todo el cálculo (precios, escalas, ofertas, combos, cupón, recargo, envío
+                // gratis) vive en CalculadoraPedido y no escribe nada. Acá adentro se llama
+                // con el cupón lockeado: la validación y el consumo del cupo tienen que
+                // ocurrir bajo el mismo lock para que dos checkouts concurrentes sobre un
+                // código con limite_usos=1 no pasen ambos.
+                $calculo = $calculadora->calcular($validated, bloquearCupon: true);
 
                 $pedido = Pedido::create([
                     'cliente_nombre' => $validated['cliente_nombre'],
@@ -615,28 +512,17 @@ class PedidoController extends Controller
                     'cliente_ciudad' => $validated['cliente_ciudad'] ?? null,
                     'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
                     'observaciones' => $validated['observaciones'] ?? null,
-                    'subtotal' => $subtotal,
-                    'total' => $total,
                     'estado' => EstadoPedido::Pendiente,
-                    'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::BuenosAires,
-                    'codigo_descuento_id' => $datosDescuento['codigo_descuento_id'],
-                    'codigo_descuento_texto' => $datosDescuento['codigo_descuento_texto'],
-                    'codigo_descuento_tipo' => $datosDescuento['codigo_descuento_tipo'],
-                    'codigo_descuento_valor' => $datosDescuento['codigo_descuento_valor'],
-                    'descuento_monto' => $datosDescuento['descuento_monto'],
-                    'envio_gratis' => ($montoMinimoEnvio > 0 && $subtotal >= $montoMinimoEnvio) || $envioGratisPorCombo,
-                    'envio_gratis_monto_minimo' => $montoMinimoEnvio,
-                    ...$datosPlanPago,
+                    'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::paraProvincia($validated['cliente_provincia'] ?? null),
+                    ...$calculo->atributosPedido(),
                 ]);
 
-                $pedido->items()->createMany($itemsData);
+                $pedido->items()->createMany($calculo->items);
 
                 // Recién con el pedido ya creado consumimos el cupo: si algo de lo que sigue
                 // falla (stock insuficiente más abajo), el rollback de la transacción
                 // deshace también este increment junto con todo lo demás.
-                if ($datosDescuento['codigoDescuento'] !== null) {
-                    $datosDescuento['codigoDescuento']->increment('usos_actuales');
-                }
+                $codigoDescuentoService->consumirUso($pedido);
 
                 // Dentro de la misma transacción: si el stock cambió entre la validación
                 // optimista de arriba y este momento (carrera real), descontar() lanza
@@ -650,6 +536,7 @@ class PedidoController extends Controller
         } catch (StockInsuficienteException $e) {
             $this->abortarPorStockInsuficiente([[
                 'producto_id' => $e->productoId,
+                'variante_id' => $e->varianteId,
                 'cantidad' => $e->cantidadSolicitada,
                 'stock_disponible' => $e->stockDisponible,
             ]]);
@@ -668,6 +555,154 @@ class PedidoController extends Controller
         // El envío del mensaje de WhatsApp lo dispara el frontend con esta respuesta (ver
         // resources/js/Pages/Checkout.jsx): no hay ningún envío del lado del servidor que
         // pueda fallar después de este punto y requerir revertir la venta.
+        return response()->json([
+            'id' => $pedido->id,
+            'total' => $pedido->total,
+        ], 201);
+    }
+
+    /**
+     * Checkout con el Central (11.3). Orden:
+     *  1. CalculadoraPedido: precios, cupón validado SIN consumir (ni lockear), ítems y totales.
+     *  2. La referencia externa (`rukoz_ref`) se genera ANTES de reservar y es la clave de idempotencia: un doble clic o un
+     *     reintento reutiliza el mismo intento (ver CheckoutCentral) y no crea dos reservas.
+     *  3. Rukoz::reservar() — HTTP, afuera de toda transacción.
+     *  4. Reserva OK → transacción local (con HTTP prohibido): se revalida el cupón con lock, se crea el pedido con su
+     *     `rukoz_ref` y se consume el cupo. NO se descuenta stock local: lo reservó el Central. Si la transacción falla,
+     *     el paquete cancela la reserva (o la deja en compensaciones) y vuelve a lanzar la excepción.
+     */
+    private function storeConReserva(array $validated, CalculadoraPedido $calculadora, CodigoDescuentoService $codigoDescuentoService, StockService $stockService): JsonResponse
+    {
+        $calculo = $calculadora->calcular($validated);
+        $armador = app(PedidoParaCentral::class);
+
+        $datosPedido = [
+            'cliente_nombre' => $validated['cliente_nombre'],
+            'cliente_dni' => $validated['cliente_dni'] ?? null,
+            'cliente_telefono' => $validated['cliente_telefono'] ?? null,
+            'cliente_email' => $validated['cliente_email'] ?? null,
+            'cliente_provincia' => $validated['cliente_provincia'] ?? null,
+            'cliente_ciudad' => $validated['cliente_ciudad'] ?? null,
+            'cliente_codigo_postal' => $validated['cliente_codigo_postal'] ?? null,
+            'observaciones' => $validated['observaciones'] ?? null,
+            'estado' => EstadoPedido::Pendiente,
+            'sucursal' => Sucursal::tryFrom($validated['sucursal'] ?? '') ?? Sucursal::paraProvincia($validated['cliente_provincia'] ?? null),
+            ...$calculo->atributosPedido(),
+        ];
+
+        // Modelos en memoria: sirven para armar el pedido del Central antes de que exista en la base.
+        $pedidoEnMemoria = new Pedido($datosPedido);
+        $itemsEnMemoria = collect($calculo->items)->map(fn (array $item) => new PedidoItem($item));
+
+        $contenido = $armador->armar($pedidoEnMemoria, $itemsEnMemoria, now())->payload;
+        unset($contenido['creado_at']);
+        $huella = CheckoutCentral::huella($contenido);
+
+        try {
+            return Cache::lock(CheckoutCentral::claveLock($huella), 90)->block(
+                30,
+                fn () => $this->reservarYCrear($validated, $calculo, $datosPedido, $pedidoEnMemoria, $itemsEnMemoria, $huella, $codigoDescuentoService, $calculadora, $stockService)
+            );
+        } catch (LockTimeoutException) {
+            // El mismo pedido sigue en curso en otro request (un doble clic): no se hace nada de más.
+            return response()->json(['message' => 'Tu pedido ya se está procesando. Esperá unos segundos.'], 409);
+        }
+    }
+
+    private function reservarYCrear(array $validated, CalculoPedido $calculo, array $datosPedido, Pedido $pedidoEnMemoria, Collection $itemsEnMemoria, string $huella, CodigoDescuentoService $codigoDescuentoService, CalculadoraPedido $calculadora, StockService $stockService): JsonResponse
+    {
+        $intento = CheckoutCentral::intento($huella);
+
+        // Este mismo pedido ya se creó (doble envío): se devuelve el que ya existe, sin reservar de nuevo.
+        $existente = Pedido::query()
+            ->when(
+                $intento['pedido_id'] !== null,
+                fn ($query) => $query->whereKey($intento['pedido_id']),
+                fn ($query) => $query->where('rukoz_ref', $intento['ref'])
+            )
+            ->first();
+
+        if ($existente !== null) {
+            return response()->json(['id' => $existente->id, 'total' => $existente->total], 201);
+        }
+
+        $armador = app(PedidoParaCentral::class);
+        $creadoAt = Carbon::parse($intento['creado_at']);
+        $armado = $armador->armar($pedidoEnMemoria, $itemsEnMemoria, $creadoAt);
+
+        try {
+            $reserva = Rukoz::reservar($intento['ref'], $armado->payload, function (array $central) use ($validated, $calculo, $datosPedido, $intento, $creadoAt, $codigoDescuentoService) {
+                // Dentro de la transacción del paquete: solo base local, nada de HTTP.
+                // El cupón se revalida AHORA con lock: el límite de usos se decide bajo el mismo lock que su consumo. Si
+                // en el medio cambió (se agotó, venció, otro checkout se llevó el último uso), se aborta y el paquete
+                // cancela la reserva que se acababa de hacer.
+                $descuento = $codigoDescuentoService->resolverParaCheckout(
+                    $validated['codigo_descuento'] ?? null,
+                    $calculo->subtotal,
+                    bloquear: true
+                );
+
+                if (round((float) $descuento['descuento_monto'], 2) !== round((float) $calculo->descuento['descuento_monto'], 2)) {
+                    throw ValidationException::withMessages([
+                        'codigo_descuento' => 'El descuento del código cambió mientras confirmábamos el pedido. Revisá el carrito e intentá de nuevo.',
+                    ]);
+                }
+
+                $pedido = new Pedido($datosPedido + [
+                    'rukoz_ref' => $intento['ref'],
+                    'rukoz_version' => $central['version'] ?? null,
+                    'rukoz_estado' => $central['estado'] ?? Pedido::RESERVA_RESERVADA,
+                    'rukoz_punto' => $central['punto'] ?? null,
+                ]);
+                // Lo que el Central recibió como `creado_at`: así un PUT posterior manda la misma hora.
+                $pedido->created_at = $creadoAt;
+                $pedido->save();
+
+                $pedido->items()->createMany($calculo->items);
+
+                // Sin StockService::descontar(): el stock lo reservó el Central.
+                $codigoDescuentoService->consumirUso($pedido);
+
+                return $pedido;
+            });
+        } catch (SinStockException $e) {
+            CheckoutCentral::olvidarIntento($huella);
+            // El espejo estaba desactualizado: se relee el stock de esos ítems para que la tienda deje de ofrecerlos.
+            EspejoStock::refrescar(ErroresDelCentral::paresParaRefrescar($e, $armado));
+
+            $mensajes = [];
+
+            foreach (ErroresDelCentral::sinStock($e, $armado) as $falta) {
+                $mensajes[$falta['clave']][] = $falta['mensaje'];
+            }
+
+            throw ValidationException::withMessages($mensajes);
+        } catch (CentralNoDisponibleException $e) {
+            // Caído, timeout o circuito abierto: no se sabe si reservó. El intento (y su ref) se conserva: el reintento del
+            // cliente es idempotente.
+            if (CheckoutCentral::permiteVenderSinReserva()) {
+                return $this->storeLocal($validated, $calculadora, $codigoDescuentoService, $stockService);
+            }
+
+            return response()->json([
+                'message' => ErroresDelCentral::MENSAJE_CENTRAL_CAIDO,
+                'central_no_disponible' => true,
+            ], 503);
+        } catch (RukozException $e) {
+            // Sin vincular, selección inválida, validación, etc.: es un problema de catálogo, no de quien compra.
+            CheckoutCentral::olvidarIntento($huella);
+            ErroresDelCentral::registrar($e, 'reservar el pedido');
+
+            throw ValidationException::withMessages([
+                'pedido' => 'Uno de los productos no está disponible por el momento. Escribinos por WhatsApp y lo resolvemos.',
+            ]);
+        }
+
+        /** @var Pedido $pedido */
+        $pedido = $reserva->local;
+
+        CheckoutCentral::intentoCompletado($huella, $intento, $pedido->id);
+
         return response()->json([
             'id' => $pedido->id,
             'total' => $pedido->total,
@@ -694,13 +729,20 @@ class PedidoController extends Controller
     private function abortarPorStockInsuficiente(array $faltantes): never
     {
         $titulos = Producto::whereIn('id', collect($faltantes)->pluck('producto_id'))->pluck('titulo', 'id');
+        $colores = ProductoVariante::whereIn('id', collect($faltantes)->pluck('variante_id')->filter())->pluck('nombre', 'id');
 
         $mensajes = [];
 
         foreach ($faltantes as $faltante) {
             $titulo = $titulos->get($faltante['producto_id'], 'este producto');
 
-            $mensajes["stock.{$faltante['producto_id']}"] = $faltante['stock_disponible'] > 0
+            // Con variante se nombra el color: "Chispa PULY (Dorada)", así el cliente sabe cuál sacar o ajustar.
+            if (! empty($faltante['variante_id']) && $colores->has($faltante['variante_id'])) {
+                $titulo .= ' (' . $colores->get($faltante['variante_id']) . ')';
+            }
+
+            // Una lista por producto: dos colores del mismo producto sin stock no se pisan entre sí.
+            $mensajes["stock.{$faltante['producto_id']}"][] = $faltante['stock_disponible'] > 0
                 ? "Solo quedan {$faltante['stock_disponible']} unidades de {$titulo} (pediste {$faltante['cantidad']}). Ajustá la cantidad."
                 : "No queda stock de {$titulo}.";
         }

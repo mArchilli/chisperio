@@ -1,19 +1,13 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { formatearDiaCalendario } from '@/lib/fecha';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-const formatearFechaCorta = (fechaIso) =>
-    new Date(`${fechaIso}T00:00:00`).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'short',
-    });
+// Los días de la serie ya vienen resueltos en hora argentina desde el back: son fechas puras.
+const formatearFechaCorta = (fechaIso) => formatearDiaCalendario(fechaIso, { day: '2-digit', month: 'short' });
 
 const formatearFechaCompleta = (fechaIso) =>
-    new Date(`${fechaIso}T00:00:00`).toLocaleDateString('es-AR', {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short',
-    });
+    formatearDiaCalendario(fechaIso, { weekday: 'short', day: '2-digit', month: 'short' });
 
 const ICONOS = {
     reloj: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,

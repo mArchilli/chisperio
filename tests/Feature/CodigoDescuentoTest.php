@@ -171,6 +171,20 @@ class CodigoDescuentoTest extends TestCase
         $this->assertSame(25.0, (float) $codigo->fresh()->valor_descuento);
     }
 
+    public function test_se_puede_eliminar_un_codigo_sin_usos(): void
+    {
+        $admin = User::factory()->create();
+        $codigo = CodigoDescuento::factory()->create(['usos_actuales' => 0]);
+        $otro = CodigoDescuento::factory()->create();
+
+        $response = $this->actingAs($admin)->delete(route('codigos-descuento.destroy', $codigo));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('codigos-descuento.index'));
+        $this->assertDatabaseMissing('codigos_descuento', ['id' => $codigo->id]);
+        $this->assertDatabaseHas('codigos_descuento', ['id' => $otro->id]);
+    }
+
     public function test_no_se_puede_eliminar_codigo_ya_usado(): void
     {
         $admin = User::factory()->create();

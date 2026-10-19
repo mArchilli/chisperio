@@ -14,7 +14,10 @@ class VendedorFlujoCompletoTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_vendedor_puede_crear_un_producto_con_stock(): void
+    // El vendedor NO gestiona el catálogo (el CRUD de productos es role:admin, ver
+    // routes/web.php; solo consulta admin/precios). Estos dos tests antes esperaban lo
+    // contrario —quedaron de cuando el vendedor sí podía— y ahora fijan la regla vigente.
+    public function test_vendedor_no_puede_crear_un_producto(): void
     {
         $vendedor = User::factory()->vendedor()->create();
         $categoria = Categoria::create(['nombre' => 'Categoria Test']);
@@ -30,14 +33,11 @@ class VendedorFlujoCompletoTest extends TestCase
             'subcategorias' => [],
         ]);
 
-        $response->assertSessionDoesntHaveErrors();
-        $this->assertDatabaseHas('productos', [
-            'titulo' => 'Producto de prueba vendedor',
-            'stock' => 20,
-        ]);
+        $response->assertForbidden();
+        $this->assertDatabaseMissing('productos', ['titulo' => 'Producto de prueba vendedor']);
     }
 
-    public function test_vendedor_puede_editar_producto_y_actualizar_stock(): void
+    public function test_vendedor_no_puede_editar_producto_ni_su_stock(): void
     {
         $vendedor = User::factory()->vendedor()->create();
         $producto = Producto::factory()->create(['stock' => 5]);
@@ -53,8 +53,8 @@ class VendedorFlujoCompletoTest extends TestCase
             'subcategorias' => [],
         ]);
 
-        $response->assertSessionDoesntHaveErrors();
-        $this->assertDatabaseHas('productos', ['id' => $producto->id, 'stock' => 40]);
+        $response->assertForbidden();
+        $this->assertDatabaseHas('productos', ['id' => $producto->id, 'stock' => 5]);
     }
 
     public function test_vendedor_ve_montos_individuales_y_acumulado_en_pedidos_index(): void

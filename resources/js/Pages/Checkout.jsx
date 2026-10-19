@@ -306,6 +306,9 @@ export default function Checkout({ canLogin }) {
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [apiError, setApiError] = useState(null);
+    // El Sistema Central no respondió y el pedido NO se creó (11.3): se muestra un aviso amable con el botón de WhatsApp
+    // y el carrito armado en el texto. El carrito se conserva.
+    const [centralNoDisponible, setCentralNoDisponible] = useState(null);
     const [codigoDescuentoError, setCodigoDescuentoError] = useState(null);
 
     // Sucursal de WhatsApp con la que el cliente va a coordinar el pedido. Se
@@ -412,6 +415,7 @@ export default function Checkout({ canLogin }) {
         if (items.length === 0 || hayItemsSinStock) return;
         setErrors({});
         setApiError(null);
+        setCentralNoDisponible(null);
         setCodigoDescuentoError(null);
 
         const pedido = pedidoParaMensaje();
@@ -477,12 +481,37 @@ export default function Checkout({ canLogin }) {
                 setCodigoDescuentoError(mensajesCodigo.join(' '));
             }
 
+            // 503: el Sistema Central no respondió (caído, timeout o circuito abierto). No se creó el pedido y no se
+            // vende sin reservar el stock: se ofrece seguir por WhatsApp con el carrito ya armado en el mensaje.
+            if (error.response?.status === 503 && error.response?.data?.central_no_disponible) {
+                setCentralNoDisponible({ mensaje: error.response.data.message, whatsapp: message });
+                return;
+            }
+
+            // 409: el mismo pedido ya se está procesando (doble clic).
+            if (error.response?.status === 409 && error.response?.data?.message) {
+                setApiError(error.response.data.message);
+                return;
+            }
+
+            // 429: demasiados intentos seguidos desde esta conexión (throttle del checkout).
+            // No es un error del pedido: se le pide esperar y reintentar.
+            if (error.response?.status === 429) {
+                setApiError('Esperá un momento y probá de nuevo.');
+                return;
+            }
+
+            // Mensaje general del servidor (p. ej. un producto que el Central no puede vender): campo `pedido`.
+            const mensajesPedido = erroresBackend?.pedido ?? [];
+
             setApiError(
                 mensajesStock.length > 0
                     ? mensajesStock
-                    : mensajesCodigo
-                        ? null
-                        : 'No pudimos registrar tu pedido. Por favor, intentá de nuevo en unos instantes.'
+                    : mensajesPedido.length > 0
+                        ? mensajesPedido
+                        : mensajesCodigo
+                            ? null
+                            : 'No pudimos registrar tu pedido. Por favor, intentá de nuevo en unos instantes.'
             );
             return;
         }
@@ -779,6 +808,20 @@ export default function Checkout({ canLogin }) {
                                         , para que nuestro personal te atienda y puedas finalizar tu compra.
                                     </p>
                                 </div>
+
+                                {/* El Sistema Central no respondió: el pedido no se creó (11.3) */}
+                                {centralNoDisponible && (
+                                    <div role="alert" className="mb-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-900">
+                                        <p>{centralNoDisponible.mensaje}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirWhatsApp(getSucursal(sucursalId).numero, centralNoDisponible.whatsapp)}
+                                            className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-[#25D366] px-5 text-xs font-extrabold uppercase tracking-[0.07em] text-white transition-all hover:bg-[#1ebe5b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 active:scale-95"
+                                        >
+                                            Escribinos por WhatsApp
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Error de envío */}
                                 {apiError && (

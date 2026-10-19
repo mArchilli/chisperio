@@ -26,3 +26,9 @@ Thumbs.db
 /public/productos/videos/*
 /public/combos/img/*
 /public/combos/videos/*
+
+# Backups de base y volcados de stock (viven fuera del repo, en Desktop\backups; esto es red de seguridad)
+*.sql
+*.sql.gz
+/backups
+stock-*-antes-*.json

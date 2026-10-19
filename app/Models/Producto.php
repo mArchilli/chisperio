@@ -286,6 +286,40 @@ class Producto extends Model
     }
 
     /**
+     * Productos SIN stock para el admin y el dashboard: el inverso de `scopeConStock`. Sin variantes, `stock = 0`
+     * (NULL es ilimitado, no cuenta). Con variantes, el stock del producto se ignora: está sin stock cuando NINGUNA variante
+     * activa tiene stock (NULL o > 0). Con el stock del Central es normal que todas las variantes lleguen en 0.
+     */
+    public function scopeSinStock(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where(function (Builder $sinVariantes) {
+                $sinVariantes->whereDoesntHave('variantes')->where('stock', 0);
+            })->orWhere(function (Builder $conVariantes) {
+                $conVariantes->whereHas('variantes')
+                    ->whereDoesntHave('variantes', function (Builder $variantes) {
+                        $variantes->where('is_active', true)
+                            ->where(fn (Builder $q2) => $q2->whereNull('stock')->orWhere('stock', '>', 0));
+                    });
+            });
+        });
+    }
+
+    /**
+     * Misma regla que `scopeSinStock`, para un producto ya cargado. Usa la relación `variantes` si está cargada (el listado
+     * del admin la trae), así no hace una consulta por producto.
+     */
+    public function estaSinStock(): bool
+    {
+        $variantes = $this->relationLoaded('variantes') ? $this->variantes : $this->variantes()->get();
+
+        if ($variantes->isEmpty()) {
+            return $this->stock === 0;
+        }
+
+        return ! $variantes->contains(fn (ProductoVariante $v) => $v->is_active && ($v->stock === null || $v->stock > 0));
+    }
+    /**
      * Resuelve la escala de precio aplicable a una cantidad dada: la de mayor
      * cantidad_minima que sea <= $cantidad. Devuelve null si ninguna aplica
      * (en cuyo caso el llamador debe usar `precio` como fallback).
